@@ -18,6 +18,7 @@ package org.anarres.cpp;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * A virtual filesystem implementation using java.io.
@@ -76,7 +77,7 @@ public class JavaFileSystem implements VirtualFileSystem {
 
         @Override
         public Source getSource() throws IOException {
-            return new FileLexerSource(this);
+            return new FileLexerSource(this, Charset.defaultCharset());
         }
 
     }

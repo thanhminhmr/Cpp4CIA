@@ -58,22 +58,22 @@ public class FileLexerSource extends InputLexerSource {
         this(file, charset, file.getPath());
     }
 
-    @Deprecated
-    public FileLexerSource(@Nonnull File file)
-            throws IOException {
-        this(file, Charset.defaultCharset());
-    }
+//    @Deprecated
+//    public FileLexerSource(@Nonnull File file)
+//            throws IOException {
+//        this(file, Charset.defaultCharset());
+//    }
 
     public FileLexerSource(@Nonnull String path, @Nonnull Charset charset)
             throws IOException {
         this(new File(path), charset, path);
     }
 
-    @Deprecated
-    public FileLexerSource(@Nonnull String path)
-            throws IOException {
-        this(path, Charset.defaultCharset());
-    }
+//    @Deprecated
+//    public FileLexerSource(@Nonnull String path)
+//            throws IOException {
+//        this(path, Charset.defaultCharset());
+//    }
 
     @Nonnull
     public File getFile() {

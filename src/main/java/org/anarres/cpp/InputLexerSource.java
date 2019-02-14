@@ -31,10 +31,10 @@ import javax.annotation.Nonnull;
  */
 public class InputLexerSource extends LexerSource {
 
-    @Deprecated
-    public InputLexerSource(@Nonnull InputStream input) {
-        this(input, Charset.defaultCharset());
-    }
+//    @Deprecated
+//    public InputLexerSource(@Nonnull InputStream input) {
+//        this(input, Charset.defaultCharset());
+//    }
 
     /**
      * Creates a new Source for lexing the given Reader.

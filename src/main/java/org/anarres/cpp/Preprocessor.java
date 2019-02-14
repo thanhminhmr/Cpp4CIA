@@ -19,6 +19,7 @@ package org.anarres.cpp;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -155,7 +156,7 @@ public class Preprocessor implements Closeable {
      */
     public Preprocessor(@Nonnull File file)
             throws IOException {
-        this(new FileLexerSource(file));
+        this(new FileLexerSource(file, Charset.defaultCharset()));
     }
 
     /**
@@ -287,7 +288,7 @@ public class Preprocessor implements Closeable {
      */
     public void addInput(@Nonnull File file)
             throws IOException {
-        addInput(new FileLexerSource(file));
+        addInput(new FileLexerSource(file, Charset.defaultCharset()));
     }
 
     /**
