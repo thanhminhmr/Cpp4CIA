@@ -23,7 +23,73 @@
     </build>
 
     <dependencies>
-        <!-- jCPP -->
+        <!-- region Eclipse CDT -->
+        <dependency>
+            <groupId>org.eclipse.cdt</groupId>
+            <artifactId>core</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.cdt.core_6.6.0.201812101042.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>contenttype</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.core.contenttype_3.7.200.v20181107-1343.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>jobs</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.core.jobs_3.10.200.v20180912-1356.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>resources</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.core.resources_3.13.200.v20181121-1020.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.core</groupId>
+            <artifactId>runtime</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.core.runtime_3.15.100.v20181107-1343.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>common</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.equinox.common_3.10.200.v20181021-1645.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>preferences</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.equinox.preferences_3.7.200.v20180827-1235.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.equinox</groupId>
+            <artifactId>registry</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.equinox.registry_3.8.200.v20181008-1820.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.osgi</groupId>
+            <artifactId>main</artifactId>
+            <type>jar</type>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/org.eclipse.osgi_3.13.200.v20181130-2106.jar</systemPath>
+        </dependency>
+        <!-- endregion Eclipse CDT -->
+
+        <!-- region jCPP -->
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
@@ -39,7 +105,7 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.6</version>
         </dependency>
-        <!-- / jCPP -->
+        <!-- endregion jCPP -->
 
     </dependencies>
 </project>
