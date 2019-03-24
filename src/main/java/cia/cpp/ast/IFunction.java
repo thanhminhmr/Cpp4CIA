@@ -3,8 +3,8 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@AstComponent
-public interface IFunction extends ICompositeContainer, ITypeContainer, IType {
+@IAstComponent
+public interface IFunction extends IMember, IType, ITypeContainer, IClassContainer, IEnumContainer, ITypedefContainer, IVariableContainer {
 	@Nonnull
 	List<IParameter> getParameters();
 }

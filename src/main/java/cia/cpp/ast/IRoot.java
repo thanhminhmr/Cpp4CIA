@@ -1,5 +1,5 @@
 package cia.cpp.ast;
 
-@AstComponent
-public interface IRoot extends INamespace {
+@IAstComponent
+public interface IRoot extends IClassContainer, IEnumContainer, ITypedefContainer, IFunctionContainer, IVariableContainer {
 }

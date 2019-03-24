@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 /**
  * Hold a type
  */
-@AstFragment
+@IAstFragment
 public interface ITypeContainer extends INode {
 	@Nullable
 	IType getType();

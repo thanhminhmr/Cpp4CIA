@@ -3,7 +3,7 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public interface IFieldContainer extends INode {
+public interface IClassContainer extends INode {
 	@Nonnull
-	List<IField> getFields();
+	List<IClass> getClasses();
 }

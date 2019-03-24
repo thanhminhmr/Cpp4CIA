@@ -4,14 +4,26 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class RootNode extends Node implements IRoot {
-	public RootNode(@Nonnull String name) {
-		super(name);
+	public RootNode() {
+		super("ROOT");
 	}
 
 	@Nonnull
 	@Override
-	public final List<IClass> getComposites() {
+	public final List<IClass> getClasses() {
 		return getChildrenList(IClass.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<IEnum> getEnums() {
+		return getChildrenList(IEnum.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<ITypedef> getTypedefs() {
+		return getChildrenList(ITypedef.class);
 	}
 
 	@Nonnull

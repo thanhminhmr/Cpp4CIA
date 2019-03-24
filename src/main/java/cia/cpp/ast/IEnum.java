@@ -1,5 +1,5 @@
 package cia.cpp.ast;
 
-@AstComponent
-public interface IEnum extends IVariableContainer, ITypeContainer, IType {
+@IAstComponent
+public interface IEnum extends IMember, IType, ITypeContainer, IVariableContainer {
 }

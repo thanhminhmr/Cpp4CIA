@@ -3,7 +3,7 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public interface IMethodContainer extends INode {
+public interface IEnumContainer extends INode {
 	@Nonnull
-	List<IMethod> getMethods();
+	List<IEnum> getEnums();
 }

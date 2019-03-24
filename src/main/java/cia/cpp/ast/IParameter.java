@@ -1,5 +1,5 @@
 package cia.cpp.ast;
 
-@AstComponent
+@IAstComponent
 public interface IParameter extends ITypeContainer {
 }

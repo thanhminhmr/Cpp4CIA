@@ -3,6 +3,6 @@ package cia.cpp.ast;
 /**
  * Can be a type to a variable (eg. a struct)
  */
-@AstFragment
+@IAstFragment
 public interface IType extends INode {
 }

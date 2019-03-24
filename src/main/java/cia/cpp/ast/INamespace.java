@@ -1,5 +1,5 @@
 package cia.cpp.ast;
 
-@AstComponent
-public interface INamespace extends ICompositeContainer, IFunctionContainer, IVariableContainer {
+@IAstComponent
+public interface INamespace extends IClassContainer, IEnumContainer, ITypedefContainer, IFunctionContainer, IVariableContainer {
 }

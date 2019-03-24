@@ -3,7 +3,7 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public interface ICompositeContainer extends INode {
+public interface ITypedefContainer extends INode {
 	@Nonnull
-	List<IClass> getComposites();
+	List<ITypedef> getTypedefs();
 }
