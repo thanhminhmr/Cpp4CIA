@@ -11,6 +11,12 @@ public interface INode extends ITreeNode {
 	@Nonnull
 	String getName();
 
+	@Nonnull
+	String getSimpleName();
+
+	@Nonnull
+	String getUniqueName();
+
 	/**
 	 * @return read-only view of dependency info map
 	 */
@@ -19,6 +25,7 @@ public interface INode extends ITreeNode {
 
 	/**
 	 * Get dependency info
+	 *
 	 * @param node the node
 	 * @return the dependency info, or null if not exist
 	 */
@@ -27,6 +34,7 @@ public interface INode extends ITreeNode {
 
 	/**
 	 * Create new dependency info
+	 *
 	 * @param node the node
 	 * @return the dependency info, or null if already exist
 	 */
@@ -35,6 +43,7 @@ public interface INode extends ITreeNode {
 
 	/**
 	 * remove dependency info
+	 *
 	 * @param node the node
 	 * @return true if the dependency info exist, false otherwise
 	 */

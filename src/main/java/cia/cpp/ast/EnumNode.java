@@ -8,10 +8,10 @@ public final class EnumNode extends Node implements IEnum {
 	@Nonnull
 	private final Visibility visibility;
 	@Nullable
-	private final IType type;
+	private IType type;
 
-	private EnumNode(@Nonnull String name, @Nonnull Visibility visibility, @Nullable IType type) {
-		super(name);
+	private EnumNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nullable IType type) {
+		super(name, simpleName, uniqueName);
 		this.visibility = visibility;
 		this.type = type;
 	}
@@ -32,6 +32,11 @@ public final class EnumNode extends Node implements IEnum {
 		return type;
 	}
 
+	@Override
+	public final void setType(@Nullable IType type) {
+		this.type = type;
+	}
+
 	@Nonnull
 	@Override
 	public final List<IVariable> getVariables() {
@@ -50,10 +55,14 @@ public final class EnumNode extends Node implements IEnum {
 		@Nonnull
 		@Override
 		public final EnumNode build() {
-			if (name == null || visibility == null) {
-				throw new NullPointerException("Builder element(s) is null.");
-			}
-			return new EnumNode(name, visibility, type);
+			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
+			//noinspection ConstantConditions
+			return new EnumNode(name, simpleName, uniqueName, visibility, type);
+		}
+
+		@Override
+		boolean isValid() {
+			return super.isValid() && visibility != null;
 		}
 
 		@Nullable

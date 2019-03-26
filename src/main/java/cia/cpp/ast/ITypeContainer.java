@@ -9,4 +9,6 @@ import javax.annotation.Nullable;
 public interface ITypeContainer extends INode {
 	@Nullable
 	IType getType();
+
+	void setType(@Nullable IType type);
 }

@@ -12,8 +12,8 @@ public final class ClassNode extends Node implements IClass {
 	@Nonnull
 	private final Visibility childDefaultVisibility;
 
-	private ClassNode(@Nonnull String name, @Nonnull Visibility visibility, @Nonnull List<IClass> bases, @Nonnull Visibility childDefaultVisibility) {
-		super(name);
+	private ClassNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nonnull List<IClass> bases, @Nonnull Visibility childDefaultVisibility) {
+		super(name, simpleName, uniqueName);
 		this.visibility = visibility;
 		this.bases = List.copyOf(bases);
 		this.childDefaultVisibility = childDefaultVisibility;
@@ -71,23 +71,35 @@ public final class ClassNode extends Node implements IClass {
 		return getChildrenList(IVariable.class);
 	}
 
+	@Override
+	public String toString() {
+		return "(" + getClass().getSimpleName() + ") { name = \"" + getName()
+				+ "\", visibility = " + visibility
+				+ ", bases = " + bases
+				+ ", childDefaultVisibility = " + childDefaultVisibility + " }";
+	}
+
 	public static final class ClassNodeBuilder extends NodeBuilder<ClassNode, ClassNodeBuilder> {
 		@Nullable
 		private Visibility visibility;
 		@Nullable
 		private Visibility defaultVisibility;
-		@Nullable
-		private List<IClass> bases;
+		@Nonnull
+		private List<IClass> bases = List.of();
 
 		private ClassNodeBuilder() {
 		}
 
 		@Override
 		public final ClassNode build() {
-			if (name == null || visibility == null || defaultVisibility == null || bases == null) {
-				throw new NullPointerException("Builder element(s) is null.");
-			}
-			return new ClassNode(name, visibility, bases, defaultVisibility);
+			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
+			//noinspection ConstantConditions
+			return new ClassNode(name, simpleName, uniqueName, visibility, bases, defaultVisibility);
+		}
+
+		@Override
+		boolean isValid() {
+			return super.isValid() && visibility != null && defaultVisibility != null;
 		}
 
 		@Nullable
@@ -112,7 +124,7 @@ public final class ClassNode extends Node implements IClass {
 			return this;
 		}
 
-		@Nullable
+		@Nonnull
 		public final List<IClass> getBases() {
 			return bases;
 		}

@@ -8,10 +8,10 @@ public final class FunctionNode extends Node implements IFunction {
 	@Nonnull
 	private final Visibility visibility;
 	@Nullable
-	private final IType type;
+	private IType type;
 
-	private FunctionNode(@Nonnull String name, @Nonnull Visibility visibility, @Nullable IType type) {
-		super(name);
+	private FunctionNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nullable IType type) {
+		super(name, simpleName, uniqueName);
 		this.visibility = visibility;
 		this.type = type;
 	}
@@ -20,11 +20,11 @@ public final class FunctionNode extends Node implements IFunction {
 		return new FunctionNodeBuilder();
 	}
 
-	@Nonnull
-	@Override
-	public final List<IParameter> getParameters() {
-		return getChildrenList(IParameter.class);
-	}
+//	@Nonnull
+//	@Override
+//	public final List<IParameter> getParameters() {
+//		return getChildrenList(IParameter.class);
+//	}
 
 	@Nonnull
 	@Override
@@ -36,6 +36,11 @@ public final class FunctionNode extends Node implements IFunction {
 	@Override
 	public final IType getType() {
 		return type;
+	}
+
+	@Override
+	public final void setType(@Nullable IType type) {
+		this.type = type;
 	}
 
 	@Nonnull
@@ -62,6 +67,13 @@ public final class FunctionNode extends Node implements IFunction {
 		return getChildrenList(IVariable.class);
 	}
 
+	@Override
+	public String toString() {
+		return "(" + getClass().getSimpleName() + ") { " + super.toString()
+				+ "\", visibility = " + visibility
+				+ ", type = " + type + " }";
+	}
+
 	public static final class FunctionNodeBuilder extends NodeBuilder<FunctionNode, FunctionNodeBuilder> {
 		@Nullable
 		private Visibility visibility;
@@ -74,10 +86,14 @@ public final class FunctionNode extends Node implements IFunction {
 		@Nonnull
 		@Override
 		public final FunctionNode build() {
-			if (name == null || visibility == null) {
-				throw new NullPointerException("Builder element(s) is null.");
-			}
-			return new FunctionNode(name, visibility, type);
+			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
+			//noinspection ConstantConditions
+			return new FunctionNode(name, simpleName, uniqueName, visibility, type);
+		}
+
+		@Override
+		boolean isValid() {
+			return super.isValid() && visibility != null;
 		}
 
 		@Nullable

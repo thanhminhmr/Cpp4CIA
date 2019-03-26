@@ -7,10 +7,10 @@ public final class VariableNode extends Node implements IVariable {
 	@Nonnull
 	private final Visibility visibility;
 	@Nullable
-	private final IType type;
+	private IType type;
 
-	public VariableNode(@Nonnull String name, @Nonnull Visibility visibility, @Nullable IType type) {
-		super(name);
+	public VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nullable IType type) {
+		super(name, simpleName, uniqueName);
 		this.visibility = visibility;
 		this.type = type;
 	}
@@ -31,6 +31,18 @@ public final class VariableNode extends Node implements IVariable {
 		return type;
 	}
 
+	@Override
+	public final void setType(@Nullable IType type) {
+		this.type = type;
+	}
+
+	@Override
+	public String toString() {
+		return "(" + getClass().getSimpleName() + ") { " + super.toString()
+				+ "\", visibility = " + visibility
+				+ ", type = " + type + " }";
+	}
+
 	public static final class VariableNodeBuilder extends NodeBuilder<VariableNode, VariableNodeBuilder> {
 		@Nullable
 		private Visibility visibility;
@@ -43,10 +55,14 @@ public final class VariableNode extends Node implements IVariable {
 		@Nonnull
 		@Override
 		public final VariableNode build() {
-			if (name == null || visibility == null) {
-				throw new NullPointerException("Builder element(s) is null.");
-			}
-			return new VariableNode(name, visibility, type);
+			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
+			//noinspection ConstantConditions
+			return new VariableNode(name, simpleName, uniqueName, visibility, type);
+		}
+
+		@Override
+		boolean isValid() {
+			return super.isValid() && visibility != null;
 		}
 
 		@Nullable

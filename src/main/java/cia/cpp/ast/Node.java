@@ -1,6 +1,5 @@
 package cia.cpp.ast;
 
-import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.*;
@@ -13,16 +12,34 @@ abstract class Node extends TreeNode implements INode {
 	private final String name;
 
 	@Nonnull
+	private final String simpleName;
+
+	@Nonnull
+	private final String uniqueName;
+
+	@Nonnull
 	private final Map<INode, Dependency> dependencyMap = new HashMap<>();
 
-	protected Node(@Nonnull String name) {
+	protected Node(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		this.name = name;
+		this.simpleName = simpleName;
+		this.uniqueName = uniqueName;
 	}
 
 	@Override
 	@Nonnull
 	public final String getName() {
 		return name;
+	}
+
+	@Nonnull
+	public final String getSimpleName() {
+		return simpleName;
+	}
+
+	@Nonnull
+	public final String getUniqueName() {
+		return uniqueName;
 	}
 
 	protected final <E> List<E> getChildrenList(final Class<E> aClass) {
@@ -62,11 +79,27 @@ abstract class Node extends TreeNode implements INode {
 		return dependencyMap.remove(node) != null;
 	}
 
+	@Nonnull
+	@Override
+	public String toString() {
+		return "(" + getClass().getSimpleName() + ") { name = \"" + name + "\", simpleName = \"" + simpleName + "\", uniqueName = \"" + uniqueName + "\" }";
+	}
+
 	protected static abstract class NodeBuilder<E extends Node, B extends NodeBuilder> {
 		@Nullable
 		protected String name;
 
+		@Nullable
+		protected String simpleName;
+
+		@Nullable
+		protected String uniqueName;
+
 		protected NodeBuilder() {
+		}
+
+		boolean isValid() {
+			return name != null && simpleName != null && uniqueName != null;
 		}
 
 		@Nonnull
@@ -80,6 +113,30 @@ abstract class Node extends TreeNode implements INode {
 		@Nonnull
 		public final B setName(@Nonnull String name) {
 			this.name = name;
+			//noinspection unchecked
+			return (B) this;
+		}
+
+		@Nullable
+		public final String getSimpleName() {
+			return simpleName;
+		}
+
+		@Nonnull
+		public final B setSimpleName(@Nonnull String simpleName) {
+			this.simpleName = simpleName;
+			//noinspection unchecked
+			return (B) this;
+		}
+
+		@Nullable
+		public final String getUniqueName() {
+			return uniqueName;
+		}
+
+		@Nonnull
+		public final B setUniqueName(@Nonnull String uniqueName) {
+			this.uniqueName = uniqueName;
 			//noinspection unchecked
 			return (B) this;
 		}

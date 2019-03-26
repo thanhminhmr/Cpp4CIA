@@ -78,4 +78,9 @@ public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	 */
 	boolean removeFromParent();
 
+	@Nonnull
+	String toString();
+
+	@Nonnull
+	String toTreeString();
 }

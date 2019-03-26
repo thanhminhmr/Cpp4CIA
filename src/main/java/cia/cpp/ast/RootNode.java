@@ -5,7 +5,7 @@ import java.util.List;
 
 public final class RootNode extends Node implements IRoot {
 	public RootNode() {
-		super("ROOT");
+		super("ROOT", "ROOT", "ROOT");
 	}
 
 	@Nonnull

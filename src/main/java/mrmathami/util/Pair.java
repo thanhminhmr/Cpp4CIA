@@ -7,18 +7,15 @@ import java.util.Objects;
 /**
  * <p>A convenience class to represent name-value pairs.</p>
  */
-public class Pair<K, V> implements Serializable {
-
+public final class Pair<K, V> implements Serializable {
 	/**
 	 * Key of this <code>Pair</code>.
 	 */
-	@Nonnull
-	private final K key;
+	private K key;
 	/**
 	 * Value of this this <code>Pair</code>.
 	 */
-	@Nonnull
-	private final V value;
+	private V value;
 
 	/**
 	 * Creates a new pair
@@ -26,9 +23,15 @@ public class Pair<K, V> implements Serializable {
 	 * @param key   The key for this pair
 	 * @param value The value to use for this pair
 	 */
-	public Pair(@Nonnull K key, @Nonnull V value) {
+	public Pair(K key, V value) {
 		this.key = key;
 		this.value = value;
+	}
+
+	/**
+	 * Creates a new empty pair
+	 */
+	public Pair() {
 	}
 
 	/**
@@ -36,9 +39,15 @@ public class Pair<K, V> implements Serializable {
 	 *
 	 * @return key for this pair
 	 */
-	@Nonnull
-	public K getKey() {
+	public final K getKey() {
 		return key;
+	}
+
+	/**
+	 * Set the key for this pair.
+	 */
+	public final void setKey(K key) {
+		this.key = key;
 	}
 
 	/**
@@ -46,9 +55,25 @@ public class Pair<K, V> implements Serializable {
 	 *
 	 * @return value for this pair
 	 */
-	@Nonnull
-	public V getValue() {
+	public final V getValue() {
 		return value;
+	}
+
+	/**
+	 * Set the value for this pair.
+	 */
+	public final void setValue(V value) {
+		this.value = value;
+	}
+
+	@Nonnull
+	private static <Value> String internalValueToString(Value value) {
+		if (value == null) return "null";
+		return String.format("(%s@%08X) \"%s\"",
+				value.getClass().getName(),
+				System.identityHashCode(value),
+				value.toString()
+		);
 	}
 
 	/**
@@ -60,8 +85,8 @@ public class Pair<K, V> implements Serializable {
 	 * @return <code>String</code> representation of this <code>Pair</code>
 	 */
 	@Override
-	public String toString() {
-		return key + "=" + value;
+	public final String toString() {
+		return internalValueToString(key) + "=" + internalValueToString(value);
 	}
 
 	/**
@@ -73,7 +98,7 @@ public class Pair<K, V> implements Serializable {
 	 * @return hash code for this <code>Pair</code>
 	 */
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		// name's hashCode is multiplied by an arbitrary prime number (13)
 		// in order to make sure there is a difference in the hashCode between
 		// these two parameters:
@@ -94,17 +119,16 @@ public class Pair<K, V> implements Serializable {
 	 * both the names and values are equal.</p>
 	 *
 	 * @param obj the <code>Object</code> to test for
-	 *          equality with this <code>Pair</code>
+	 *            equality with this <code>Pair</code>
 	 * @return <code>true</code> if the given <code>Object</code> is
 	 * equal to this <code>Pair</code> else <code>false</code>
 	 */
 	@Override
-	public boolean equals(Object obj) {
+	public final boolean equals(Object obj) {
 		if (this == obj) return true;
 		if (obj instanceof Pair) {
-			Pair pair = (Pair) obj;
-			if (!Objects.equals(key, pair.key)) return false;
-			return Objects.equals(value, pair.value);
+			final Pair pair = (Pair) obj;
+			return Objects.equals(key, pair.key) && Objects.equals(value, pair.value);
 		}
 		return false;
 	}

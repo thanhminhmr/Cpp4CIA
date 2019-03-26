@@ -4,8 +4,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class NamespaceNode extends Node implements INamespace {
-	private NamespaceNode(@Nonnull String name) {
-		super(name);
+	private NamespaceNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
+		super(name, simpleName, uniqueName);
 	}
 
 	public static NamespaceNodeBuilder builder() {
@@ -46,10 +46,9 @@ public final class NamespaceNode extends Node implements INamespace {
 		@Nonnull
 		@Override
 		public final NamespaceNode build() {
-			if (name == null) {
-				throw new NullPointerException("Builder element(s) is null.");
-			}
-			return new NamespaceNode(name);
+			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
+			//noinspection ConstantConditions
+			return new NamespaceNode(name, simpleName, uniqueName);
 		}
 	}
 }

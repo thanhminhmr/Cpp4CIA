@@ -1,8 +1,12 @@
 package cia.cpp;
 
+import cia.cpp.ast.*;
+import mrmathami.util.Pair;
 import mrmathami.util.tree.TreeNode;
 import org.anarres.cpp.*;
+import org.eclipse.cdt.core.dom.ast.IType;
 import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.model.ILanguage;
 import org.eclipse.cdt.core.parser.*;
@@ -82,12 +86,12 @@ public final class AstBuilder {
 
 
 		AstBuilder astBuilder = new AstBuilder(
-//				List.of(
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.h")
-//				),
-				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"))
+				Set.of(
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.h")
+				)
+//				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"))
 		);
 //		astBuilder.build(new File("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
 		long start_time = System.nanoTime();
@@ -141,62 +145,189 @@ public final class AstBuilder {
 		}
 	}
 
-	private static void createBindings(IASTNode node, Map<IBinding, TreeNode<IBinding>> bindingMap) {
+	private static void createBindingMap(Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap, IASTNode node) {
+		final Map<IType, IBinding> TypeBindingMap = new HashMap<>();
 		if (node instanceof IASTName) {
 			IBinding binding = ((IASTName) node).resolveBinding();
 			while (binding != null && !(binding instanceof ISemanticProblem) && !bindingMap.containsKey(binding)) {
-				bindingMap.put(binding, new TreeNode<>(binding));
+				bindingMap.put(binding, new TreeNode<>(new Pair<>(binding, null)));
+//				if (binding instanceof)
 				binding = binding.getOwner();
 			}
 		}
 		final IASTNode[] children = node.getChildren();
 		if (children == null) return;
-		for (IASTNode child : children) {
-			createBindings(child, bindingMap);
+		for (final IASTNode child : children) {
+			createBindingMap(bindingMap, child);
 		}
 	}
 
-	private static void createBindingTree(TreeNode<IBinding> treeRoot, IASTTranslationUnit translationUnit) {
-		final Map<IBinding, TreeNode<IBinding>> bindingMap = new HashMap<>(16384);
-		createBindings(translationUnit, bindingMap);
-		for (final Map.Entry<IBinding, TreeNode<IBinding>> entry : bindingMap.entrySet()) {
+	private static void createBindingTree(TreeNode<Pair<IBinding, INode>> treeRoot, Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap) {
+		// TODO: tree walk ?
+		for (final Map.Entry<IBinding, TreeNode<Pair<IBinding, INode>>> entry : bindingMap.entrySet()) {
 			final IBinding binding = entry.getKey();
-			final TreeNode<IBinding> node = entry.getValue();
+			final TreeNode<Pair<IBinding, INode>> node = entry.getValue();
 			final IBinding parentBinding = binding.getOwner();
 			if (parentBinding == null) {
 				treeRoot.addChild(node);
 			} else if (!(parentBinding instanceof ISemanticProblem)) {
-				final TreeNode<IBinding> parentNode = bindingMap.get(parentBinding);
+				final TreeNode<Pair<IBinding, INode>> parentNode = bindingMap.get(parentBinding);
 				parentNode.addChild(node);
 			}
 		}
 	}
 
-	private void build() throws IOException {
+	private static IMember.Visibility createVisibilityFromMember(ICPPMember member) throws IllegalStateException {
+		switch (member.getVisibility()) {
+			case ICPPMember.v_private:
+				return IMember.Visibility.PRIVATE;
+			case ICPPMember.v_protected:
+				return IMember.Visibility.PROTECTED;
+			case ICPPMember.v_public:
+				return IMember.Visibility.PUBLIC;
+		}
+
+		throw new IllegalStateException("Member have illegal visibility value of " + member.getVisibility());
+	}
+
+	private static String createQualifiedNameFromCPPBinding(ICPPBinding binding) throws DOMException {
+		return String.join(".", binding.getQualifiedName());
+	}
+
+	private static IMember.Visibility createDefaultVisibilityFromClass(ICPPClassType classType) throws IllegalStateException {
+		switch (classType.getKey()) {
+			case ICPPClassType.k_class:
+				return IMember.Visibility.PRIVATE;
+			case ICompositeType.k_struct:
+			case ICompositeType.k_union:
+				return IMember.Visibility.PUBLIC;
+		}
+
+		throw new IllegalStateException("Class have illegal type value of " + classType.getKey());
+	}
+
+	private static void createAstTree(TreeNode<Pair<IBinding, INode>> parentTreeNode) throws DOMException {
+		final Pair<IBinding, INode> parentBindingAstPair = parentTreeNode.getValue();
+		assert parentBindingAstPair != null;
+		final INode parentAstNode = parentBindingAstPair.getValue();
+		for (TreeNode<Pair<IBinding, INode>> childTreeNode : parentTreeNode.getChildren()) {
+			final Pair<IBinding, INode> childBindingAstPair = childTreeNode.getValue();
+			assert childBindingAstPair != null;
+			final IBinding binding = childBindingAstPair.getKey();
+			if (binding instanceof ICPPSpecialization) continue;
+
+			INode childAstNode = null;
+
+			if (binding instanceof ICPPMember) {
+				if (parentAstNode instanceof IClass) {
+					final IMember.Visibility visibility = createVisibilityFromMember((ICPPMember) binding);
+					if (binding instanceof ICPPMethod) {
+						final String uniqueName =
+								createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
+										+ ((ICPPFunction) binding).getType();
+						childAstNode = FunctionNode.builder()
+								.setName(binding.toString())
+								.setSimpleName(binding.getName())
+								.setUniqueName(uniqueName)
+								.setVisibility(visibility)
+								//((ICPPFunction) binding).getType().getReturnType()
+								.build();
+					} else if (binding instanceof ICPPField) {
+						final String uniqueName =
+								createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
+										+ ((ICPPVariable) binding).getType();
+						childAstNode = VariableNode.builder()
+								.setName(binding.toString())
+								.setSimpleName(binding.getName())
+								.setUniqueName(uniqueName)
+								.setVisibility(visibility)
+								.build();
+					}
+				}
+			} else if (binding instanceof ICPPFunction) {
+				final String uniqueName =
+						createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
+								+ ((ICPPFunction) binding).getType();
+				childAstNode = FunctionNode.builder()
+						.setName(binding.toString())
+						.setSimpleName(binding.getName())
+						.setUniqueName(uniqueName)
+						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+						.build();
+			} else if (binding instanceof ICPPVariable) {
+				final String uniqueName =
+						createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
+								+ ((ICPPVariable) binding).getType();
+				childAstNode = VariableNode.builder()
+						.setName(binding.toString())
+						.setSimpleName(binding.getName())
+						.setUniqueName(uniqueName)
+						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+						.build();
+			} else if (binding instanceof ICPPClassType) {
+				childAstNode = ClassNode.builder()
+						.setName(binding.toString())
+						.setSimpleName(binding.getName())
+						.setUniqueName(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+						.setDefaultVisibility(createDefaultVisibilityFromClass((ICPPClassType) binding))
+						.build();
+			} else if (binding instanceof ICPPNamespace) {
+				childAstNode = NamespaceNode.builder()
+						.setName(binding.toString())
+						.setSimpleName(binding.getName())
+						.setUniqueName(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.build();
+			}
+			if (childAstNode != null) {
+				parentAstNode.addChild(childAstNode);
+				childBindingAstPair.setValue(childAstNode);
+				createAstTree(childTreeNode);
+			}
+		}
+	}
+
+	private void build() throws IOException, DOMException {
 		final Set<File> includePaths = TranslationUnitBuilder.createIncludePaths(projectFiles);
 //		final Map<File, Set<File>> includeMap = TranslationUnitBuilder.createIncludeMap(projectFiles, includePaths);
 
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(projectFiles, includePaths);
 
-//		{
-//			final File logFile = new File("R:\\preprocessed.log");
-//			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
-//				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
-//					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
-//						printer(printStream, 0, translationUnit, translationUnit);
-//					}
-//				}
-//			}
-//		}
+		{
+			final File logFile = new File("R:\\preprocessed.log");
+			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
+				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
+					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
+						printer(printStream, 0, translationUnit, translationUnit);
+					}
+				}
+			}
+		}
 
-		final TreeNode<IBinding> treeRoot = new TreeNode<>(null);
-		createBindingTree(treeRoot, translationUnit);
+		final Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap = new HashMap<>(4096);
+		createBindingMap(bindingMap, translationUnit);
+
+		final RootNode rootNode = new RootNode();
+		final TreeNode<Pair<IBinding, INode>> treeRoot = new TreeNode<>(new Pair<>(null, rootNode));
+		createBindingTree(treeRoot, bindingMap);
 		{
 			final File logFile = new File("R:\\treeRoot.log");
 			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
 				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
 					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
 						printStream.println(treeRoot);
+					}
+				}
+			}
+		}
+
+		createAstTree(treeRoot);
+		{
+			final File logFile = new File("R:\\tree.log");
+			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
+				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
+					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
+						printStream.println(rootNode.toTreeString());
 					}
 				}
 			}

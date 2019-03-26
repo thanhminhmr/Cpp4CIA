@@ -19,10 +19,10 @@ abstract class TreeNode implements ITreeNode {
 		throw new IllegalStateException("Unexpected foreign node in tree.");
 	}
 
-	public static String toString(@Nullable ITreeNode node) {
-		if (node == null) return "null";
+	@Nonnull
+	public final String toTreeString() {
 		final StringBuilder builder = new StringBuilder();
-		getTreeNode(node).internalToString(builder, 0);
+		internalToString(builder, 0);
 		return builder.toString();
 	}
 
@@ -30,9 +30,9 @@ abstract class TreeNode implements ITreeNode {
 	private void internalToString(@Nonnull StringBuilder builder, int level) {
 		final String alignString = "\t".repeat(level);
 		if (children.isEmpty()) {
-			builder.append(alignString).append("{ value: ").append(this).append(" }");
+			builder.append(alignString).append("{ value: ").append(this.toString()).append(" }");
 		} else {
-			builder.append(alignString).append("{ value: ").append(this).append(", children: [\n");
+			builder.append(alignString).append("{ value: ").append(this.toString()).append(", children: [\n");
 
 			getTreeNode(children.get(0)).internalToString(builder, level + 1);
 			for (int i = 1; i < children.size(); i++) {
