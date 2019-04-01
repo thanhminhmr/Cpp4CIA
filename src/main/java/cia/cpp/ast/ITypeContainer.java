@@ -1,5 +1,6 @@
 package cia.cpp.ast;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
@@ -8,7 +9,18 @@ import javax.annotation.Nullable;
 @IAstFragment
 public interface ITypeContainer extends INode {
 	@Nullable
-	IType getType();
+	INode getType();
 
-	void setType(@Nullable IType type);
+	void setType(@Nullable INode type);
+
+	/**
+	 * The type builder
+	 */
+	interface ITypeContainerBuilder<E extends ITypeContainer, B extends ITypeContainerBuilder> extends INodeBuilder<E, B> {
+		@Nullable
+		INode getType();
+
+		@Nonnull
+		B setType(@Nullable INode type);
+	}
 }

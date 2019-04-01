@@ -4,7 +4,22 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 @IAstComponent
-public interface IFunction extends IMember, IType, ITypeContainer, IClassContainer, IEnumContainer, ITypedefContainer, IVariableContainer {
-//	@Nonnull
-//	List<IParameter> getParameters();
+public interface IFunction extends ITypeContainer, IClassContainer, IEnumContainer, ITypedefContainer, IVariableContainer {
+	@Nonnull
+	List<INode> getParameters();
+
+	boolean addParameter(@Nonnull INode parameter);
+
+	boolean removeParameter(@Nonnull INode parameter);
+
+	/**
+	 * The function builder
+	 */
+	interface IFunctionBuilder extends INodeBuilder<IFunction, IFunctionBuilder>, ITypeContainerBuilder<IFunction, IFunctionBuilder> {
+		@Nonnull
+		List<INode> getParameters();
+
+		@Nonnull
+		IFunctionBuilder setParameters(@Nonnull List<INode> parameters);
+	}
 }

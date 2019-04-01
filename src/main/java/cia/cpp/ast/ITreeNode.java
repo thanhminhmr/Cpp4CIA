@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 
-public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
+public interface ITreeNode extends Iterable<ITreeNode> {
 	/**
 	 * Return the root node.
 	 *
@@ -54,10 +54,21 @@ public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	 * Return false if the child node doesn't belong to this node.
 	 * Return true otherwise.
 	 *
-	 * @param child a child node to removeFromParent
+	 * @param child a child node to remove
 	 * @return whether the operation is success or not
 	 */
 	boolean removeChild(@Nonnull ITreeNode child);
+
+	/**
+	 * Replace a child node by another node from current node.
+	 * Return false if the old child node doesn't belong to this node, or new child node already have parent.
+	 * Return true otherwise.
+	 *
+	 * @param oldChild a child node to remove
+	 * @param newChild a child node to add
+	 * @return whether the operation is success or not
+	 */
+	boolean replaceChild(@Nonnull ITreeNode oldChild, @Nonnull ITreeNode newChild);
 
 	/**
 	 * Add this node to the parent node.
@@ -74,7 +85,6 @@ public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	 * Return true otherwise.
 	 *
 	 * @return whether the operation is success or not
-	 * @throws IllegalStateException if the encapsulated value is not yet set.
 	 */
 	boolean removeFromParent();
 

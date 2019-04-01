@@ -12,10 +12,10 @@ public interface INode extends ITreeNode {
 	String getName();
 
 	@Nonnull
-	String getSimpleName();
+	String getUniqueName();
 
 	@Nonnull
-	String getUniqueName();
+	String getContent();
 
 	/**
 	 * @return read-only view of dependency info map
@@ -48,4 +48,33 @@ public interface INode extends ITreeNode {
 	 * @return true if the dependency info exist, false otherwise
 	 */
 	boolean removeDependency(@Nonnull INode node);
+
+	/**
+	 * @param <E> the node
+	 * @param <B> the node builder
+	 */
+	interface INodeBuilder<E extends INode, B extends INodeBuilder> {
+		boolean isValid();
+
+		@Nonnull
+		E build();
+
+		@Nullable
+		String getName();
+
+		@Nonnull
+		B setName(@Nonnull String name);
+
+		@Nullable
+		String getUniqueName();
+
+		@Nonnull
+		B setUniqueName(@Nonnull String uniqueName);
+
+		@Nullable
+		String getContent();
+
+		@Nonnull
+		B setContent(@Nonnull String content);
+	}
 }

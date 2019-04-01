@@ -2,53 +2,57 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 
-public final class TypedefNode extends Node implements ITypedef {
+public final class TypedefNode extends Node implements ITypedef, Serializable {
 	@Nullable
-	private IType type;
+	private INode type;
 
-	private TypedefNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable IType type) {
+	private TypedefNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable INode type) {
 		super(name, simpleName, uniqueName);
 		this.type = type;
 	}
 
-	public static TypedefNodeBuilder builder() {
+	@Nonnull
+	public static ITypedefBuilder builder() {
 		return new TypedefNodeBuilder();
 	}
 
 	@Nullable
 	@Override
-	public final IType getType() {
+	public final INode getType() {
 		return type;
 	}
 
 	@Override
-	public final void setType(@Nullable IType type) {
+	public final void setType(@Nullable INode type) {
 		this.type = type;
 	}
 
-	public static final class TypedefNodeBuilder extends NodeBuilder<TypedefNode, TypedefNodeBuilder> {
+	public static final class TypedefNodeBuilder extends NodeBuilder<ITypedef, ITypedefBuilder> implements ITypedefBuilder {
 		@Nullable
-		private IType type;
+		private INode type;
 
 		private TypedefNodeBuilder() {
 		}
 
 		@Nonnull
 		@Override
-		public final TypedefNode build() {
+		public final ITypedef build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new TypedefNode(name, simpleName, uniqueName, type);
+			return new TypedefNode(name, uniqueName, content, type);
 		}
 
+		@Override
 		@Nullable
-		public final IType getType() {
+		public final INode getType() {
 			return type;
 		}
 
+		@Override
 		@Nonnull
-		public final TypedefNodeBuilder setType(@Nullable IType type) {
+		public final ITypedefBuilder setType(@Nullable INode type) {
 			this.type = type;
 			return this;
 		}

@@ -2,44 +2,53 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public final class FunctionNode extends Node implements IFunction {
+public final class FunctionNode extends Node implements IFunction, Serializable {
 	@Nonnull
-	private final Visibility visibility;
-	@Nullable
-	private IType type;
+	private final List<INode> parameters;
 
-	private FunctionNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nullable IType type) {
+	@Nullable
+	private INode type;
+
+	private FunctionNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull List<INode> parameters, @Nullable INode type) {
 		super(name, simpleName, uniqueName);
-		this.visibility = visibility;
+		this.parameters = parameters;
 		this.type = type;
 	}
 
-	public static FunctionNodeBuilder builder() {
+	@Nonnull
+	public static IFunctionBuilder builder() {
 		return new FunctionNodeBuilder();
 	}
 
-//	@Nonnull
-//	@Override
-//	public final List<IParameter> getParameters() {
-//		return getChildrenList(IParameter.class);
-//	}
-
 	@Nonnull
 	@Override
-	public final Visibility getVisibility() {
-		return visibility;
+	public List<INode> getParameters() {
+		return Collections.unmodifiableList(parameters);
+	}
+
+	@Override
+	public boolean addParameter(@Nonnull INode parameter) {
+		return parameters.add(parameter);
+	}
+
+	@Override
+	public boolean removeParameter(@Nonnull INode parameter) {
+		return parameters.remove(parameter);
 	}
 
 	@Nullable
 	@Override
-	public final IType getType() {
+	public final INode getType() {
 		return type;
 	}
 
 	@Override
-	public final void setType(@Nullable IType type) {
+	public final void setType(@Nullable INode type) {
 		this.type = type;
 	}
 
@@ -67,53 +76,53 @@ public final class FunctionNode extends Node implements IFunction {
 		return getChildrenList(IVariable.class);
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
 		return "(" + getClass().getSimpleName() + ") { " + super.toString()
-				+ "\", visibility = " + visibility
 				+ ", type = " + type + " }";
 	}
 
-	public static final class FunctionNodeBuilder extends NodeBuilder<FunctionNode, FunctionNodeBuilder> {
+	public static final class FunctionNodeBuilder extends NodeBuilder<IFunction, IFunctionBuilder> implements IFunctionBuilder {
+		@Nonnull
+		private List<INode> parameters = new ArrayList<>();
+
 		@Nullable
-		private Visibility visibility;
-		@Nullable
-		private IType type;
+		private INode type;
 
 		private FunctionNodeBuilder() {
 		}
 
 		@Nonnull
 		@Override
-		public final FunctionNode build() {
+		public final IFunction build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new FunctionNode(name, simpleName, uniqueName, visibility, type);
-		}
-
-		@Override
-		boolean isValid() {
-			return super.isValid() && visibility != null;
-		}
-
-		@Nullable
-		public final Visibility getVisibility() {
-			return visibility;
+			return new FunctionNode(name, uniqueName, content, parameters, type);
 		}
 
 		@Nonnull
-		public final FunctionNodeBuilder setVisibility(@Nullable Visibility visibility) {
-			this.visibility = visibility;
+		@Override
+		public List<INode> getParameters() {
+			return parameters;
+		}
+
+		@Nonnull
+		@Override
+		public IFunctionBuilder setParameters(@Nonnull List<INode> parameters) {
+			this.parameters = new ArrayList<>(parameters);
 			return this;
 		}
 
+		@Override
 		@Nullable
-		public final IType getType() {
+		public final INode getType() {
 			return type;
 		}
 
+		@Override
 		@Nonnull
-		public final FunctionNodeBuilder setType(@Nullable IType type) {
+		public final IFunctionBuilder setType(@Nullable INode type) {
 			this.type = type;
 			return this;
 		}

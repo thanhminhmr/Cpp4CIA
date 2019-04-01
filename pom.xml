@@ -87,6 +87,12 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/org.eclipse.osgi_3.13.200.v20181130-2106.jar</systemPath>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/com.ibm.icu/icu4j -->
+        <dependency>
+            <groupId>com.ibm.icu</groupId>
+            <artifactId>icu4j</artifactId>
+            <version>64.1</version>
+        </dependency>
         <!-- endregion Eclipse CDT -->
 
         <!-- region jCPP -->

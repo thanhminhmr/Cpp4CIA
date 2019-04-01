@@ -2,87 +2,64 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.Serializable;
 
-public final class VariableNode extends Node implements IVariable {
-	@Nonnull
-	private final Visibility visibility;
+public final class VariableNode extends Node implements IVariable, Serializable {
 	@Nullable
-	private IType type;
+	private INode type;
 
-	public VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Visibility visibility, @Nullable IType type) {
+	public VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable INode type) {
 		super(name, simpleName, uniqueName);
-		this.visibility = visibility;
 		this.type = type;
 	}
 
-	public static VariableNodeBuilder builder() {
-		return new VariableNodeBuilder();
-	}
-
 	@Nonnull
-	@Override
-	public final Visibility getVisibility() {
-		return visibility;
+	public static IVariableBuilder builder() {
+		return new VariableNodeBuilder();
 	}
 
 	@Nullable
 	@Override
-	public final IType getType() {
+	public final INode getType() {
 		return type;
 	}
 
 	@Override
-	public final void setType(@Nullable IType type) {
+	public final void setType(@Nullable INode type) {
 		this.type = type;
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
 		return "(" + getClass().getSimpleName() + ") { " + super.toString()
-				+ "\", visibility = " + visibility
 				+ ", type = " + type + " }";
 	}
 
-	public static final class VariableNodeBuilder extends NodeBuilder<VariableNode, VariableNodeBuilder> {
+	public static final class VariableNodeBuilder extends NodeBuilder<IVariable, IVariableBuilder> implements IVariableBuilder {
 		@Nullable
-		private Visibility visibility;
-		@Nullable
-		private IType type;
+		private INode type;
 
 		private VariableNodeBuilder() {
 		}
 
 		@Nonnull
 		@Override
-		public final VariableNode build() {
+		public final IVariable build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new VariableNode(name, simpleName, uniqueName, visibility, type);
+			return new VariableNode(name, uniqueName, content, type);
 		}
 
 		@Override
-		boolean isValid() {
-			return super.isValid() && visibility != null;
-		}
-
 		@Nullable
-		public final Visibility getVisibility() {
-			return visibility;
-		}
-
-		@Nonnull
-		public final VariableNodeBuilder setVisibility(@Nullable Visibility visibility) {
-			this.visibility = visibility;
-			return this;
-		}
-
-		@Nullable
-		public final IType getType() {
+		public final INode getType() {
 			return type;
 		}
 
+		@Override
 		@Nonnull
-		public final VariableNodeBuilder setType(@Nullable IType type) {
+		public final IVariableBuilder setType(@Nullable INode type) {
 			this.type = type;
 			return this;
 		}

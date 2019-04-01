@@ -4,17 +4,22 @@ import cia.cpp.ast.*;
 import mrmathami.util.Pair;
 import mrmathami.util.tree.TreeNode;
 import org.anarres.cpp.*;
-import org.eclipse.cdt.core.dom.ast.IType;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
+import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.model.ILanguage;
 import org.eclipse.cdt.core.parser.*;
+import org.eclipse.cdt.internal.core.parser.IMacroDictionary;
+import org.eclipse.cdt.internal.core.parser.SavedFilesProvider;
+import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent;
+import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContentProvider;
 import org.eclipse.core.runtime.CoreException;
 
 import javax.annotation.Nonnull;
 import java.io.*;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class AstBuilder {
@@ -35,12 +40,20 @@ public final class AstBuilder {
 		}
 	}
 
+	private static String getCanonicalAbsolutePath(String path) {
+		return getCanonicalAbsolutePath(new File(path));
+	}
+
 	private static File getCanonicalAbsoluteFile(File file) {
 		try {
 			return file.getCanonicalFile();
 		} catch (IOException ignored) {
 			return file.getAbsoluteFile();
 		}
+	}
+
+	private static File getCanonicalAbsoluteFile(String path) {
+		return getCanonicalAbsoluteFile(new File(path));
 	}
 
 	private static char[] readFile(File file) {
@@ -84,13 +97,17 @@ public final class AstBuilder {
 
 	public static void main(String[] args) throws Exception {
 
-
 		AstBuilder astBuilder = new AstBuilder(
 				Set.of(
 						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
 						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
 						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.h")
 				)
+//				Set.of(
+//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
+//				)
 //				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"))
 		);
 //		astBuilder.build(new File("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
@@ -103,15 +120,21 @@ public final class AstBuilder {
 		char[] tabLevel = new char[level];
 		for (int i = 0; i < tabLevel.length; i++) tabLevel[i] = '\t';
 
+		final String raw = node.getRawSignature();
+		final int cr = raw.indexOf('\r');
+		final int lf = raw.indexOf('\n');
+		final int line = (cr < 0 || lf < 0) ? Integer.max(cr, lf) : Integer.min(cr, lf);
+		final String rawSub = (line < 0 || line > 60) ? (raw.length() > 60 ? raw.substring(0, 60) : raw) : raw.substring(0, line);
+
 
 		if (node instanceof IASTName) {
 			IBinding iBinding = ((IASTName) node).resolveBinding();
 			IASTName[] names = iBinding != null ? translationUnit.getDeclarationsInAST(iBinding) : null;
 
-			printStream.printf("%s%-" + (100 - level * 4) + "s + %-100s + %-50s | %-50s | %-50s | %s\n",
+			printStream.printf("%s%-" + (100 - level * 4 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
 					String.valueOf(tabLevel),
-					String.format("%-" + (100 - level * 4 - 13) + "s (0x%08X)", node.getClass().getSimpleName(), node.hashCode()),
-					node,
+					node.getClass().getSimpleName(), node.hashCode(),
+					rawSub,
 					node.getFileLocation(),
 					iBinding != null ? String.format("(0x%08X) %s", iBinding.hashCode(), iBinding.getClass().getSimpleName()) : null,
 					iBinding != null ? iBinding.getName() : null,
@@ -125,15 +148,9 @@ public final class AstBuilder {
 					}).toArray()) : null
 			);
 		} else {
-			String raw = node.getRawSignature();
-			int cr = raw.indexOf('\r');
-			int lf = raw.indexOf('\n');
-			int line = (cr < 0 || lf < 0) ? Integer.max(cr, lf) : Integer.min(cr, lf);
-			String rawSub = (line < 0) ? raw : raw.substring(0, line);
-
-			printStream.printf("%s%-" + (100 - level * 4) + "s | %-100s | %s\n",
+			printStream.printf("%s%-" + (100 - level * 4 - 13) + "s (0x%08X) | %-60s | %s\n",
 					String.valueOf(tabLevel),
-					String.format("%-" + (100 - level * 4 - 13) + "s (0x%08X)", node.getClass().getSimpleName(), node.hashCode()),
+					node.getClass().getSimpleName(), node.hashCode(),
 					rawSub,
 					node.getFileLocation()
 			);
@@ -146,7 +163,7 @@ public final class AstBuilder {
 	}
 
 	private static void createBindingMap(Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap, IASTNode node) {
-		final Map<IType, IBinding> TypeBindingMap = new HashMap<>();
+//		final Map<IType, IBinding> TypeBindingMap = new HashMap<>();
 		if (node instanceof IASTName) {
 			IBinding binding = ((IASTName) node).resolveBinding();
 			while (binding != null && !(binding instanceof ISemanticProblem) && !bindingMap.containsKey(binding)) {
@@ -177,34 +194,51 @@ public final class AstBuilder {
 		}
 	}
 
-	private static IMember.Visibility createVisibilityFromMember(ICPPMember member) throws IllegalStateException {
-		switch (member.getVisibility()) {
-			case ICPPMember.v_private:
-				return IMember.Visibility.PRIVATE;
-			case ICPPMember.v_protected:
-				return IMember.Visibility.PROTECTED;
-			case ICPPMember.v_public:
-				return IMember.Visibility.PUBLIC;
-		}
-
-		throw new IllegalStateException("Member have illegal visibility value of " + member.getVisibility());
-	}
+//	private static IMember.Visibility createVisibilityFromMember(ICPPMember member) throws IllegalStateException {
+//		switch (member.getVisibility()) {
+//			case ICPPMember.v_private:
+//				return IMember.Visibility.PRIVATE;
+//			case ICPPMember.v_protected:
+//				return IMember.Visibility.PROTECTED;
+//			case ICPPMember.v_public:
+//				return IMember.Visibility.PUBLIC;
+//		}
+//
+//		throw new IllegalStateException("Member have illegal visibility value of " + member.getVisibility());
+//	}
 
 	private static String createQualifiedNameFromCPPBinding(ICPPBinding binding) throws DOMException {
-		return String.join(".", binding.getQualifiedName());
+//		return String.join("::", binding.getQualifiedName());
+		return ASTTypeUtil.getQualifiedName(binding);
 	}
 
-	private static IMember.Visibility createDefaultVisibilityFromClass(ICPPClassType classType) throws IllegalStateException {
-		switch (classType.getKey()) {
-			case ICPPClassType.k_class:
-				return IMember.Visibility.PRIVATE;
-			case ICompositeType.k_struct:
-			case ICompositeType.k_union:
-				return IMember.Visibility.PUBLIC;
+	private static String createUniqueNameFromCPPBinding(ICPPBinding binding, IASTTranslationUnit translationUnit) {
+		if (binding instanceof ICPPFunction) {
+			ICPPFunction function = (ICPPFunction) binding;
+			function.getType();
+			function.getDeclaredType();
+		} else if (binding instanceof ICPPVariable) {
+			ICPPVariable variable = (ICPPVariable) binding;
+			variable.getType();
+			IASTName[] declarationsInAST = translationUnit.getDeclarationsInAST(binding);
+			for (IASTName iastName : declarationsInAST) {
+			}
 		}
-
-		throw new IllegalStateException("Class have illegal type value of " + classType.getKey());
+		return null;
 	}
+
+//
+//	private static IMember.Visibility createDefaultVisibilityFromClass(ICPPClassType classType) throws IllegalStateException {
+//		switch (classType.getKey()) {
+//			case ICPPClassType.k_class:
+//				return IMember.Visibility.PRIVATE;
+//			case ICompositeType.k_struct:
+//			case ICompositeType.k_union:
+//				return IMember.Visibility.PUBLIC;
+//		}
+//
+//		throw new IllegalStateException("Class have illegal type value of " + classType.getKey());
+//	}
 
 	private static void createAstTree(TreeNode<Pair<IBinding, INode>> parentTreeNode) throws DOMException {
 		final Pair<IBinding, INode> parentBindingAstPair = parentTreeNode.getValue();
@@ -220,16 +254,16 @@ public final class AstBuilder {
 
 			if (binding instanceof ICPPMember) {
 				if (parentAstNode instanceof IClass) {
-					final IMember.Visibility visibility = createVisibilityFromMember((ICPPMember) binding);
+//					final IMember.Visibility visibility = createVisibilityFromMember((ICPPMember) binding);
 					if (binding instanceof ICPPMethod) {
 						final String uniqueName =
 								createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
-										+ ((ICPPFunction) binding).getType();
+										+ ((ICPPFunction) binding).getDeclaredType();
 						childAstNode = FunctionNode.builder()
 								.setName(binding.toString())
-								.setSimpleName(binding.getName())
-								.setUniqueName(uniqueName)
-								.setVisibility(visibility)
+								.setUniqueName(binding.getName())
+								.setContent(uniqueName)
+//								.setVisibility(visibility)
 								//((ICPPFunction) binding).getType().getReturnType()
 								.build();
 					} else if (binding instanceof ICPPField) {
@@ -238,21 +272,21 @@ public final class AstBuilder {
 										+ ((ICPPVariable) binding).getType();
 						childAstNode = VariableNode.builder()
 								.setName(binding.toString())
-								.setSimpleName(binding.getName())
-								.setUniqueName(uniqueName)
-								.setVisibility(visibility)
+								.setUniqueName(binding.getName())
+								.setContent(uniqueName)
+//								.setVisibility(visibility)
 								.build();
 					}
 				}
 			} else if (binding instanceof ICPPFunction) {
 				final String uniqueName =
 						createQualifiedNameFromCPPBinding((ICPPBinding) binding) + ";"
-								+ ((ICPPFunction) binding).getType();
+								+ ((ICPPFunction) binding).getDeclaredType();
 				childAstNode = FunctionNode.builder()
 						.setName(binding.toString())
-						.setSimpleName(binding.getName())
-						.setUniqueName(uniqueName)
-						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+						.setUniqueName(binding.getName())
+						.setContent(uniqueName)
+//						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			} else if (binding instanceof ICPPVariable) {
 				final String uniqueName =
@@ -260,23 +294,30 @@ public final class AstBuilder {
 								+ ((ICPPVariable) binding).getType();
 				childAstNode = VariableNode.builder()
 						.setName(binding.toString())
-						.setSimpleName(binding.getName())
-						.setUniqueName(uniqueName)
-						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+						.setUniqueName(binding.getName())
+						.setContent(uniqueName)
+//						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			} else if (binding instanceof ICPPClassType) {
 				childAstNode = ClassNode.builder()
 						.setName(binding.toString())
-						.setSimpleName(binding.getName())
-						.setUniqueName(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
-						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
-						.setDefaultVisibility(createDefaultVisibilityFromClass((ICPPClassType) binding))
+						.setUniqueName(binding.getName())
+						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+//						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
+//						.setDefaultVisibility(createDefaultVisibilityFromClass((ICPPClassType) binding))
 						.build();
 			} else if (binding instanceof ICPPNamespace) {
 				childAstNode = NamespaceNode.builder()
 						.setName(binding.toString())
-						.setSimpleName(binding.getName())
-						.setUniqueName(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.setUniqueName(binding.getName())
+						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.build();
+			} else if (binding instanceof ICPPEnumeration) {
+				childAstNode = EnumNode.builder()
+						.setName(binding.toString())
+						.setUniqueName(binding.getName())
+						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+//						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			}
 			if (childAstNode != null) {
@@ -288,10 +329,22 @@ public final class AstBuilder {
 	}
 
 	private void build() throws IOException, DOMException {
-		final Set<File> includePaths = TranslationUnitBuilder.createIncludePaths(projectFiles);
+		final Set<File> includePaths = TranslationUnitBuilder.createInternalIncludePaths(projectFiles);
 //		final Map<File, Set<File>> includeMap = TranslationUnitBuilder.createIncludeMap(projectFiles, includePaths);
+//		System.out.println(includeMap);
 
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(projectFiles, includePaths);
+
+		assert translationUnit != null;
+		IASTDeclaration[] declarations = translationUnit.getDeclarations();
+		try (PrintStream stream = new PrintStream("R:\\declaration.log")) {
+			for (IASTDeclaration declaration : declarations) {
+				stream.printf("%-50s%s\n",
+						String.format("%s@%08x", declaration.getClass().getSimpleName(), System.identityHashCode(declaration)),
+						declaration.getRawSignature()
+				);
+			}
+		}
 
 		{
 			final File logFile = new File("R:\\preprocessed.log");
@@ -334,9 +387,177 @@ public final class AstBuilder {
 		}
 	}
 
+	private static final class AstTreeBuilder {
+		private final Map<IBinding, INode> bindingNodeMap = new HashMap<>();
+		private final Map<INode, IBinding> nodeTypeMap = new HashMap<>();
+		private final Map<INode, List<IBinding>> classBasesMap = new HashMap<>();
+
+		private <E extends INode, B extends INode.INodeBuilder<E, B>> INode createNode(IBinding binding, String content, B builder) {
+			// todo: support internal node
+			final INode existChildNode = bindingNodeMap.get(binding);
+			if (existChildNode != null) return existChildNode;
+
+			final E childNode = builder
+					.setName(binding.getName())
+					.setUniqueName(binding instanceof ICPPBinding
+							? ASTTypeUtil.getQualifiedName((ICPPBinding) binding)
+							: binding.getName())
+					.setContent(content)
+					.build();
+
+			bindingNodeMap.put(binding, childNode);
+			return childNode;
+		}
+
+		private INode createFromDeclarator(INode typeNode, IASTDeclarator declarator) {
+			final IASTName declaratorName = declarator.getName();
+			final IBinding declaratorBinding = declaratorName.resolveBinding();
+
+			if (declarator instanceof ICPPASTFunctionDeclarator) {
+				// region
+				final ICPPASTFunctionDeclarator functionDeclarator = (ICPPASTFunctionDeclarator) declarator;
+
+				final List<INode> parameterList = new ArrayList<>();
+
+				final ICPPASTParameterDeclaration[] functionParameters = functionDeclarator.getParameters();
+				for (final ICPPASTParameterDeclaration functionParameter : functionParameters) {
+					final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
+					final INode parameterType = createFromDeclSpecifier(parameterSpecifier);
+
+					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
+					final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
+					parameterList.add(parameterNode);
+				}
+
+				final INode functionNode = createNode(declaratorBinding, functionDeclarator.getRawSignature(),
+						FunctionNode.builder().setType(typeNode).setParameters(parameterList));
+
+				for (final INode parameterNode : parameterList) {
+					functionNode.addChild(parameterNode);
+				}
+				// endregion
+				return functionNode;
+			} else {
+				// todo: variable, etc...
+				return createNode(declaratorBinding, declarator.getRawSignature(), VariableNode.builder());
+			}
+		}
+
+		private INode createFromDeclSpecifier(IASTDeclSpecifier declSpecifier) {
+			if (declSpecifier instanceof ICPPASTEnumerationSpecifier) {
+				// region
+				final ICPPASTEnumerationSpecifier enumerationSpecifier = (ICPPASTEnumerationSpecifier) declSpecifier;
+				final IASTName enumerationName = enumerationSpecifier.getName();
+				final IBinding enumerationBinding = enumerationName.resolveBinding();
+
+				final INode enumNode = createNode(enumerationBinding, enumerationSpecifier.getRawSignature(), EnumNode.builder());
+
+				final INode nodeType = enumerationSpecifier.isScoped() ? enumNode : null;
+				final IASTEnumerationSpecifier.IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
+				for (final IASTEnumerationSpecifier.IASTEnumerator enumerator : enumerators) {
+					final IASTName enumeratorName = enumerator.getName();
+					final IBinding enumeratorBinding = enumeratorName.resolveBinding();
+
+					final INode enumeratorNode = createNode(enumeratorBinding, enumerator.getRawSignature(),
+							VariableNode.builder().setType(nodeType));
+
+					enumNode.addChild(enumeratorNode);
+				}
+				// endregion
+				return enumNode;
+			} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
+				// region
+				final ICPPASTCompositeTypeSpecifier classSpecifier = (ICPPASTCompositeTypeSpecifier) declSpecifier;
+				final IASTName className = classSpecifier.getName();
+				final IBinding classBinding = className.resolveBinding();
+
+				final INode classNode = createNode(classBinding, classSpecifier.getRawSignature(), ClassNode.builder());
+
+				final List<IBinding> classBases = new ArrayList<>();
+
+				final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier[] classBaseSpecifiers = classSpecifier.getBaseSpecifiers();
+				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classBaseSpecifiers) {
+					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
+					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
+
+					classBases.add(classBaseNameBinding);
+				}
+
+				classBasesMap.put(classNode, classBases);
+
+				final IASTDeclaration[] classChildDeclarations = classSpecifier.getDeclarations(false);
+				for (final IASTDeclaration classChildDeclaration : classChildDeclarations) {
+					createChildrenFromDeclaration(classNode, classChildDeclaration);
+				}
+				// endregion
+				return classNode;
+			} else if (declSpecifier instanceof ICPPASTNamedTypeSpecifier) {
+				final IASTNamedTypeSpecifier typeSpecifier = (IASTNamedTypeSpecifier) declSpecifier;
+				final IASTName typeName = typeSpecifier.getName();
+				final IBinding typeBinding = typeName.resolveBinding();
+
+				// todo: <<<<<<<<<<<<<<<<<<<<<<
+
+			}
+		}
+
+		private void createChildrenFromDeclaration(INode parentNode, IASTDeclaration declaration) {
+			if (declaration instanceof ICPPASTNamespaceDefinition) {
+				// region
+				final ICPPASTNamespaceDefinition namespaceDefinition = (ICPPASTNamespaceDefinition) declaration;
+				final IASTName namespaceName = namespaceDefinition.getName();
+				final IBinding namespaceBinding = namespaceName.resolveBinding();
+
+				final INode namespaceNode = createNode(namespaceBinding, namespaceDefinition.getRawSignature(), NamespaceNode.builder());
+				final IASTDeclaration[] namespaceChildDeclarations = namespaceDefinition.getDeclarations(false);
+				for (final IASTDeclaration namespaceChildDeclaration : namespaceChildDeclarations) {
+					createChildrenFromDeclaration(namespaceNode, namespaceChildDeclaration);
+				}
+				// endregion
+				parentNode.addChild(namespaceNode);
+			} else if (declaration instanceof IASTSimpleDeclaration) {
+				// region
+				final IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) declaration;
+
+				final IASTDeclSpecifier simpleSpecifier = simpleDeclaration.getDeclSpecifier();
+				final INode simpleNodeType = createFromDeclSpecifier(simpleSpecifier);
+
+				final IASTDeclarator[] declarators = simpleDeclaration.getDeclarators();
+				for (final IASTDeclarator declarator : declarators) {
+					final INode simpleNode = createFromDeclarator(simpleNodeType, declarator);
+					parentNode.addChild(simpleNode);
+				}
+				// endregion
+			} else if (declaration instanceof ICPPASTFunctionDefinition) {
+				// region
+				final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
+
+				final IASTDeclSpecifier functionSpecifier = functionDefinition.getDeclSpecifier();
+				final INode functionReturnType = createFromDeclSpecifier(functionSpecifier);
+
+				final IASTFunctionDeclarator functionDeclarator = functionDefinition.getDeclarator();
+				final INode functionNode = createFromDeclarator(functionReturnType, functionDeclarator);
+
+				functionDefinition.getMemberInitializers();
+				functionDefinition.getBody();
+				// endregion
+				parentNode.addChild(functionNode);
+
+			} else {
+				// todo: debug?
+			}
+		}
+
+
+		private static final class InternalNode extends Node {
+			private InternalNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
+				super(name, uniqueName, content);
+			}
+		}
+	}
 
 	private static final class TranslationUnitBuilder {
-		private static final IncludeFileContentProvider EMPTY_PROVIDER = IncludeFileContentProvider.getEmptyFilesProvider();
+		private static final IncludeFileContentProvider EMPTY_PROVIDER = /*new MyIncludeFileContentProvider();*/IncludeFileContentProvider.getEmptyFilesProvider();
 		private static final IParserLogService LOG_SERVICE = new DefaultLogService();
 		private static final GPPLanguage GPP_LANGUAGE = GPPLanguage.getDefault();
 		private static final IScannerInfo SCANNER_INFO = new ScannerInfo();
@@ -344,7 +565,7 @@ public final class AstBuilder {
 		private TranslationUnitBuilder() {
 		}
 
-		private static Set<File> createIncludePaths(Set<File> projectFiles) {
+		private static Set<File> createInternalIncludePaths(Set<File> projectFiles) {
 			final Set<File> includePaths = new HashSet<>();
 			for (final File projectFile : projectFiles) {
 				includePaths.add(getCanonicalAbsoluteFile(projectFile.getParentFile()));
@@ -352,7 +573,7 @@ public final class AstBuilder {
 			return includePaths;
 		}
 
-		private static Set<File> createFileIncludes(IASTTranslationUnit translationUnit, Set<File> projectFiles, Set<File> includePaths, File currentFolder) {
+		private static Set<File> createFileIncludes(IASTTranslationUnit translationUnit, Set<File> projectFiles, Set<File> internalIncludePaths, File currentFolder) {
 			final IASTPreprocessorIncludeStatement[] includeDirectives = translationUnit.getIncludeDirectives();
 			final Set<File> includeList = new HashSet<>();
 			for (final IASTPreprocessorIncludeStatement includeDirective : includeDirectives) {
@@ -363,7 +584,7 @@ public final class AstBuilder {
 						includeList.add(includeFile);
 						continue;
 					}
-					for (final File includePath : includePaths) {
+					for (final File includePath : internalIncludePaths) {
 						final File file = getCanonicalAbsoluteFile(new File(includePath, includeFileName));
 						if (projectFiles.contains(file)) {
 							includeList.add(file);
@@ -375,7 +596,7 @@ public final class AstBuilder {
 			return includeList;
 		}
 
-		private static Map<File, Set<File>> createIncludeMap(Set<File> projectFiles, Set<File> includePaths) {
+		private static Map<File, Set<File>> createIncludeMap(Set<File> projectFiles, Set<File> internalIncludePaths) {
 			final Map<File, Set<File>> includeMap = new HashMap<>();
 			for (final File currentFile : projectFiles) {
 				try {
@@ -387,7 +608,7 @@ public final class AstBuilder {
 									| ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS,
 							LOG_SERVICE);
 
-					includeMap.put(currentFile, createFileIncludes(translationUnit, projectFiles, includePaths, currentFile.getParentFile()));
+					includeMap.put(currentFile, createFileIncludes(translationUnit, projectFiles, internalIncludePaths, currentFile.getParentFile()));
 				} catch (CoreException e) {
 					e.printStackTrace();
 				}
@@ -395,24 +616,58 @@ public final class AstBuilder {
 			return includeMap;
 		}
 
-		private static IASTTranslationUnit build(Set<File> projectFiles, Set<File> includePaths) {
-			final char[] fileContentChars = PreprocessorBuilder.build(projectFiles, includePaths);
+		private static IASTTranslationUnit build(Set<File> projectFiles, Set<File> internalIncludePaths) {
+			final char[] fileContentChars = PreprocessorBuilder.build(projectFiles, internalIncludePaths);
 			final FileContent fileContent = FileContent.create("preprocessed.cpp", fileContentChars);
 			try {
 				return GPP_LANGUAGE.getASTTranslationUnit(
 						fileContent, SCANNER_INFO, EMPTY_PROVIDER, null,
-						ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS
-								| ILanguage.OPTION_NO_IMAGE_LOCATIONS,
-						LOG_SERVICE);
+						ILanguage.OPTION_NO_IMAGE_LOCATIONS
+								| ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS, LOG_SERVICE);
 			} catch (CoreException e) {
 				e.printStackTrace();
 			}
 			return null;
 		}
+//
+//		private static IASTTranslationUnit build2(Set<File> projectFiles, Set<File> internalIncludePaths) {
+////			final char[] fileContentChars = PreprocessorBuilder.build(projectFiles, internalIncludePaths);
+//			final FileContent fileContent = FileContent.create("preprocessed.cpp", fileContentChars);
+//			try {
+//				return GPP_LANGUAGE.getASTTranslationUnit(
+//						fileContent, SCANNER_INFO, EMPTY_PROVIDER, null,
+//						ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS
+//								| ILanguage.OPTION_NO_IMAGE_LOCATIONS,
+//						LOG_SERVICE);
+//			} catch (CoreException e) {
+//				e.printStackTrace();
+//			}
+//			return null;
+//		}
+//		private static Map<File, IASTTranslationUnit> buildMultiple() {
+//			final Map<File, IASTTranslationUnit> map = new HashMap<>();
+//		}
+
+		private static final class MyIncludeFileContentProvider extends SavedFilesProvider {
+			//			private final Set<File> projectFiles;
+			@Override
+			public InternalFileContent getContentForInclusion(String path, IMacroDictionary macroDictionary) {
+//				final File file = getCanonicalAbsoluteFile(path);
+				System.out.println(path);
+				return ((InternalFileContentProvider) IncludeFileContentProvider.getEmptyFilesProvider()).getContentForInclusion(path, macroDictionary);
+			}
+
+			@Override
+			public InternalFileContent getContentForInclusion(IIndexFileLocation ifl, String astPath) {
+				System.out.println(astPath);
+				return ((InternalFileContentProvider) IncludeFileContentProvider.getEmptyFilesProvider()).getContentForInclusion(ifl, astPath);
+			}
+		}
 	}
 
 	private static final class PreprocessorBuilder implements PreprocessorListener {
 		private static final PreprocessorBuilder EMPTY_PREPROCESSOR_LISTENER = new PreprocessorBuilder();
+		private static final Pattern ALPHANUMERIC = Pattern.compile("[0-9A-Z_a-z]*");
 
 		private PreprocessorBuilder() {
 		}
@@ -436,7 +691,6 @@ public final class AstBuilder {
 			preprocessor.addFeature(Feature.TRIGRAPHS);
 			preprocessor.addFeature(Feature.LINEMARKERS);
 			preprocessor.addMacro("__JCPP__");
-			preprocessor.addMacro("__cplusplus");
 
 			final List<String> includePathStrings = new ArrayList<>();
 			for (final File file : includePaths) includePathStrings.add(file.getPath());
@@ -450,21 +704,23 @@ public final class AstBuilder {
 			return preprocessor;
 		}
 
+		private static boolean isValidChar(char c) {
+			return c == '"' || c == '\'' || c >= '0' && c <= '9' || c >= 'A' && c <= 'Z' || c == '_' || c >= 'a' && c <= 'z';
+		}
+
 		private static StringBuilder runPreprocessor(Set<File> projectFiles, Set<File> includePaths) throws IOException, LexerException {
 			final Preprocessor preprocessor = createPreprocessor(projectFiles, includePaths);
 			final StringBuilder fileContent = new StringBuilder();
 
+			/*
 			int emptyLine = 1;
 			final StringBuilder emptyLineBuilder = new StringBuilder();
 			while (true) {
 				final Token tok = preprocessor.token();
 				if (tok.getType() == Token.EOF) break;
 
-				/*
-				DON'T PANIC. THERE IS NOTHING HERE USEFUL. SKIP IT.
-				BASICALLY IT TRIM THE EMPTY LINES, ONLY KEEP AT MOST 2 SEQUENCE EMPTY LINES
-				 */
-
+//				DON'T PANIC. THERE IS NOTHING HERE USEFUL. SKIP IT.
+//				BASICALLY IT TRIM THE EMPTY LINES, ONLY KEEP AT MOST 2 SEQUENCE EMPTY LINES
 				if (tok.getType() != Token.CCOMMENT && tok.getType() != Token.CPPCOMMENT) {
 					final String tokText = tok.getText().replace("\r\n", "\n").replace("\r", "\n");
 					if (tok.getType() != Token.WHITESPACE && !tokText.isBlank()) {
@@ -491,8 +747,54 @@ public final class AstBuilder {
 					}
 				}
 			}
+			/*/
+			boolean haveEndSpace = true;
+//			boolean needSpace = false;
+//			boolean specialNoNamePointer = false;
+			while (true) {
+				final Token token = preprocessor.token();
+				if (token.getType() == Token.EOF) break;
 
-			return fileContent;
+				if (token.getType() == Token.CCOMMENT
+						|| token.getType() == Token.CPPCOMMENT
+						|| token.getType() == Token.P_LINE) {
+					continue;
+				}
+
+				if (token.getType() == Token.NL
+						|| token.getType() == Token.WHITESPACE) {
+					haveEndSpace = true;
+					continue;
+				}
+
+//				final String tokenText = token.getText();
+//				if (tokenText.isBlank()) continue;
+//				final String tokenTextTrim = tokenText.trim();
+//				if (specialNoNamePointer && token.getType() == '=' || needSpace && haveEndSpace && isValidChar(tokenTextTrim.charAt(0))) {
+//					fileContent.append(' ');
+//				}
+//				fileContent.append(tokenTextTrim);
+//				needSpace = isValidChar(tokenTextTrim.charAt(tokenTextTrim.length() - 1));
+//				haveEndSpace = false;
+//				specialNoNamePointer = token.getType() == '*';
+
+				final String tokenText = token.getText().trim();
+				if (tokenText.isBlank()) {
+					haveEndSpace = true;
+					continue;
+				}
+				if (haveEndSpace) fileContent.append(' ');
+				fileContent.append(tokenText);
+				haveEndSpace = false;
+			}
+			//*/
+
+			//todo: dbg
+			try (FileWriter writer = new FileWriter("R:\\output.cpp")) {
+				writer.write(fileContent.toString());
+			} catch (IOException ignored) {
+			}
+			return fileContent.append('\n');
 		}
 
 		private static char[] build(Set<File> projectFiles, Set<File> includePaths) {

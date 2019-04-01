@@ -9,7 +9,7 @@ abstract class TreeNode implements ITreeNode {
 	private ITreeNode parent;
 
 	@Nonnull
-	private List<ITreeNode> children = new LinkedList<>();
+	private List<ITreeNode> children = new ArrayList<>();
 
 	protected TreeNode() {
 	}
@@ -18,6 +18,9 @@ abstract class TreeNode implements ITreeNode {
 		if (iTreeNode instanceof TreeNode) return (TreeNode) iTreeNode;
 		throw new IllegalStateException("Unexpected foreign node in tree.");
 	}
+
+	@Nonnull
+	public abstract String toString();
 
 	@Nonnull
 	public final String toTreeString() {
@@ -131,6 +134,21 @@ abstract class TreeNode implements ITreeNode {
 		return true;
 	}
 
+	@Override
+	public boolean replaceChild(@Nonnull ITreeNode oldChild, @Nonnull ITreeNode newChild) {
+		// check if current node is not parent node
+		if (oldChild.getParent() != this) return false;
+		// check if child node is root node
+		if (!newChild.isRoot()) return false;
+
+		final int index = children.indexOf(oldChild);
+		assert index >= 0;
+		children.set(index, newChild);
+		getTreeNode(oldChild).internalSetParent(null);
+		getTreeNode(newChild).internalSetParent(this);
+		return true;
+	}
+
 	/**
 	 * Add this node to the parent node.
 	 * Return false if this node already have parent node.
@@ -149,7 +167,6 @@ abstract class TreeNode implements ITreeNode {
 	 * Return true otherwise.
 	 *
 	 * @return whether the operation is success or not
-	 * @throws IllegalStateException if the encapsulated value is not yet set.
 	 */
 	@Override
 	public final boolean removeFromParent() {

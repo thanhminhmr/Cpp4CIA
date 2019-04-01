@@ -7,23 +7,23 @@ import java.util.*;
 /**
  * Base of nay AST TreeNode. Do not use TreeNode class directly.
  */
-abstract class Node extends TreeNode implements INode {
+public abstract class Node extends TreeNode implements INode {
 	@Nonnull
 	private final String name;
-
-	@Nonnull
-	private final String simpleName;
 
 	@Nonnull
 	private final String uniqueName;
 
 	@Nonnull
+	private final String content;
+
+	@Nonnull
 	private final Map<INode, Dependency> dependencyMap = new HashMap<>();
 
-	protected Node(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
+	protected Node(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
 		this.name = name;
-		this.simpleName = simpleName;
 		this.uniqueName = uniqueName;
+		this.content = content;
 	}
 
 	@Override
@@ -33,13 +33,13 @@ abstract class Node extends TreeNode implements INode {
 	}
 
 	@Nonnull
-	public final String getSimpleName() {
-		return simpleName;
+	public final String getUniqueName() {
+		return uniqueName;
 	}
 
 	@Nonnull
-	public final String getUniqueName() {
-		return uniqueName;
+	public final String getContent() {
+		return content;
 	}
 
 	protected final <E> List<E> getChildrenList(final Class<E> aClass) {
@@ -82,34 +82,38 @@ abstract class Node extends TreeNode implements INode {
 	@Nonnull
 	@Override
 	public String toString() {
-		return "(" + getClass().getSimpleName() + ") { name = \"" + name + "\", simpleName = \"" + simpleName + "\", uniqueName = \"" + uniqueName + "\" }";
+		return "(" + getClass().getSimpleName() + ") { name = \"" + name + "\", uniqueName = \"" + uniqueName + "\", content = \"" + content + "\" }";
 	}
 
-	protected static abstract class NodeBuilder<E extends Node, B extends NodeBuilder> {
+	protected static abstract class NodeBuilder<E extends INode, B extends INodeBuilder> implements INodeBuilder<E, B> {
 		@Nullable
 		protected String name;
 
 		@Nullable
-		protected String simpleName;
+		protected String uniqueName;
 
 		@Nullable
-		protected String uniqueName;
+		protected String content;
 
 		protected NodeBuilder() {
 		}
 
-		boolean isValid() {
-			return name != null && simpleName != null && uniqueName != null;
+		@Override
+		public boolean isValid() {
+			return name != null && uniqueName != null && content != null;
 		}
 
+		@Override
 		@Nonnull
 		public abstract E build();
 
+		@Override
 		@Nullable
 		public final String getName() {
 			return name;
 		}
 
+		@Override
 		@Nonnull
 		public final B setName(@Nonnull String name) {
 			this.name = name;
@@ -117,26 +121,30 @@ abstract class Node extends TreeNode implements INode {
 			return (B) this;
 		}
 
-		@Nullable
-		public final String getSimpleName() {
-			return simpleName;
-		}
-
-		@Nonnull
-		public final B setSimpleName(@Nonnull String simpleName) {
-			this.simpleName = simpleName;
-			//noinspection unchecked
-			return (B) this;
-		}
-
+		@Override
 		@Nullable
 		public final String getUniqueName() {
 			return uniqueName;
 		}
 
+		@Override
 		@Nonnull
 		public final B setUniqueName(@Nonnull String uniqueName) {
 			this.uniqueName = uniqueName;
+			//noinspection unchecked
+			return (B) this;
+		}
+
+		@Override
+		@Nullable
+		public final String getContent() {
+			return content;
+		}
+
+		@Override
+		@Nonnull
+		public final B setContent(@Nonnull String content) {
+			this.content = content;
 			//noinspection unchecked
 			return (B) this;
 		}
