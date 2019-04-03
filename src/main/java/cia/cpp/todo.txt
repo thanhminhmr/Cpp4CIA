@@ -1,0 +1,4 @@
+1. design the CIA tree with the CDT tree:
+- loosely bind to it
+- have a trim function to trim it's dependency
+- must be Serializable

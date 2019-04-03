@@ -1,4 +1,4 @@
-package cia.cpp.builder.ast;
+package cia.cpp.builder;
 
 import cia.cpp.ast.IFunction;
 import cia.cpp.ast.*;
@@ -12,24 +12,22 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class AstBuilder {
-	private final IASTTranslationUnit translationUnit;
+final class AstBuilder {
 	private final Map<String, INode> integralNodeMap = new HashMap<>();
 	private final Map<IBinding, INode> bindingNodeMap = new HashMap<>();
 
-	private AstBuilder(IASTTranslationUnit translationUnit) {
-		this.translationUnit = translationUnit;
+	private AstBuilder() {
 	}
 
 	private static String objectToString(Object object) {
 		return object != null ? String.format("(0x%08X) %s", object.hashCode(), object.getClass().getSimpleName()) : "null";
 	}
 
-	public static AstBuilder of(IASTTranslationUnit translationUnit) {
-		return new AstBuilder(translationUnit);
+	public static IRoot build(IASTTranslationUnit translationUnit) {
+		return new AstBuilder().internalBuild(translationUnit);
 	}
 
-	public final IRoot build() {
+	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
 		final IRoot rootNode = new RootNode();
 		for (IASTDeclaration declaration : translationUnit.getDeclarations()) {
 			createChildrenFromDeclaration(rootNode, declaration);

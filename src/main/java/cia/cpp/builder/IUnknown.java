@@ -1,4 +1,4 @@
-package cia.cpp.builder.ast;
+package cia.cpp.builder;
 
 import cia.cpp.ast.INode;
 
