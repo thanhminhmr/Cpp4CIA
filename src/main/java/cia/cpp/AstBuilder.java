@@ -1,6 +1,8 @@
 package cia.cpp;
 
+import cia.cpp.ast.IFunction;
 import cia.cpp.ast.*;
+import mrmathami.util.ImmutablePair;
 import mrmathami.util.Pair;
 import mrmathami.util.tree.TreeNode;
 import org.anarres.cpp.*;
@@ -10,6 +12,7 @@ import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.index.IIndexFileLocation;
 import org.eclipse.cdt.core.model.ILanguage;
 import org.eclipse.cdt.core.parser.*;
+import org.eclipse.cdt.internal.core.model.ASTStringUtil;
 import org.eclipse.cdt.internal.core.parser.IMacroDictionary;
 import org.eclipse.cdt.internal.core.parser.SavedFilesProvider;
 import org.eclipse.cdt.internal.core.parser.scanner.InternalFileContent;
@@ -30,6 +33,10 @@ public final class AstBuilder {
 
 	public AstBuilder(Set<File> projectFiles) {
 		this.projectFiles = projectFiles.stream().map(AstBuilder::getCanonicalAbsoluteFile).collect(Collectors.toUnmodifiableSet());
+	}
+
+	private static String objectToString(Object object) {
+		return object != null ? String.format("(0x%08X) %s", object.hashCode(), object.getClass().getSimpleName()) : "null";
 	}
 
 	private static String getCanonicalAbsolutePath(File file) {
@@ -117,22 +124,18 @@ public final class AstBuilder {
 	}
 
 	private static void printer(PrintStream printStream, int level, IASTNode node, IASTTranslationUnit translationUnit) {
-		char[] tabLevel = new char[level];
-		for (int i = 0; i < tabLevel.length; i++) tabLevel[i] = '\t';
-
 		final String raw = node.getRawSignature();
 		final int cr = raw.indexOf('\r');
 		final int lf = raw.indexOf('\n');
 		final int line = (cr < 0 || lf < 0) ? Integer.max(cr, lf) : Integer.min(cr, lf);
 		final String rawSub = (line < 0 || line > 60) ? (raw.length() > 60 ? raw.substring(0, 60) : raw) : raw.substring(0, line);
 
-
 		if (node instanceof IASTName) {
 			IBinding iBinding = ((IASTName) node).resolveBinding();
 			IASTName[] names = iBinding != null ? translationUnit.getDeclarationsInAST(iBinding) : null;
 
-			printStream.printf("%s%-" + (100 - level * 4 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
-					String.valueOf(tabLevel),
+			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
+					"",
 					node.getClass().getSimpleName(), node.hashCode(),
 					rawSub,
 					node.getFileLocation(),
@@ -148,8 +151,8 @@ public final class AstBuilder {
 					}).toArray()) : null
 			);
 		} else {
-			printStream.printf("%s%-" + (100 - level * 4 - 13) + "s (0x%08X) | %-60s | %s\n",
-					String.valueOf(tabLevel),
+			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) | %-60s | %s\n",
+					"",
 					node.getClass().getSimpleName(), node.hashCode(),
 					rawSub,
 					node.getFileLocation()
@@ -262,7 +265,7 @@ public final class AstBuilder {
 						childAstNode = FunctionNode.builder()
 								.setName(binding.toString())
 								.setUniqueName(binding.getName())
-								.setContent(uniqueName)
+								.setSignature(uniqueName)
 //								.setVisibility(visibility)
 								//((ICPPFunction) binding).getType().getReturnType()
 								.build();
@@ -273,7 +276,7 @@ public final class AstBuilder {
 						childAstNode = VariableNode.builder()
 								.setName(binding.toString())
 								.setUniqueName(binding.getName())
-								.setContent(uniqueName)
+								.setSignature(uniqueName)
 //								.setVisibility(visibility)
 								.build();
 					}
@@ -285,7 +288,7 @@ public final class AstBuilder {
 				childAstNode = FunctionNode.builder()
 						.setName(binding.toString())
 						.setUniqueName(binding.getName())
-						.setContent(uniqueName)
+						.setSignature(uniqueName)
 //						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			} else if (binding instanceof ICPPVariable) {
@@ -295,14 +298,14 @@ public final class AstBuilder {
 				childAstNode = VariableNode.builder()
 						.setName(binding.toString())
 						.setUniqueName(binding.getName())
-						.setContent(uniqueName)
+						.setSignature(uniqueName)
 //						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			} else if (binding instanceof ICPPClassType) {
 				childAstNode = ClassNode.builder()
 						.setName(binding.toString())
 						.setUniqueName(binding.getName())
-						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.setSignature(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
 //						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 //						.setDefaultVisibility(createDefaultVisibilityFromClass((ICPPClassType) binding))
 						.build();
@@ -310,13 +313,13 @@ public final class AstBuilder {
 				childAstNode = NamespaceNode.builder()
 						.setName(binding.toString())
 						.setUniqueName(binding.getName())
-						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.setSignature(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
 						.build();
 			} else if (binding instanceof ICPPEnumeration) {
 				childAstNode = EnumNode.builder()
 						.setName(binding.toString())
 						.setUniqueName(binding.getName())
-						.setContent(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
+						.setSignature(createQualifiedNameFromCPPBinding((ICPPBinding) binding))
 //						.setVisibility((parentAstNode instanceof IClass) ? ((IClass) parentAstNode).getChildDefaultVisibility() : IMember.Visibility.PUBLIC)
 						.build();
 			}
@@ -336,7 +339,7 @@ public final class AstBuilder {
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(projectFiles, includePaths);
 
 		assert translationUnit != null;
-		IASTDeclaration[] declarations = translationUnit.getDeclarations();
+		final IASTDeclaration[] declarations = translationUnit.getDeclarations();
 		try (PrintStream stream = new PrintStream("R:\\declaration.log")) {
 			for (IASTDeclaration declaration : declarations) {
 				stream.printf("%-50s%s\n",
@@ -357,26 +360,9 @@ public final class AstBuilder {
 			}
 		}
 
-		final Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap = new HashMap<>(4096);
-		createBindingMap(bindingMap, translationUnit);
-
-		final RootNode rootNode = new RootNode();
-		final TreeNode<Pair<IBinding, INode>> treeRoot = new TreeNode<>(new Pair<>(null, rootNode));
-		createBindingTree(treeRoot, bindingMap);
+		final IRoot rootNode = cia.cpp.builder.ast.AstBuilder.of(translationUnit).build();
 		{
-			final File logFile = new File("R:\\treeRoot.log");
-			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
-				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
-					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
-						printStream.println(treeRoot);
-					}
-				}
-			}
-		}
-
-		createAstTree(treeRoot);
-		{
-			final File logFile = new File("R:\\tree.log");
+			final File logFile = new File("R:\\tree_new.log");
 			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
 				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
 					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
@@ -385,176 +371,37 @@ public final class AstBuilder {
 				}
 			}
 		}
+
+//		final Map<IBinding, TreeNode<Pair<IBinding, INode>>> bindingMap = new HashMap<>(4096);
+//		createBindingMap(bindingMap, translationUnit);
+//
+//		final RootNode rootNode = new RootNode();
+//		final TreeNode<Pair<IBinding, INode>> treeRoot = new TreeNode<>(new Pair<>(null, rootNode));
+//		createBindingTree(treeRoot, bindingMap);
+//		{
+//			final File logFile = new File("R:\\treeRoot.log");
+//			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
+//				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
+//					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
+//						printStream.println(treeRoot);
+//					}
+//				}
+//			}
+//		}
+//
+//		createAstTree(treeRoot);
+//		{
+//			final File logFile = new File("R:\\tree.log");
+//			try (final FileOutputStream fileOutputStream = new FileOutputStream(logFile)) {
+//				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
+//					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
+//						printStream.println(rootNode.toTreeString());
+//					}
+//				}
+//			}
+//		}
 	}
 
-	private static final class AstTreeBuilder {
-		private final Map<IBinding, INode> bindingNodeMap = new HashMap<>();
-		private final Map<INode, IBinding> nodeTypeMap = new HashMap<>();
-		private final Map<INode, List<IBinding>> classBasesMap = new HashMap<>();
-
-		private <E extends INode, B extends INode.INodeBuilder<E, B>> INode createNode(IBinding binding, String content, B builder) {
-			// todo: support internal node
-			final INode existChildNode = bindingNodeMap.get(binding);
-			if (existChildNode != null) return existChildNode;
-
-			final E childNode = builder
-					.setName(binding.getName())
-					.setUniqueName(binding instanceof ICPPBinding
-							? ASTTypeUtil.getQualifiedName((ICPPBinding) binding)
-							: binding.getName())
-					.setContent(content)
-					.build();
-
-			bindingNodeMap.put(binding, childNode);
-			return childNode;
-		}
-
-		private INode createFromDeclarator(INode typeNode, IASTDeclarator declarator) {
-			final IASTName declaratorName = declarator.getName();
-			final IBinding declaratorBinding = declaratorName.resolveBinding();
-
-			if (declarator instanceof ICPPASTFunctionDeclarator) {
-				// region
-				final ICPPASTFunctionDeclarator functionDeclarator = (ICPPASTFunctionDeclarator) declarator;
-
-				final List<INode> parameterList = new ArrayList<>();
-
-				final ICPPASTParameterDeclaration[] functionParameters = functionDeclarator.getParameters();
-				for (final ICPPASTParameterDeclaration functionParameter : functionParameters) {
-					final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
-					final INode parameterType = createFromDeclSpecifier(parameterSpecifier);
-
-					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
-					final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
-					parameterList.add(parameterNode);
-				}
-
-				final INode functionNode = createNode(declaratorBinding, functionDeclarator.getRawSignature(),
-						FunctionNode.builder().setType(typeNode).setParameters(parameterList));
-
-				for (final INode parameterNode : parameterList) {
-					functionNode.addChild(parameterNode);
-				}
-				// endregion
-				return functionNode;
-			} else {
-				// todo: variable, etc...
-				return createNode(declaratorBinding, declarator.getRawSignature(), VariableNode.builder());
-			}
-		}
-
-		private INode createFromDeclSpecifier(IASTDeclSpecifier declSpecifier) {
-			if (declSpecifier instanceof ICPPASTEnumerationSpecifier) {
-				// region
-				final ICPPASTEnumerationSpecifier enumerationSpecifier = (ICPPASTEnumerationSpecifier) declSpecifier;
-				final IASTName enumerationName = enumerationSpecifier.getName();
-				final IBinding enumerationBinding = enumerationName.resolveBinding();
-
-				final INode enumNode = createNode(enumerationBinding, enumerationSpecifier.getRawSignature(), EnumNode.builder());
-
-				final INode nodeType = enumerationSpecifier.isScoped() ? enumNode : null;
-				final IASTEnumerationSpecifier.IASTEnumerator[] enumerators = enumerationSpecifier.getEnumerators();
-				for (final IASTEnumerationSpecifier.IASTEnumerator enumerator : enumerators) {
-					final IASTName enumeratorName = enumerator.getName();
-					final IBinding enumeratorBinding = enumeratorName.resolveBinding();
-
-					final INode enumeratorNode = createNode(enumeratorBinding, enumerator.getRawSignature(),
-							VariableNode.builder().setType(nodeType));
-
-					enumNode.addChild(enumeratorNode);
-				}
-				// endregion
-				return enumNode;
-			} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
-				// region
-				final ICPPASTCompositeTypeSpecifier classSpecifier = (ICPPASTCompositeTypeSpecifier) declSpecifier;
-				final IASTName className = classSpecifier.getName();
-				final IBinding classBinding = className.resolveBinding();
-
-				final INode classNode = createNode(classBinding, classSpecifier.getRawSignature(), ClassNode.builder());
-
-				final List<IBinding> classBases = new ArrayList<>();
-
-				final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier[] classBaseSpecifiers = classSpecifier.getBaseSpecifiers();
-				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classBaseSpecifiers) {
-					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
-					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
-
-					classBases.add(classBaseNameBinding);
-				}
-
-				classBasesMap.put(classNode, classBases);
-
-				final IASTDeclaration[] classChildDeclarations = classSpecifier.getDeclarations(false);
-				for (final IASTDeclaration classChildDeclaration : classChildDeclarations) {
-					createChildrenFromDeclaration(classNode, classChildDeclaration);
-				}
-				// endregion
-				return classNode;
-			} else if (declSpecifier instanceof ICPPASTNamedTypeSpecifier) {
-				final IASTNamedTypeSpecifier typeSpecifier = (IASTNamedTypeSpecifier) declSpecifier;
-				final IASTName typeName = typeSpecifier.getName();
-				final IBinding typeBinding = typeName.resolveBinding();
-
-				// todo: <<<<<<<<<<<<<<<<<<<<<<
-
-			}
-		}
-
-		private void createChildrenFromDeclaration(INode parentNode, IASTDeclaration declaration) {
-			if (declaration instanceof ICPPASTNamespaceDefinition) {
-				// region
-				final ICPPASTNamespaceDefinition namespaceDefinition = (ICPPASTNamespaceDefinition) declaration;
-				final IASTName namespaceName = namespaceDefinition.getName();
-				final IBinding namespaceBinding = namespaceName.resolveBinding();
-
-				final INode namespaceNode = createNode(namespaceBinding, namespaceDefinition.getRawSignature(), NamespaceNode.builder());
-				final IASTDeclaration[] namespaceChildDeclarations = namespaceDefinition.getDeclarations(false);
-				for (final IASTDeclaration namespaceChildDeclaration : namespaceChildDeclarations) {
-					createChildrenFromDeclaration(namespaceNode, namespaceChildDeclaration);
-				}
-				// endregion
-				parentNode.addChild(namespaceNode);
-			} else if (declaration instanceof IASTSimpleDeclaration) {
-				// region
-				final IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) declaration;
-
-				final IASTDeclSpecifier simpleSpecifier = simpleDeclaration.getDeclSpecifier();
-				final INode simpleNodeType = createFromDeclSpecifier(simpleSpecifier);
-
-				final IASTDeclarator[] declarators = simpleDeclaration.getDeclarators();
-				for (final IASTDeclarator declarator : declarators) {
-					final INode simpleNode = createFromDeclarator(simpleNodeType, declarator);
-					parentNode.addChild(simpleNode);
-				}
-				// endregion
-			} else if (declaration instanceof ICPPASTFunctionDefinition) {
-				// region
-				final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
-
-				final IASTDeclSpecifier functionSpecifier = functionDefinition.getDeclSpecifier();
-				final INode functionReturnType = createFromDeclSpecifier(functionSpecifier);
-
-				final IASTFunctionDeclarator functionDeclarator = functionDefinition.getDeclarator();
-				final INode functionNode = createFromDeclarator(functionReturnType, functionDeclarator);
-
-				functionDefinition.getMemberInitializers();
-				functionDefinition.getBody();
-				// endregion
-				parentNode.addChild(functionNode);
-
-			} else {
-				// todo: debug?
-			}
-		}
-
-
-		private static final class InternalNode extends Node {
-			private InternalNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
-				super(name, uniqueName, content);
-			}
-		}
-	}
 
 	private static final class TranslationUnitBuilder {
 		private static final IncludeFileContentProvider EMPTY_PROVIDER = /*new MyIncludeFileContentProvider();*/IncludeFileContentProvider.getEmptyFilesProvider();

@@ -20,9 +20,15 @@ abstract class TreeNode implements ITreeNode {
 	}
 
 	@Nonnull
+	@Override
 	public abstract String toString();
 
 	@Nonnull
+	@Override
+	public abstract String toTreeElementString();
+
+	@Nonnull
+	@Override
 	public final String toTreeString() {
 		final StringBuilder builder = new StringBuilder();
 		internalToString(builder, 0);
@@ -33,9 +39,11 @@ abstract class TreeNode implements ITreeNode {
 	private void internalToString(@Nonnull StringBuilder builder, int level) {
 		final String alignString = "\t".repeat(level);
 		if (children.isEmpty()) {
-			builder.append(alignString).append("{ value: ").append(this.toString()).append(" }");
+			builder.append(alignString).append("{ value: ")
+					.append(this.toTreeElementString().replace("\n", "\n" + alignString)).append(" }");
 		} else {
-			builder.append(alignString).append("{ value: ").append(this.toString()).append(", children: [\n");
+			builder.append(alignString).append("{ value: ")
+					.append(this.toTreeElementString().replace("\n", "\n" + alignString)).append(", children: [\n");
 
 			getTreeNode(children.get(0)).internalToString(builder, level + 1);
 			for (int i = 1; i < children.size(); i++) {
@@ -134,8 +142,17 @@ abstract class TreeNode implements ITreeNode {
 		return true;
 	}
 
+	/**
+	 * Replace a child node by another node from current node.
+	 * Return false if the old child node doesn't belong to this node, or new child node already have parent.
+	 * Return true otherwise.
+	 *
+	 * @param oldChild a child node to remove
+	 * @param newChild a child node to add
+	 * @return whether the operation is success or not
+	 */
 	@Override
-	public boolean replaceChild(@Nonnull ITreeNode oldChild, @Nonnull ITreeNode newChild) {
+	public final boolean replaceChild(@Nonnull ITreeNode oldChild, @Nonnull ITreeNode newChild) {
 		// check if current node is not parent node
 		if (oldChild.getParent() != this) return false;
 		// check if child node is root node
@@ -147,6 +164,39 @@ abstract class TreeNode implements ITreeNode {
 		getTreeNode(oldChild).internalSetParent(null);
 		getTreeNode(newChild).internalSetParent(this);
 		return true;
+	}
+
+	/**
+	 * Add children nodes to current node.
+	 * Return false if one of children nodes already have parent node.
+	 * Return true otherwise.
+	 *
+	 * @param children children nodes to add
+	 * @return whether the operation is success or not
+	 */
+	@Override
+	public final <E extends ITreeNode> boolean addChildren(@Nonnull List<E> children) {
+		for (final ITreeNode child : children) {
+			if (!child.isRoot()) return false;
+		}
+		this.children.addAll(children);
+		for (final ITreeNode child : children) {
+			getTreeNode(child).internalSetParent(this);
+		}
+		return true;
+	}
+
+	/**
+	 * Remove children nodes from current node.
+	 * Return children nodes.
+	 *
+	 * @return children nodes
+	 */
+	@Override
+	public final List<ITreeNode> removeChildren() {
+		final List<ITreeNode> children = List.copyOf(this.children);
+		this.children.clear();
+		return children;
 	}
 
 	/**

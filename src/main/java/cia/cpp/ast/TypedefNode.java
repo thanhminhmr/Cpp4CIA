@@ -3,6 +3,7 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.List;
 
 public final class TypedefNode extends Node implements ITypedef, Serializable {
 	@Nullable
@@ -29,6 +30,29 @@ public final class TypedefNode extends Node implements ITypedef, Serializable {
 		this.type = type;
 	}
 
+	@Nonnull
+	@Override
+	public String toString() {
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", type: " + type
+				+ " }";
+	}
+
+	@Nonnull
+	@Override
+	public String toTreeElementString() {
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ ", type: " + type
+				+ " }";
+	}
+
 	public static final class TypedefNodeBuilder extends NodeBuilder<ITypedef, ITypedefBuilder> implements ITypedefBuilder {
 		@Nullable
 		private INode type;
@@ -41,7 +65,7 @@ public final class TypedefNode extends Node implements ITypedef, Serializable {
 		public final ITypedef build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new TypedefNode(name, uniqueName, content, type);
+			return new TypedefNode(name, uniqueName, signature, type);
 		}
 
 		@Override

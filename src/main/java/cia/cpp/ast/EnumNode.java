@@ -1,7 +1,6 @@
 package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 
@@ -17,7 +16,7 @@ public final class EnumNode extends Node implements IEnum, Serializable {
 
 	@Nonnull
 	@Override
-	public final List<IVariable> getVariables() {
+	public final List<INode> getVariables() {
 		return getChildrenList(IVariable.class);
 	}
 
@@ -30,7 +29,7 @@ public final class EnumNode extends Node implements IEnum, Serializable {
 		public final IEnum build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new EnumNode(name, uniqueName, content);
+			return new EnumNode(name, uniqueName, signature);
 		}
 	}
 }

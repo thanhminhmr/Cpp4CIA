@@ -5,24 +5,30 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
-	private final int type;
-	private int count = 0;
+	private int type = 0;
+	private int count = 1;
 
 	Dependency(@Nonnull Type type) {
 		this.type = type.ordinal();
+	}
+
+	Dependency() {
 	}
 
 	public final int getCount() {
 		return count;
 	}
 
-	public final void setCount(int count) {
+	@Nonnull
+	public final Dependency setCount(int count) {
 		this.count = count;
+		return this;
 	}
 
-	public final int increment() {
+	@Nonnull
+	public final Dependency incrementCount() {
 		this.count += 1;
-		return count;
+		return this;
 	}
 
 	@Nullable
@@ -30,14 +36,28 @@ public final class Dependency implements Serializable {
 		return (type >= 0 && type < Type.values.length) ? Type.values[type] : null;
 	}
 
+	@Nonnull
+	public final Dependency setType(@Nonnull Type type) {
+		this.type = type.ordinal();
+		return this;
+	}
+
+	@Override
+	public String toString() {
+		return "(" + Node.objectToString(this)
+				+ ") { type: " + getType()
+				+ ", count: " + count
+				+ " }";
+	}
+
 	public enum Type {
+		UNKNOWN,
 		USE,
 		MEMBER,
 		INHERITANCE,
-		CONTAINMENT,
+		//CONTAINMENT,
 		INVOCATION,
-		OVERRIDE,
-		CALLBACK;
+		OVERRIDE;
 
 		private static final Type[] values = Type.values();
 	}

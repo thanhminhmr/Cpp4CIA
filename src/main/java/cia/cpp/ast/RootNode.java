@@ -11,31 +11,31 @@ public final class RootNode extends Node implements IRoot, Serializable {
 
 	@Nonnull
 	@Override
-	public final List<IClass> getClasses() {
+	public final List<INode> getClasses() {
 		return getChildrenList(IClass.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IEnum> getEnums() {
+	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<ITypedef> getTypedefs() {
+	public final List<INode> getTypedefs() {
 		return getChildrenList(ITypedef.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IFunction> getFunctions() {
+	public final List<INode> getFunctions() {
 		return getChildrenList(IFunction.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IVariable> getVariables() {
+	public final List<INode> getVariables() {
 		return getChildrenList(IVariable.class);
 	}
 }

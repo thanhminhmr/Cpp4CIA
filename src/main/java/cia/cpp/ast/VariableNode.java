@@ -3,12 +3,13 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
+import java.util.List;
 
 public final class VariableNode extends Node implements IVariable, Serializable {
 	@Nullable
 	private INode type;
 
-	public VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable INode type) {
+	private VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable INode type) {
 		super(name, simpleName, uniqueName);
 		this.type = type;
 	}
@@ -32,8 +33,24 @@ public final class VariableNode extends Node implements IVariable, Serializable 
 	@Nonnull
 	@Override
 	public String toString() {
-		return "(" + getClass().getSimpleName() + ") { " + super.toString()
-				+ ", type = " + type + " }";
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", type: " + type
+				+ " }";
+	}
+
+	@Nonnull
+	@Override
+	public String toTreeElementString() {
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ ", type: " + type
+				+ " }";
 	}
 
 	public static final class VariableNodeBuilder extends NodeBuilder<IVariable, IVariableBuilder> implements IVariableBuilder {
@@ -48,7 +65,7 @@ public final class VariableNode extends Node implements IVariable, Serializable 
 		public final IVariable build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new VariableNode(name, uniqueName, content, type);
+			return new VariableNode(name, uniqueName, signature, type);
 		}
 
 		@Override

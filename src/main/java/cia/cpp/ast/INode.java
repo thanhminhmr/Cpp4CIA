@@ -15,7 +15,7 @@ public interface INode extends ITreeNode {
 	String getUniqueName();
 
 	@Nonnull
-	String getContent();
+	String getSignature();
 
 	/**
 	 * @return read-only view of dependency info map
@@ -33,13 +33,16 @@ public interface INode extends ITreeNode {
 	Dependency getDependency(@Nonnull INode node);
 
 	/**
-	 * Create new dependency info
+	 * Get dependency info, create new if not exist
 	 *
 	 * @param node the node
 	 * @return the dependency info, or null if already exist
 	 */
+	@Nonnull
+	Dependency addDependency(@Nonnull INode node);
+
 	@Nullable
-	Dependency createDependency(@Nonnull INode node, @Nonnull Dependency.Type type);
+	Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode);
 
 	/**
 	 * remove dependency info
@@ -72,9 +75,9 @@ public interface INode extends ITreeNode {
 		B setUniqueName(@Nonnull String uniqueName);
 
 		@Nullable
-		String getContent();
+		String getSignature();
 
 		@Nonnull
-		B setContent(@Nonnull String content);
+		B setSignature(@Nonnull String content);
 	}
 }

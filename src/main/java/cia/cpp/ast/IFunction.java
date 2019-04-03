@@ -12,6 +12,8 @@ public interface IFunction extends ITypeContainer, IClassContainer, IEnumContain
 
 	boolean removeParameter(@Nonnull INode parameter);
 
+	boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter);
+
 	/**
 	 * The function builder
 	 */

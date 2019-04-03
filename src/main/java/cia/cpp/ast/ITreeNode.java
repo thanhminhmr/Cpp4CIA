@@ -71,6 +71,24 @@ public interface ITreeNode extends Iterable<ITreeNode> {
 	boolean replaceChild(@Nonnull ITreeNode oldChild, @Nonnull ITreeNode newChild);
 
 	/**
+	 * Add children nodes to current node.
+	 * Return false if one of children nodes already have parent node.
+	 * Return true otherwise.
+	 *
+	 * @param children children nodes to add
+	 * @return whether the operation is success or not
+	 */
+	<E extends ITreeNode> boolean addChildren(@Nonnull List<E> children);
+
+	/**
+	 * Remove children nodes from current node.
+	 * Return children nodes.
+	 *
+	 * @return children nodes
+	 */
+	List<ITreeNode> removeChildren();
+
+	/**
 	 * Add this node to the parent node.
 	 * Return false if this node already have parent node.
 	 * Return true otherwise.
@@ -90,6 +108,9 @@ public interface ITreeNode extends Iterable<ITreeNode> {
 
 	@Nonnull
 	String toString();
+
+	@Nonnull
+	String toTreeElementString();
 
 	@Nonnull
 	String toTreeString();

@@ -41,6 +41,14 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 		return parameters.remove(parameter);
 	}
 
+	@Override
+	public boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter) {
+		final int index = parameters.indexOf(oldParameter);
+		if (index < 0) return false;
+		parameters.set(index, newParameter);
+		return true;
+	}
+
 	@Nullable
 	@Override
 	public final INode getType() {
@@ -54,33 +62,50 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 
 	@Nonnull
 	@Override
-	public final List<IClass> getClasses() {
+	public final List<INode> getClasses() {
 		return getChildrenList(IClass.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IEnum> getEnums() {
+	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<ITypedef> getTypedefs() {
+	public final List<INode> getTypedefs() {
 		return getChildrenList(ITypedef.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IVariable> getVariables() {
+	public final List<INode> getVariables() {
 		return getChildrenList(IVariable.class);
 	}
 
 	@Nonnull
 	@Override
 	public String toString() {
-		return "(" + getClass().getSimpleName() + ") { " + super.toString()
-				+ ", type = " + type + " }";
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", type: " + type
+				+ " }";
+	}
+
+	@Nonnull
+	@Override
+	public String toTreeElementString() {
+		return "(" + objectToString(this)
+				+ ") { name: \"" + getName()
+				+ "\", uniqueName: \"" + getUniqueName()
+				+ "\", signature: \"" + getSignature()
+				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ ", parameters: " + listToString(parameters)
+				+ ", type: " + type
+				+ " }";
 	}
 
 	public static final class FunctionNodeBuilder extends NodeBuilder<IFunction, IFunctionBuilder> implements IFunctionBuilder {
@@ -98,7 +123,7 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 		public final IFunction build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
 			//noinspection ConstantConditions
-			return new FunctionNode(name, uniqueName, content, parameters, type);
+			return new FunctionNode(name, uniqueName, signature, parameters, type);
 		}
 
 		@Nonnull
