@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 @IAstComponent
-public interface IClass extends IClassContainer, IEnumContainer, ITypedefContainer, IFunctionContainer, IVariableContainer {
+public interface IClass extends IClassContainer, IEnumContainer, /*ITypedefContainer,*/ IFunctionContainer, IVariableContainer {
 	@Nonnull
 	List<INode> getBases();
 

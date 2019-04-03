@@ -26,11 +26,11 @@ public final class NamespaceNode extends Node implements INamespace, Serializabl
 		return getChildrenList(IEnum.class);
 	}
 
-	@Nonnull
-	@Override
-	public final List<INode> getTypedefs() {
-		return getChildrenList(ITypedef.class);
-	}
+//	@Nonnull
+//	@Override
+//	public final List<INode> getTypedefs() {
+//		return getChildrenList(ITypedef.class);
+//	}
 
 	@Nonnull
 	@Override

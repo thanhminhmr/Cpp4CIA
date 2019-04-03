@@ -91,7 +91,7 @@ public final class AstBuilder {
 		final String uniqueName = binding instanceof ICPPBinding ? ASTTypeUtil.getQualifiedName((ICPPBinding) binding)
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : name;
 
-		final INode newNode = binding instanceof IProblemBinding
+		final INode newNode = builder instanceof IUnknown.IUnknownBuilder && binding instanceof IProblemBinding
 				? createIntegralNode(uniqueName, IntegralNode.builder())
 				: builder
 				.setName(name)
@@ -248,7 +248,7 @@ public final class AstBuilder {
 			final IBinding simpleBinding = simpleName.resolveBinding();
 
 			//noinspection UnnecessaryLocalVariable
-			final INode simpleNode = createNode(simpleBinding, simpleName, simpleParameter.getRawSignature(), TypedefNode.builder());
+			final INode simpleNode = createNode(simpleBinding, simpleName, simpleParameter.getRawSignature(), VariableNode.builder());
 
 			return simpleNode;
 		} else if (templateParameter instanceof ICPPASTTemplatedTypeTemplateParameter) {
@@ -256,7 +256,7 @@ public final class AstBuilder {
 			final IASTName nestedTemplateName = nestedTemplateParameter.getName();
 			final IBinding nestedTemplateBinding = nestedTemplateName.resolveBinding();
 			final INode nestedTemplateNode = createNode(nestedTemplateBinding, nestedTemplateName,
-					nestedTemplateParameter.getRawSignature(), TypedefNode.builder());
+					nestedTemplateParameter.getRawSignature(), VariableNode.builder());
 
 			for (final ICPPASTTemplateParameter nestedParameter : nestedTemplateParameter.getTemplateParameters()) {
 				final INode nestedNode = createFromTemplateParameter(nestedTemplateNode, nestedParameter);
@@ -376,7 +376,7 @@ public final class AstBuilder {
 
 				final INode childNode = createNode(astBinding, astName, null, UnknownNode.builder());
 				if (!(childNode instanceof IIntegral)) {
-					parentNode.addDependency(childNode).setType(parentNode instanceof IFunction ? Dependency.Type.INVOCATION : Dependency.Type.USE);
+					parentNode.addDependency(childNode).setType(childNode instanceof IFunction ? Dependency.Type.INVOCATION : Dependency.Type.USE);
 				}
 			} else {
 				createChildFromAstNode(parentNode, astChild);

@@ -72,11 +72,11 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 		return getChildrenList(IEnum.class);
 	}
 
-	@Nonnull
-	@Override
-	public final List<INode> getTypedefs() {
-		return getChildrenList(ITypedef.class);
-	}
+//	@Nonnull
+//	@Override
+//	public final List<INode> getTypedefs() {
+//		return getChildrenList(ITypedef.class);
+//	}
 
 	@Nonnull
 	@Override

@@ -56,11 +56,11 @@ public final class ClassNode extends Node implements IClass, Serializable {
 		return getChildrenList(IEnum.class);
 	}
 
-	@Nonnull
-	@Override
-	public final List<INode> getTypedefs() {
-		return getChildrenList(ITypedef.class);
-	}
+//	@Nonnull
+//	@Override
+//	public final List<INode> getTypedefs() {
+//		return getChildrenList(ITypedef.class);
+//	}
 
 	@Nonnull
 	@Override
