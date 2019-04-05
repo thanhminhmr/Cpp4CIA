@@ -42,10 +42,7 @@ final class AstBuilder {
 					final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
 					replaceNode(node, newNode);
 				}
-			}
-		}
-		for (final INode node : bindingNodeMap.values()) {
-			if (!(node instanceof IUnknown || node instanceof IIntegral)) {
+			} else {
 				// remove all dependency to unknown node and integral node
 				final Set<INode> keySet = Set.copyOf(node.getDependencies().keySet());
 				for (final INode dependencyNode : keySet) {

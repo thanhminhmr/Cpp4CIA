@@ -12,8 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public final class Builder {
-	private Builder() {
+public final class BuilderTest {
+	private BuilderTest() {
 	}
 
 	private static List<File> readConfigFile(File file) throws IOException {
@@ -65,12 +65,12 @@ public final class Builder {
 //				);
 
 		final List<File> includePaths = List.of();
-		final IRoot root = ProjectBuilder.build(projectFiles, includePaths, false);
-		if (root == null) return;
+		final Project project = ProjectBuilder.build(projectFiles, includePaths, false);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final Project project = Project.of(projectFiles, includePaths, root);
+		if (project == null) return;
+
 		try (final FileOutputStream fos = new FileOutputStream("R:\\output.project")) {
 			project.toOutputStream(fos);
 		}

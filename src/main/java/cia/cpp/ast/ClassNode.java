@@ -6,7 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = 7463945441205690382L;
+	private static final long serialVersionUID = 6858078087778982493L;
 
 	@Nonnull
 	private final List<INode> bases;
@@ -56,12 +56,6 @@ public final class ClassNode extends Node implements IClass {
 	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
-
-//	@Nonnull
-//	@Override
-//	public final List<INode> getTypedefs() {
-//		return getChildrenList(ITypedef.class);
-//	}
 
 	@Nonnull
 	@Override

@@ -10,6 +10,12 @@ import java.util.Map;
  */
 public interface INode extends ITreeNode {
 	@Nonnull
+	static INode getNode(@Nonnull ITreeNode treeNode) {
+		if (treeNode instanceof INode) return (INode) treeNode;
+		throw new IllegalStateException("Unexpected foreign node in tree.");
+	}
+
+	@Nonnull
 	String getName();
 
 	@Nonnull

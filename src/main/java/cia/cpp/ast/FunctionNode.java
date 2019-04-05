@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
+	private static final long serialVersionUID = 3675435978181588711L;
+
 	@Nonnull
 	private final List<INode> parameters;
 
@@ -71,12 +73,6 @@ public final class FunctionNode extends Node implements IFunction {
 	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
-
-//	@Nonnull
-//	@Override
-//	public final List<INode> getTypedefs() {
-//		return getChildrenList(ITypedef.class);
-//	}
 
 	@Nonnull
 	@Override

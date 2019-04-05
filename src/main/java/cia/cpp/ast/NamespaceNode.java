@@ -4,6 +4,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class NamespaceNode extends Node implements INamespace {
+	private static final long serialVersionUID = 5044228050020968914L;
+
 	private NamespaceNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		super(name, simpleName, uniqueName);
 	}
@@ -24,12 +26,6 @@ public final class NamespaceNode extends Node implements INamespace {
 	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
-
-//	@Nonnull
-//	@Override
-//	public final List<INode> getTypedefs() {
-//		return getChildrenList(ITypedef.class);
-//	}
 
 	@Nonnull
 	@Override

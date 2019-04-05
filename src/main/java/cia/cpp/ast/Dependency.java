@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
-	private static final long serialVersionUID = -7468161988267785170L;
+	private static final long serialVersionUID = 7276599684911562797L;
 
 	private int type = 0;
 	private int count = 1;

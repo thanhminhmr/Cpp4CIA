@@ -4,6 +4,8 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class RootNode extends Node implements IRoot {
+	private static final long serialVersionUID = 8769009304807039468L;
+
 	public RootNode() {
 		super("ROOT", "ROOT", "ROOT");
 	}
@@ -19,12 +21,6 @@ public final class RootNode extends Node implements IRoot {
 	public final List<INode> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
-
-//	@Nonnull
-//	@Override
-//	public final List<INode> getTypedefs() {
-//		return getChildrenList(ITypedef.class);
-//	}
 
 	@Nonnull
 	@Override

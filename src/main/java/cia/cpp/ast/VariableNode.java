@@ -5,6 +5,8 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IVariable {
+	private static final long serialVersionUID = 4823138680394473462L;
+
 	@Nullable
 	private INode type;
 

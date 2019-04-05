@@ -7,6 +7,8 @@ import java.io.*;
 import java.util.List;
 
 public final class Project implements Serializable {
+	private static final long serialVersionUID = 2142820713309514476L;
+
 	@Nonnull
 	private final List<File> projectFiles;
 

@@ -2,13 +2,16 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.*;
 
 /**
  * Base of nay AST TreeNode. Do not use TreeNode class directly.
  */
 public abstract class Node extends TreeNode implements INode {
-	private static final long serialVersionUID = 8869217430668709163L;
+	private static final long serialVersionUID = 4035260152547734104L;
 
 	@Nonnull
 	private final String name;
@@ -68,6 +71,7 @@ public abstract class Node extends TreeNode implements INode {
 		return signature;
 	}
 
+	@Nonnull
 	protected final <E> List<INode> getChildrenList(final Class<E> aClass) {
 		final List<ITreeNode> children = super.getChildren();
 		final List<INode> list = new ArrayList<>(children.size());
@@ -93,7 +97,6 @@ public abstract class Node extends TreeNode implements INode {
 
 	@Nonnull
 	public final Dependency addDependency(@Nonnull INode node) {
-		Objects.requireNonNull(node);
 		final Dependency oldDependency = dependencyMap.get(node);
 		if (oldDependency != null) return oldDependency.incrementCount();
 		final Dependency dependency = new Dependency();
@@ -104,8 +107,6 @@ public abstract class Node extends TreeNode implements INode {
 	@Nullable
 	@Override
 	public final Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode) {
-		Objects.requireNonNull(oldNode);
-		Objects.requireNonNull(newNode);
 		final Dependency oldDependency = dependencyMap.get(oldNode);
 		if (oldDependency == null) return null;
 		final Dependency newDependency = dependencyMap.get(newNode);
@@ -160,15 +161,6 @@ public abstract class Node extends TreeNode implements INode {
 		final Node node = (Node) object;
 		return name.equals(node.name) && uniqueName.equals(node.uniqueName)
 				&& signature.equals(node.signature);
-	}
-
-	@Override
-	public int hashCode() {
-		int result = super.hashCode();
-		result = 31 * result + name.hashCode();
-		result = 31 * result + uniqueName.hashCode();
-		result = 31 * result + signature.hashCode();
-		return result;
 	}
 
 	@Nonnull

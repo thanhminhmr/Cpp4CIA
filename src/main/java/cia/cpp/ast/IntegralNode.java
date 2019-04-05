@@ -3,6 +3,8 @@ package cia.cpp.ast;
 import javax.annotation.Nonnull;
 
 public final class IntegralNode extends Node implements IIntegral {
+	private static final long serialVersionUID = 7672687082721187640L;
+
 	private IntegralNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
 		super(name, uniqueName, content);
 	}

@@ -2,10 +2,13 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.*;
 
 abstract class TreeNode implements ITreeNode {
-	private static final long serialVersionUID = -5556720519997680447L;
+	private static final long serialVersionUID = 478909744504392013L;
 
 	@Nullable
 	private ITreeNode parent;
@@ -239,6 +242,11 @@ abstract class TreeNode implements ITreeNode {
 		return Objects.equals(parent, node.parent);// && children.equals(node.children);
 	}
 
+	@Override
+	public int hashCode() {
+		return getClass().hashCode();
+	}
+
 	/**
 	 * Return this tree iterator
 	 *
@@ -246,7 +254,7 @@ abstract class TreeNode implements ITreeNode {
 	 */
 	@Nonnull
 	@Override
-	public Iterator<ITreeNode> iterator() {
+	public final Iterator<ITreeNode> iterator() {
 		return new NodeIterator(this);
 	}
 

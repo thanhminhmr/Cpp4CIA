@@ -1,5 +1,6 @@
 package cia.cpp.builder;
 
+import cia.cpp.Project;
 import cia.cpp.ast.IRoot;
 import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.*;
@@ -85,9 +86,7 @@ public final class ProjectBuilder {
 		}
 	}
 
-	public static IRoot build(List<File> projectFiles, List<File> includePaths, boolean isReadable) {
-		// todo: return project
-
+	public static Project build(List<File> projectFiles, List<File> includePaths, boolean isReadable) {
 		final List<File> projectFileList = createCanonicalAbsoluteFileList(projectFiles);
 		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePaths);
 		final List<File> internalIncludePaths = createInternalIncludePaths(projectFileList);
@@ -104,6 +103,7 @@ public final class ProjectBuilder {
 				e.printStackTrace();
 			}
 		}
+
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 		if (translationUnit == null) return null;
 
@@ -131,6 +131,6 @@ public final class ProjectBuilder {
 			}
 		}
 
-		return root;
+		return Project.of(projectFiles, includePaths, root);
 	}
 }
