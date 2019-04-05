@@ -1,8 +1,10 @@
 package cia.cpp;
 
+import cia.cpp.ast.IRoot;
 import cia.cpp.builder.ProjectBuilder;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,22 +40,40 @@ public final class Builder {
 	}
 
 	public static void main(String[] args) throws Exception {
-		System.in.read();
+		//System.in.read();
 		long start_time = System.nanoTime();
-		ProjectBuilder.build(
+		final List<File> projectFiles =
 //				List.of(
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
-//				)
-				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"))
+//				);
+//				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+				List.of(
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
+						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
+				);
 //				List.of(
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.h")
-//				)
-				, List.of(), false
-		);
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Array.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Bitmap.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Buffer.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\NeuralNetwork.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Pixel.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Randomizer.h"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Trainer.cpp")
+//				);
+
+		final List<File> includePaths = List.of();
+		final IRoot root = ProjectBuilder.build(projectFiles, includePaths, false);
+		if (root == null) return;
+
+		System.out.println((System.nanoTime() - start_time) / 1000000.0);
+
+		final Project project = Project.of(projectFiles, includePaths, root);
+		try (final FileOutputStream fos = new FileOutputStream("R:\\output.project")) {
+			project.toOutputStream(fos);
+		}
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 	}

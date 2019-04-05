@@ -2,6 +2,7 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -21,7 +22,7 @@ public interface INode extends ITreeNode {
 	 * @return read-only view of dependency info map
 	 */
 	@Nonnull
-	Map<INode, Dependency> getDependencyMap();
+	Map<INode, Dependency> getDependencies();
 
 	/**
 	 * Get dependency info
@@ -36,21 +37,33 @@ public interface INode extends ITreeNode {
 	 * Get dependency info, create new if not exist
 	 *
 	 * @param node the node
-	 * @return the dependency info, or null if already exist
+	 * @return the dependency info
 	 */
 	@Nonnull
 	Dependency addDependency(@Nonnull INode node);
 
+	/**
+	 * Replace node dependency with another node dependency
+	 *
+	 * @param oldNode the old node
+	 * @param newNode the new node
+	 * @return the dependency info, or null if oldNode not exist
+	 */
 	@Nullable
 	Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode);
 
 	/**
-	 * remove dependency info
+	 * Remove dependency info
 	 *
 	 * @param node the node
 	 * @return true if the dependency info exist, false otherwise
 	 */
 	boolean removeDependency(@Nonnull INode node);
+
+	void addDependencies(Map<INode, Dependency> newDependencyMap);
+
+	@Nonnull
+	Map<INode, Dependency> removeDependencies();
 
 	/**
 	 * @param <E> the node

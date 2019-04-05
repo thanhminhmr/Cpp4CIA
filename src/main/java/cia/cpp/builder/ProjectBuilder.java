@@ -85,15 +85,15 @@ public final class ProjectBuilder {
 		}
 	}
 
-	public static IRoot build(List<File> projectFileList, List<File> includePathList, boolean isReadable) {
+	public static IRoot build(List<File> projectFiles, List<File> includePaths, boolean isReadable) {
 		// todo: return project
 
-		final List<File> projectFiles = createCanonicalAbsoluteFileList(projectFileList);
-		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePathList);
-		final List<File> internalIncludePaths = createInternalIncludePaths(projectFiles);
-		final List<File> includePaths = combineCanonicalAbsoluteFileList(externalIncludePaths, internalIncludePaths);
+		final List<File> projectFileList = createCanonicalAbsoluteFileList(projectFiles);
+		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePaths);
+		final List<File> internalIncludePaths = createInternalIncludePaths(projectFileList);
+		final List<File> includePathList = combineCanonicalAbsoluteFileList(externalIncludePaths, internalIncludePaths);
 
-		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFiles, includePaths, isReadable);
+		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, isReadable);
 		if (fileContentCharArray == null) return null;
 
 		// todo: dbg

@@ -2,10 +2,9 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
-import java.util.List;
+import java.util.Objects;
 
-public final class VariableNode extends Node implements IVariable, Serializable {
+public final class VariableNode extends Node implements IVariable {
 	@Nullable
 	private INode type;
 
@@ -30,6 +29,22 @@ public final class VariableNode extends Node implements IVariable, Serializable 
 		this.type = type;
 	}
 
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+		final VariableNode that = (VariableNode) object;
+		return Objects.equals(type, that.type);
+
+	}
+
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		result = 31 * result + (type != null ? type.hashCode() : 0);
+		return result;
+	}
+
 	@Nonnull
 	@Override
 	public String toString() {
@@ -48,7 +63,7 @@ public final class VariableNode extends Node implements IVariable, Serializable 
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ "\", dependencyMap: " + mapToString(getDependencies())
 				+ ", type: " + type
 				+ " }";
 	}

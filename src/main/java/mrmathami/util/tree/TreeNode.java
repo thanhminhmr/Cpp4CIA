@@ -6,6 +6,8 @@ import java.io.Serializable;
 import java.util.*;
 
 public final class TreeNode<Value> implements Iterable<TreeNode<Value>>, Serializable {
+	private static final long serialVersionUID = -6927375627214127129L;
+
 	@Nullable
 	private final Value value;
 	@Nullable

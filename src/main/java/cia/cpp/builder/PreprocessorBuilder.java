@@ -35,6 +35,8 @@ final class PreprocessorBuilder implements PreprocessorListener {
 			preprocessor.setListener(EMPTY_PREPROCESSOR_LISTENER);
 			preprocessor.addFeature(Feature.DIGRAPHS);
 			preprocessor.addFeature(Feature.TRIGRAPHS);
+			preprocessor.addFeature(Feature.INCLUDENEXT);
+			preprocessor.addFeature(Feature.PRAGMA_ONCE);
 			preprocessor.addFeature(Feature.LINEMARKERS);
 //		    preprocessor.addMacro("__JCPP__");
 			{

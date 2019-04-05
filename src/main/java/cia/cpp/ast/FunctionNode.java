@@ -2,12 +2,12 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
-public final class FunctionNode extends Node implements IFunction, Serializable {
+public final class FunctionNode extends Node implements IFunction {
 	@Nonnull
 	private final List<INode> parameters;
 
@@ -84,6 +84,21 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 		return getChildrenList(IVariable.class);
 	}
 
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+		final FunctionNode node = (FunctionNode) object;
+		return Objects.equals(type, node.type);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		result = 31 * result + (type != null ? type.hashCode() : 0);
+		return result;
+	}
+
 	@Nonnull
 	@Override
 	public String toString() {
@@ -102,7 +117,7 @@ public final class FunctionNode extends Node implements IFunction, Serializable 
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ "\", dependencyMap: " + mapToString(getDependencies())
 				+ ", parameters: " + listToString(parameters)
 				+ ", type: " + type
 				+ " }";

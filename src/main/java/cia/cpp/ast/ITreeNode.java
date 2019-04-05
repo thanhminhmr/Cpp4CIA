@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
 
-public interface ITreeNode extends Iterable<ITreeNode> {
+public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	/**
 	 * Return the root node.
 	 *
@@ -75,10 +75,10 @@ public interface ITreeNode extends Iterable<ITreeNode> {
 	 * Return false if one of children nodes already have parent node.
 	 * Return true otherwise.
 	 *
-	 * @param children children nodes to add
+	 * @param newChildren children nodes to add
 	 * @return whether the operation is success or not
 	 */
-	<E extends ITreeNode> boolean addChildren(@Nonnull List<E> children);
+	<E extends ITreeNode> boolean addChildren(@Nonnull List<E> newChildren);
 
 	/**
 	 * Remove children nodes from current node.

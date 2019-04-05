@@ -1,10 +1,9 @@
 package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 
-public final class RootNode extends Node implements IRoot, Serializable {
+public final class RootNode extends Node implements IRoot {
 	public RootNode() {
 		super("ROOT", "ROOT", "ROOT");
 	}

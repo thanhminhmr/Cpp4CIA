@@ -1,10 +1,9 @@
 package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 
-public final class NamespaceNode extends Node implements INamespace, Serializable {
+public final class NamespaceNode extends Node implements INamespace {
 	private NamespaceNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		super(name, simpleName, uniqueName);
 	}

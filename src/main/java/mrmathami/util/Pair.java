@@ -8,6 +8,8 @@ import java.util.Objects;
  * <p>A convenience class to represent name-value pairs.</p>
  */
 public final class Pair<K, V> implements Serializable {
+	private static final long serialVersionUID = -7167112365686535895L;
+	
 	/**
 	 * Key of this <code>Pair</code>.
 	 */

@@ -1,12 +1,13 @@
 package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public final class ClassNode extends Node implements IClass, Serializable {
+public final class ClassNode extends Node implements IClass {
+	private static final long serialVersionUID = 7463945441205690382L;
+
 	@Nonnull
 	private final List<INode> bases;
 
@@ -91,7 +92,7 @@ public final class ClassNode extends Node implements IClass, Serializable {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencyMap())
+				+ "\", dependencyMap: " + mapToString(getDependencies())
 				+ ", bases: " + listToString(bases)
 				+ " }";
 	}

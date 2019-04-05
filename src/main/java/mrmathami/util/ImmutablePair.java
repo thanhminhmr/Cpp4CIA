@@ -7,6 +7,8 @@ import java.util.Objects;
  * <p>A convenience class to represent name-value pairs.</p>
  */
 public final class ImmutablePair<K, V> implements Serializable {
+	private static final long serialVersionUID = 4522681225264319518L;
+
 	private static final ImmutablePair EMPTY = new ImmutablePair<>(null, null);
 
 	/**
@@ -25,7 +27,7 @@ public final class ImmutablePair<K, V> implements Serializable {
 	 * @param key   The key for this pair
 	 * @param value The value to use for this pair
 	 */
-	public ImmutablePair(K key, V value) {
+	private ImmutablePair(K key, V value) {
 		this.key = key;
 		this.value = value;
 	}

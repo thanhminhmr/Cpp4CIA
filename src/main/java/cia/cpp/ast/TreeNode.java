@@ -5,6 +5,8 @@ import javax.annotation.Nullable;
 import java.util.*;
 
 abstract class TreeNode implements ITreeNode {
+	private static final long serialVersionUID = -5556720519997680447L;
+
 	@Nullable
 	private ITreeNode parent;
 
@@ -136,7 +138,7 @@ abstract class TreeNode implements ITreeNode {
 	public final boolean removeChild(@Nonnull ITreeNode child) {
 		// check if current node is not parent node
 		if (child.getParent() != this) return false;
-		// none of above
+
 		children.remove(child);
 		getTreeNode(child).internalSetParent(null);
 		return true;
@@ -159,7 +161,6 @@ abstract class TreeNode implements ITreeNode {
 		if (!newChild.isRoot()) return false;
 
 		final int index = children.indexOf(oldChild);
-		assert index >= 0;
 		children.set(index, newChild);
 		getTreeNode(oldChild).internalSetParent(null);
 		getTreeNode(newChild).internalSetParent(this);
@@ -171,16 +172,18 @@ abstract class TreeNode implements ITreeNode {
 	 * Return false if one of children nodes already have parent node.
 	 * Return true otherwise.
 	 *
-	 * @param children children nodes to add
+	 * @param newChildren children nodes to add
 	 * @return whether the operation is success or not
 	 */
 	@Override
-	public final <E extends ITreeNode> boolean addChildren(@Nonnull List<E> children) {
-		for (final ITreeNode child : children) {
+	public final <E extends ITreeNode> boolean addChildren(@Nonnull List<E> newChildren) {
+		if (newChildren.isEmpty()) return true;
+
+		for (final ITreeNode child : newChildren) {
 			if (!child.isRoot()) return false;
 		}
-		this.children.addAll(children);
-		for (final ITreeNode child : children) {
+		children.addAll(newChildren);
+		for (final ITreeNode child : newChildren) {
 			getTreeNode(child).internalSetParent(this);
 		}
 		return true;
@@ -194,9 +197,11 @@ abstract class TreeNode implements ITreeNode {
 	 */
 	@Override
 	public final List<ITreeNode> removeChildren() {
-		final List<ITreeNode> children = List.copyOf(this.children);
-		this.children.clear();
-		return children;
+		if (children.isEmpty()) return List.of();
+
+		final List<ITreeNode> oldChildren = List.copyOf(children);
+		children.clear();
+		return oldChildren;
 	}
 
 	/**
@@ -231,7 +236,7 @@ abstract class TreeNode implements ITreeNode {
 		if (this == object) return true;
 		if (object == null || getClass() != object.getClass()) return false;
 		final TreeNode node = (TreeNode) object;
-		return Objects.equals(parent, node.parent) && children.equals(node.children);
+		return Objects.equals(parent, node.parent);// && children.equals(node.children);
 	}
 
 	/**

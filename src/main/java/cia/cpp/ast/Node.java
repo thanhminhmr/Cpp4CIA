@@ -8,6 +8,8 @@ import java.util.*;
  * Base of nay AST TreeNode. Do not use TreeNode class directly.
  */
 public abstract class Node extends TreeNode implements INode {
+	private static final long serialVersionUID = 8869217430668709163L;
+
 	@Nonnull
 	private final String name;
 
@@ -79,7 +81,7 @@ public abstract class Node extends TreeNode implements INode {
 
 	@Nonnull
 	@Override
-	public final Map<INode, Dependency> getDependencyMap() {
+	public final Map<INode, Dependency> getDependencies() {
 		return Collections.unmodifiableMap(dependencyMap);
 	}
 
@@ -91,11 +93,10 @@ public abstract class Node extends TreeNode implements INode {
 
 	@Nonnull
 	public final Dependency addDependency(@Nonnull INode node) {
+		Objects.requireNonNull(node);
 		final Dependency oldDependency = dependencyMap.get(node);
 		if (oldDependency != null) return oldDependency.incrementCount();
 		final Dependency dependency = new Dependency();
-
-
 		dependencyMap.put(node, dependency);
 		return dependency;
 	}
@@ -103,22 +104,71 @@ public abstract class Node extends TreeNode implements INode {
 	@Nullable
 	@Override
 	public final Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode) {
+		Objects.requireNonNull(oldNode);
+		Objects.requireNonNull(newNode);
 		final Dependency oldDependency = dependencyMap.get(oldNode);
 		if (oldDependency == null) return null;
 		final Dependency newDependency = dependencyMap.get(newNode);
 		if (newDependency != null) {
-			oldDependency.setCount(newDependency.getCount() + oldDependency.getCount());
-			dependencyMap.remove(newNode);
+			newDependency.setCount(newDependency.getCount() + oldDependency.getCount());
+			dependencyMap.remove(oldNode);
+			return newDependency;
 		} else {
 			dependencyMap.put(newNode, oldDependency);
 			dependencyMap.remove(oldNode);
+			return oldDependency;
 		}
-		return oldDependency;
 	}
 
 	@Override
 	public final boolean removeDependency(@Nonnull INode node) {
 		return dependencyMap.remove(node) != null;
+	}
+
+	@Override
+	public void addDependencies(Map<INode, Dependency> newDependencyMap) {
+		if (newDependencyMap.isEmpty()) return;
+
+		for (final Map.Entry<INode, Dependency> entry : newDependencyMap.entrySet()) {
+			final INode node = entry.getKey();
+			final Dependency dependency = entry.getValue();
+			final Dependency oldDependency = dependencyMap.get(node);
+			if (oldDependency != null) {
+				oldDependency.setCount(oldDependency.getCount() + dependency.getCount());
+			} else {
+				final Dependency newDependency = new Dependency(dependency.getType());
+				newDependency.setCount(dependency.getCount());
+				dependencyMap.put(node, newDependency);
+			}
+		}
+	}
+
+	@Nonnull
+	@Override
+	public Map<INode, Dependency> removeDependencies() {
+		if (dependencyMap.isEmpty()) return Map.of();
+
+		final Map<INode, Dependency> oldDependencyMap = Map.copyOf(dependencyMap);
+		dependencyMap.clear();
+		return oldDependencyMap;
+	}
+
+	@Override
+	public boolean equals(Object object) {
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+		final Node node = (Node) object;
+		return name.equals(node.name) && uniqueName.equals(node.uniqueName)
+				&& signature.equals(node.signature);
+	}
+
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		result = 31 * result + name.hashCode();
+		result = 31 * result + uniqueName.hashCode();
+		result = 31 * result + signature.hashCode();
+		return result;
 	}
 
 	@Nonnull

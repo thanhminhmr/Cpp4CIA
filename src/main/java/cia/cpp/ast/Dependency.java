@@ -5,6 +5,8 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
+	private static final long serialVersionUID = -7468161988267785170L;
+
 	private int type = 0;
 	private int count = 1;
 
@@ -31,9 +33,10 @@ public final class Dependency implements Serializable {
 		return this;
 	}
 
-	@Nullable
+	@Nonnull
 	public final Type getType() {
-		return (type >= 0 && type < Type.values.length) ? Type.values[type] : null;
+		if (type < 0 || type >= Type.values.length) throw new IndexOutOfBoundsException("Invalid type!");
+		return Type.values[type];
 	}
 
 	@Nonnull

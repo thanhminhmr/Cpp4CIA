@@ -5,6 +5,8 @@ import cia.cpp.ast.Node;
 import javax.annotation.Nonnull;
 
 final class UnknownNode extends Node implements IUnknown {
+	private static final long serialVersionUID = -7116903985998129873L;
+
 	private UnknownNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
 		super(name, uniqueName, content);
 	}

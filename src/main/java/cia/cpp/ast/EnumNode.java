@@ -1,10 +1,9 @@
 package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.io.Serializable;
 import java.util.List;
 
-public final class EnumNode extends Node implements IEnum, Serializable {
+public final class EnumNode extends Node implements IEnum {
 	private EnumNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		super(name, simpleName, uniqueName);
 	}

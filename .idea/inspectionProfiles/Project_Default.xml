@@ -1,7 +1,11 @@
 <component name="InspectionProjectProfileManager">
   <profile version="1.0">
     <option name="myName" value="Project Default" />
+    <inspection_tool class="ComparatorNotSerializable" enabled="true" level="WARNING" enabled_by_default="true" />
     <inspection_tool class="GroovyDocCheck" enabled="true" level="Doc Error" enabled_by_default="true" />
     <inspection_tool class="JavadocReference" enabled="true" level="Doc Error" enabled_by_default="true" />
+    <inspection_tool class="SerializableHasSerialVersionUIDField" enabled="true" level="ERROR" enabled_by_default="true">
+      <option name="ignoreAnonymousInnerClasses" value="false" />
+    </inspection_tool>
   </profile>
 </component>
