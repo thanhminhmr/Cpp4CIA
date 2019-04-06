@@ -1,11 +1,13 @@
 package cia.cpp.ast;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
-	private static final long serialVersionUID = 7276599684911562797L;
+	private static final long serialVersionUID = 5603557269009278757L;
 
 	private int type = 0;
 	private int count = 1;
@@ -46,8 +48,8 @@ public final class Dependency implements Serializable {
 	}
 
 	@Override
-	public String toString() {
-		return "(" + Node.objectToString(this)
+	public final String toString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { type: " + getType()
 				+ ", count: " + count
 				+ " }";

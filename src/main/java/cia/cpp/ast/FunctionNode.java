@@ -1,5 +1,7 @@
 package cia.cpp.ast;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -8,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = 3675435978181588711L;
+	private static final long serialVersionUID = -1266207100630546683L;
 
 	@Nonnull
 	private final List<INode> parameters;
@@ -81,15 +83,14 @@ public final class FunctionNode extends Node implements IFunction {
 	}
 
 	@Override
-	public boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+	public final boolean equals(Object object) {
+		if (!super.equals(object)) return false;
 		final FunctionNode node = (FunctionNode) object;
 		return Objects.equals(type, node.type);
 	}
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		int result = super.hashCode();
 		result = 31 * result + (type != null ? type.hashCode() : 0);
 		return result;
@@ -97,8 +98,8 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Nonnull
 	@Override
-	public String toString() {
-		return "(" + objectToString(this)
+	public final String toString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
@@ -108,13 +109,13 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Nonnull
 	@Override
-	public String toTreeElementString() {
-		return "(" + objectToString(this)
+	public final String toTreeElementString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencies())
-				+ ", parameters: " + listToString(parameters)
+				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ ", parameters: " + Utilities.collectionToString(parameters)
 				+ ", type: " + type
 				+ " }";
 	}

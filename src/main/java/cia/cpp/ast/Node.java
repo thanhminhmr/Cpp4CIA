@@ -1,17 +1,16 @@
 package cia.cpp.ast;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.*;
 
 /**
  * Base of nay AST TreeNode. Do not use TreeNode class directly.
  */
 public abstract class Node extends TreeNode implements INode {
-	private static final long serialVersionUID = 4035260152547734104L;
+	private static final long serialVersionUID = 2977623392166713480L;
 
 	@Nonnull
 	private final String name;
@@ -29,30 +28,6 @@ public abstract class Node extends TreeNode implements INode {
 		this.name = name;
 		this.uniqueName = uniqueName;
 		this.signature = signature;
-	}
-
-	protected static String objectToString(Object object) {
-		return object != null ? String.format("%s@0x%08X", object.getClass().getSimpleName(), object.hashCode()) : "null";
-	}
-
-	protected static String mapToString(Map<?, ?> map) {
-		final StringBuilder builder = new StringBuilder().append("[");
-		for (final Map.Entry<?, ?> entry : map.entrySet()) {
-			if (builder.length() > 1) builder.append(',');
-			builder.append("\n\t").append(entry.getKey()).append(" = ").append(entry.getValue());
-		}
-		if (builder.length() > 1) builder.append('\n');
-		return builder.append(']').toString();
-	}
-
-	protected static String listToString(List<?> list) {
-		final StringBuilder builder = new StringBuilder().append("[");
-		for (final Object element : list) {
-			if (builder.length() > 1) builder.append(',');
-			builder.append("\n\t").append(element);
-		}
-		if (builder.length() > 1) builder.append('\n');
-		return builder.append(']').toString();
 	}
 
 	@Override
@@ -156,17 +131,28 @@ public abstract class Node extends TreeNode implements INode {
 
 	@Override
 	public boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+		if (!super.equals(object)) return false;
 		final Node node = (Node) object;
 		return name.equals(node.name) && uniqueName.equals(node.uniqueName)
 				&& signature.equals(node.signature);
 	}
 
+	@Override
+	public int hashCode() {
+		int result = super.hashCode();
+		//noinspection ConstantConditions
+		result = 31 * result + (name != null ? name.hashCode() : 0);
+		//noinspection ConstantConditions
+		result = 31 * result + (uniqueName != null ? uniqueName.hashCode() : 0);
+		//noinspection ConstantConditions
+		result = 31 * result + (signature != null ? signature.hashCode() : 0);
+		return result;
+	}
+
 	@Nonnull
 	@Override
 	public String toString() {
-		return "(" + objectToString(this)
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
@@ -176,11 +162,11 @@ public abstract class Node extends TreeNode implements INode {
 	@Nonnull
 	@Override
 	public String toTreeElementString() {
-		return "(" + objectToString(this)
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", dependencyMap: " + mapToString(dependencyMap)
+				+ "\", dependencyMap: " + Utilities.mapToString(dependencyMap)
 				+ " }";
 	}
 

@@ -2,9 +2,6 @@ package cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.*;
 
 abstract class TreeNode implements ITreeNode {

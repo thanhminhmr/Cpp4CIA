@@ -106,6 +106,10 @@ public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	 */
 	boolean removeFromParent();
 
+	boolean equals(Object object);
+
+	int hashCode();
+
 	@Nonnull
 	String toString();
 

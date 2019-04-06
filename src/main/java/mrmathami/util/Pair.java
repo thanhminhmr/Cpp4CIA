@@ -8,7 +8,7 @@ import java.util.Objects;
  * <p>A convenience class to represent name-value pairs.</p>
  */
 public final class Pair<K, V> implements Serializable {
-	private static final long serialVersionUID = -7167112365686535895L;
+	private static final long serialVersionUID = 2312500632450504945L;
 	
 	/**
 	 * Key of this <code>Pair</code>.
@@ -68,16 +68,6 @@ public final class Pair<K, V> implements Serializable {
 		this.value = value;
 	}
 
-	@Nonnull
-	private static <Value> String internalValueToString(Value value) {
-		if (value == null) return "null";
-		return String.format("(%s@%08X) \"%s\"",
-				value.getClass().getName(),
-				System.identityHashCode(value),
-				value.toString()
-		);
-	}
-
 	/**
 	 * <p><code>String</code> representation of this
 	 * <code>Pair</code>.</p>
@@ -88,7 +78,7 @@ public final class Pair<K, V> implements Serializable {
 	 */
 	@Override
 	public final String toString() {
-		return internalValueToString(key) + "=" + internalValueToString(value);
+		return Utilities.objectToString(key) + "=" + Utilities.objectToString(value);
 	}
 
 	/**

@@ -3,6 +3,9 @@ package cia.cpp.builder;
 import cia.cpp.ast.Node;
 
 import javax.annotation.Nonnull;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 
 final class UnknownNode extends Node implements IUnknown {
 	private static final long serialVersionUID = -7116903985998129873L;
@@ -13,6 +16,14 @@ final class UnknownNode extends Node implements IUnknown {
 
 	public static IUnknownBuilder builder() {
 		return new UnknownBuilder();
+	}
+
+	private void writeObject(ObjectOutputStream objectOutputStream) throws IOException {
+		throw new IOException("UnknownNode is not Serializable");
+	}
+
+	private void readObject(ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
+		throw new IOException("UnknownNode is not Serializable");
 	}
 
 	private static final class UnknownBuilder extends NodeBuilder<IUnknown, IUnknownBuilder> implements IUnknownBuilder {

@@ -7,6 +7,7 @@ import cia.cpp.ast.IRoot;
 import cia.cpp.ast.ITreeNode;
 import mrmathami.util.ImmutablePair;
 import mrmathami.util.Pair;
+import mrmathami.util.Utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -64,17 +65,17 @@ public final class ProjectDiffer {
 		// todo: dbg
 		{
 			try (final FileWriter fileWriter = new FileWriter("R:\\addedNodes.log")) {
-				fileWriter.write(addedNodes.toString());
+				fileWriter.write(Utilities.collectionToString(addedNodes));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			try (final FileWriter fileWriter = new FileWriter("R:\\changedNodes.log")) {
-				fileWriter.write(changedNodes.toString());
+				fileWriter.write(Utilities.collectionToString(changedNodes));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			try (final FileWriter fileWriter = new FileWriter("R:\\removedNodes.log")) {
-				fileWriter.write(removedNodes.toString());
+				fileWriter.write(Utilities.collectionToString(removedNodes));
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

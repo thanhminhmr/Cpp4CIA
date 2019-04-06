@@ -39,7 +39,7 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths = List.of();
-			final Project project = ProjectBuilder.build(projectFiles, includePaths, false);
+			final Project project = ProjectBuilder.build("project1", projectFiles, includePaths, false);
 
 			if (project == null) return;
 
@@ -69,7 +69,7 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths2 = List.of();
-			final Project project2 = ProjectBuilder.build(projectFiles2, includePaths2, false);
+			final Project project2 = ProjectBuilder.build("project2", projectFiles2, includePaths2, false);
 
 			if (project2 == null) return;
 
@@ -81,7 +81,6 @@ public final class DifferTest {
 				project2.toOutputStream(fos);
 			}
 		}
-
 
 
 		Project project, project2;

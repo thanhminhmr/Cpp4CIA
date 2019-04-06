@@ -3,11 +3,41 @@ package mrmathami.util;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 public final class Utilities {
 	private static final char[] EMPTY_CHARS = new char[0];
 
 	private Utilities() {
+	}
+
+	public static String objectToString(Object object) {
+		return object != null ? String.format("%s,0x%08X,0x%08X",
+				object.getClass().getSimpleName(),
+				System.identityHashCode(object),
+				object.hashCode()) : "null";
+	}
+
+	public static String mapToString(Map<?, ?> map) {
+		final StringBuilder builder = new StringBuilder().append("[");
+		for (final Map.Entry<?, ?> entry : map.entrySet()) {
+			if (builder.length() > 1) builder.append(',');
+			builder.append("\n\t").append(entry.getKey()).append(" = ").append(entry.getValue());
+		}
+		if (builder.length() > 1) builder.append('\n');
+		return builder.append(']').toString();
+	}
+
+	public static String collectionToString(Collection<?> collection) {
+		final StringBuilder builder = new StringBuilder().append("[");
+		for (final Object element : collection) {
+			if (builder.length() > 1) builder.append(',');
+			builder.append("\n\t").append(element);
+		}
+		if (builder.length() > 1) builder.append('\n');
+		return builder.append(']').toString();
 	}
 
 	public static String getCanonicalAbsolutePath(File file) {

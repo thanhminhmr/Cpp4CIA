@@ -48,12 +48,12 @@ public final class BuilderTest {
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-//				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
-				List.of(
-						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
-						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
-						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
-				);
+				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+//				List.of(
+//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
+//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
+//				);
 //				List.of(
 //						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Array.h"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Bitmap.h"),
@@ -65,13 +65,13 @@ public final class BuilderTest {
 //				);
 
 		final List<File> includePaths = List.of();
-		final Project project = ProjectBuilder.build(projectFiles, includePaths, false);
+		final Project project = ProjectBuilder.build("tesseract", projectFiles, includePaths, false);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
 		if (project == null) return;
 
-		try (final FileOutputStream fos = new FileOutputStream("R:\\output.project")) {
+		try (final FileOutputStream fos = new FileOutputStream("R:\\output.proj")) {
 			project.toOutputStream(fos);
 		}
 

@@ -1,12 +1,15 @@
 package cia.cpp.ast;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = 6858078087778982493L;
+	private static final long serialVersionUID = 7638006855749287476L;
 
 	@Nonnull
 	private final List<INode> bases;
@@ -29,6 +32,7 @@ public final class ClassNode extends Node implements IClass {
 
 	@Override
 	public final boolean addBase(@Nonnull INode base) {
+		if (bases.contains(base)) return false;
 		return bases.add(base);
 	}
 
@@ -41,7 +45,11 @@ public final class ClassNode extends Node implements IClass {
 	public final boolean replaceBase(@Nonnull INode oldBase, @Nonnull INode newBase) {
 		final int index = bases.indexOf(oldBase);
 		if (index < 0) return false;
-		bases.set(index, newBase);
+		if (bases.contains(newBase)) {
+			bases.remove(index);
+		} else {
+			bases.set(index, newBase);
+		}
 		return true;
 	}
 
@@ -69,10 +77,27 @@ public final class ClassNode extends Node implements IClass {
 		return getChildrenList(IVariable.class);
 	}
 
+	@Override
+	public final boolean equals(Object object) {
+		if (!super.equals(object)) return false;
+		final ClassNode node = (ClassNode) object;
+		final Set<INode> myBaseSet = Set.copyOf(bases);
+		final Set<INode> yourBaseSet = Set.copyOf(node.bases);
+		return myBaseSet.equals(yourBaseSet);
+	}
+
+	@Override
+	public final int hashCode() {
+		int result = super.hashCode();
+		//noinspection ConstantConditions
+		result = 31 * result + (bases != null ? bases.hashCode() : 0);
+		return result;
+	}
+
 	@Nonnull
 	@Override
-	public String toString() {
-		return "(" + objectToString(this)
+	public final String toString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
@@ -81,13 +106,13 @@ public final class ClassNode extends Node implements IClass {
 
 	@Nonnull
 	@Override
-	public String toTreeElementString() {
-		return "(" + objectToString(this)
+	public final String toTreeElementString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencies())
-				+ ", bases: " + listToString(bases)
+				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ ", bases: " + Utilities.collectionToString(bases)
 				+ " }";
 	}
 

@@ -7,7 +7,10 @@ import java.io.*;
 import java.util.List;
 
 public final class Project implements Serializable {
-	private static final long serialVersionUID = 2142820713309514476L;
+	private static final long serialVersionUID = 4215704611904157468L;
+
+	@Nonnull
+	private final String projectName;
 
 	@Nonnull
 	private final List<File> projectFiles;
@@ -18,14 +21,15 @@ public final class Project implements Serializable {
 	@Nonnull
 	private final IRoot rootNode;
 
-	private Project(@Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
+	private Project(@Nonnull String projectName, @Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
+		this.projectName = projectName;
 		this.projectFiles = projectFiles;
 		this.includePaths = includePaths;
 		this.rootNode = rootNode;
 	}
 
-	public static Project of(@Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
-		return new Project(projectFiles, includePaths, rootNode);
+	public static Project of(@Nonnull String projectName, @Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
+		return new Project(projectName, projectFiles, includePaths, rootNode);
 	}
 
 	public static Project fromInputStream(@Nonnull InputStream inputStream) throws IOException {

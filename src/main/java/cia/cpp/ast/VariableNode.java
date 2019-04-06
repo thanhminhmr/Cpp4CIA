@@ -1,11 +1,13 @@
 package cia.cpp.ast;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IVariable {
-	private static final long serialVersionUID = 4823138680394473462L;
+	private static final long serialVersionUID = 245317490612142346L;
 
 	@Nullable
 	private INode type;
@@ -33,8 +35,7 @@ public final class VariableNode extends Node implements IVariable {
 
 	@Override
 	public boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
+		if (!super.equals(object)) return false;
 		final VariableNode that = (VariableNode) object;
 		return Objects.equals(type, that.type);
 
@@ -49,8 +50,8 @@ public final class VariableNode extends Node implements IVariable {
 
 	@Nonnull
 	@Override
-	public String toString() {
-		return "(" + objectToString(this)
+	public final String toString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
@@ -60,12 +61,12 @@ public final class VariableNode extends Node implements IVariable {
 
 	@Nonnull
 	@Override
-	public String toTreeElementString() {
-		return "(" + objectToString(this)
+	public final String toTreeElementString() {
+		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + mapToString(getDependencies())
+				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
 				+ ", type: " + type
 				+ " }";
 	}

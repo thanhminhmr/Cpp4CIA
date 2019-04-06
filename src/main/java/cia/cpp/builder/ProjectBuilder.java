@@ -86,7 +86,7 @@ public final class ProjectBuilder {
 		}
 	}
 
-	public static Project build(List<File> projectFiles, List<File> includePaths, boolean isReadable) {
+	public static Project build(String projectName, List<File> projectFiles, List<File> includePaths, boolean isReadable) {
 		final List<File> projectFileList = createCanonicalAbsoluteFileList(projectFiles);
 		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePaths);
 		final List<File> internalIncludePaths = createInternalIncludePaths(projectFileList);
@@ -97,7 +97,7 @@ public final class ProjectBuilder {
 
 		// todo: dbg
 		{
-			try (final FileWriter writer = new FileWriter("R:\\output.cpp")) {
+			try (final FileWriter writer = new FileWriter("R:\\output_" + projectName + ".cpp")) {
 				writer.write(fileContentCharArray);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -108,29 +108,29 @@ public final class ProjectBuilder {
 		if (translationUnit == null) return null;
 
 		// todo: dbg
-		{
-			try (final FileOutputStream fileOutputStream = new FileOutputStream("R:\\preprocessed.log")) {
-				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
-					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
-						_debugPrinter(printStream, 0, translationUnit, translationUnit);
-					}
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+//		{
+//			try (final FileOutputStream fileOutputStream = new FileOutputStream("R:\\preprocessed_" + projectName + ".log")) {
+//				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
+//					try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
+//						_debugPrinter(printStream, 0, translationUnit, translationUnit);
+//					}
+//				}
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
 
 		final IRoot root = AstBuilder.build(translationUnit);
 
 		// todo: dbg
 		{
-			try (final FileWriter fileWriter = new FileWriter("R:\\tree_new.log")) {
+			try (final FileWriter fileWriter = new FileWriter("R:\\tree_new_" + projectName + ".log")) {
 				fileWriter.write(root.toTreeString());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 
-		return Project.of(projectFiles, includePaths, root);
+		return Project.of(projectName, projectFiles, includePaths, root);
 	}
 }

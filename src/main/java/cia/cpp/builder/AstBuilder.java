@@ -107,12 +107,19 @@ final class AstBuilder {
 			return existNode;
 		}
 
-		final String name = astName != null ? astName.toString() : "";
-		final String uniqueName = binding instanceof ICPPBinding ? ASTTypeUtil.getQualifiedName((ICPPBinding) binding)
+		final String name = astName != null ? astName.toString() : binding != null ? binding.getName() : "";
+		final String uniqueName = binding instanceof ICPPBinding ? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("^\\{ROOT:\\d+}::", "{ROOT}::")
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : name;
+
+		if (uniqueName.contains("{ROOT:")) {
+			if (binding instanceof ICPPBinding) System.out.println("ASTTypeUtil = " + ASTTypeUtil.getQualifiedName((ICPPBinding) binding));
+			if (astName != null) System.out.println("ASTStringUtil = " + ASTStringUtil.getQualifiedName(astName));
+		}
 
 		final INode newNode = builder instanceof IUnknown.IUnknownBuilder && binding instanceof IProblemBinding
 				? createIntegralNode(uniqueName, IntegralNode.builder())
+				: uniqueName.isBlank() && signature != null && !signature.isBlank()
+				? createIntegralNode(signature, IntegralNode.builder())
 				: builder.setName(name).setUniqueName(uniqueName).setSignature(signature != null ? signature : uniqueName).build();
 
 		if (existNode != null) replaceNode(existNode, newNode);
