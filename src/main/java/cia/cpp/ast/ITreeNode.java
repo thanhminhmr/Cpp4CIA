@@ -75,10 +75,10 @@ public interface ITreeNode extends Iterable<ITreeNode>, Serializable {
 	 * Return false if one of children nodes already have parent node.
 	 * Return true otherwise.
 	 *
-	 * @param newChildren children nodes to add
+	 * @param children children nodes to add
 	 * @return whether the operation is success or not
 	 */
-	<E extends ITreeNode> boolean addChildren(@Nonnull List<E> newChildren);
+	<E extends ITreeNode> boolean addChildren(@Nonnull List<E> children);
 
 	/**
 	 * Remove children nodes from current node.

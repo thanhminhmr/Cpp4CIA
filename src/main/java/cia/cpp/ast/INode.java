@@ -31,6 +31,21 @@ public interface INode extends ITreeNode {
 	Map<INode, Dependency> getDependencies();
 
 	/**
+	 * Add multiple dependency info
+	 *
+	 * @param dependencyMap new dependency map
+	 */
+	void addDependencies(@Nonnull Map<INode, Dependency> dependencyMap);
+
+	/**
+	 * remove all dependency info
+	 *
+	 * @return old dependency map
+	 */
+	@Nonnull
+	Map<INode, Dependency> removeDependencies();
+
+	/**
 	 * Get dependency info
 	 *
 	 * @param node the node
@@ -49,6 +64,14 @@ public interface INode extends ITreeNode {
 	Dependency addDependency(@Nonnull INode node);
 
 	/**
+	 * Remove dependency info
+	 *
+	 * @param node the node
+	 * @return true if the dependency info exist, false otherwise
+	 */
+	boolean removeDependency(@Nonnull INode node);
+
+	/**
 	 * Replace node dependency with another node dependency
 	 *
 	 * @param oldNode the old node
@@ -59,17 +82,11 @@ public interface INode extends ITreeNode {
 	Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode);
 
 	/**
-	 * Remove dependency info
+	 * compare two dependency map
 	 *
-	 * @param node the node
-	 * @return true if the dependency info exist, false otherwise
+	 * @return result
 	 */
-	boolean removeDependency(@Nonnull INode node);
-
-	void addDependencies(Map<INode, Dependency> newDependencyMap);
-
-	@Nonnull
-	Map<INode, Dependency> removeDependencies();
+	boolean equalsDependencies(@Nonnull INode node);
 
 	/**
 	 * @param <E> the node

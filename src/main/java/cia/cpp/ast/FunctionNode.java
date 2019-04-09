@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = -1266207100630546683L;
+	private static final long serialVersionUID = 7230219781784496872L;
 
 	@Nonnull
 	private final List<INode> parameters;
@@ -31,22 +31,41 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Nonnull
 	@Override
-	public List<INode> getParameters() {
+	public final List<INode> getParameters() {
 		return Collections.unmodifiableList(parameters);
 	}
 
 	@Override
-	public boolean addParameter(@Nonnull INode parameter) {
-		return parameters.add(parameter);
+	public final boolean addParameters(@Nonnull List<INode> parameters) {
+		if (parameters.isEmpty()) return true;
+		if (!super.addChildren(parameters)) return false;
+
+		return this.parameters.addAll(parameters);
 	}
 
 	@Override
-	public boolean removeParameter(@Nonnull INode parameter) {
-		return parameters.remove(parameter);
+	public final List<INode> removeParameters() {
+		final List<INode> oldParameters = List.copyOf(parameters);
+		for (final INode parameter : parameters) removeChild(parameter);
+		parameters.clear();
+		return oldParameters;
 	}
 
 	@Override
-	public boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter) {
+	public final boolean addParameter(@Nonnull INode parameter) {
+		//noinspection ConstantConditions
+		return super.addChild(parameter) && parameters.add(parameter);
+	}
+
+	@Override
+	public final boolean removeParameter(@Nonnull INode parameter) {
+		return super.removeChild(parameter) && parameters.remove(parameter);
+	}
+
+	@Override
+	public final boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter) {
+		if (!super.replaceChild(oldParameter, newParameter)) return false;
+
 		final int index = parameters.indexOf(oldParameter);
 		if (index < 0) return false;
 		parameters.set(index, newParameter);

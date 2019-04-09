@@ -2,16 +2,16 @@ package cia.cpp.differ;
 
 import cia.cpp.Project;
 import cia.cpp.ProjectDifference;
-import cia.cpp.ast.INode;
-import cia.cpp.ast.IRoot;
-import cia.cpp.ast.ITreeNode;
+import cia.cpp.ast.*;
 import mrmathami.util.ImmutablePair;
-import mrmathami.util.Pair;
 import mrmathami.util.Utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public final class ProjectDiffer {
 	private ProjectDiffer() {
@@ -41,24 +41,24 @@ public final class ProjectDiffer {
 		final Set<INode> removedNodes = new HashSet<>();
 
 		for (final INode nodeA : nodeMapA.keySet()) {
-			final INode nodeB = nodeMapB.get(nodeA);
-			if (nodeB != null) {
-				if (!nodeA.equals(nodeB)) {
-					throw new IllegalStateException();
+			if (!(nodeA instanceof IVariable && nodeA.getParent() instanceof IFunction)) {
+				final INode nodeB = nodeMapB.get(nodeA);
+				if (nodeB != null) {
+					if (!nodeA.equalsDependencies(nodeB)
+							|| (nodeA instanceof IClass && !((IClass) nodeA).equalsBase(nodeB))) {
+						changedNodes.add(ImmutablePair.of(nodeA, nodeB));
+					}
+				} else {
+					removedNodes.add(nodeA);
 				}
-				if (!nodeA.getDependencies().equals(nodeB.getDependencies())) {
-					changedNodes.add(ImmutablePair.of(nodeA, nodeB));
-				}
-			} else {
-				removedNodes.add(nodeA);
 			}
 		}
 		for (final INode nodeB : nodeMapB.keySet()) {
-			final INode nodeA = nodeMapA.get(nodeB);
-			if (nodeA == null) addedNodes.add(nodeB);
-			else
-			if (!nodeA.equals(nodeB)) {
-				throw new IllegalStateException();
+			if (!(nodeB instanceof IVariable && nodeB.getParent() instanceof IFunction)) {
+				final INode nodeA = nodeMapA.get(nodeB);
+				if (nodeA == null) {
+					addedNodes.add(nodeB);
+				}
 			}
 		}
 

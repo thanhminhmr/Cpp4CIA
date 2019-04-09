@@ -1,6 +1,7 @@
 package cia.cpp.builder;
 
 import cia.cpp.ast.IFunction;
+import cia.cpp.ast.IVariable;
 import cia.cpp.ast.*;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
@@ -11,6 +12,7 @@ import java.util.*;
 final class AstBuilder {
 	private final Map<String, INode> integralNodeMap = new HashMap<>();
 	private final Map<IBinding, INode> bindingNodeMap = new HashMap<>();
+	private final List<INode> unknownNodeList = new LinkedList<>();
 
 	private AstBuilder() {
 	}
@@ -24,15 +26,10 @@ final class AstBuilder {
 	}
 
 	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
-		final IRoot rootNode = new RootNode();
+		final IRoot rootNode = RootNode.builder().build();
 		for (final IASTDeclaration declaration : translationUnit.getDeclarations()) {
 			createChildrenFromDeclaration(rootNode, declaration);
 		}
-		finalizeBuild();
-		return rootNode;
-	}
-
-	private void finalizeBuild() {
 		for (final INode node : bindingNodeMap.values()) {
 			if (node instanceof IUnknown || node instanceof IIntegral) {
 				// replace unknown node with integral node
@@ -50,10 +47,27 @@ final class AstBuilder {
 						node.removeDependency(dependencyNode);
 					}
 				}
+				if (node instanceof IVariable) {
+					// remove all children
+					node.removeChildren();
+				} else if (node instanceof IFunction) {
+					final IFunction function = (IFunction) node;
+					final List<INode> parameters = List.copyOf(function.getParameters());
+					final List<INode> variables = new ArrayList<>(function.getVariables());
+					variables.removeAll(parameters);
+					for (final INode variable : variables) function.removeChild(variable);
+				}
 			}
 		}
-		integralNodeMap.clear();
-		bindingNodeMap.clear();
+		for (final INode node : List.copyOf(unknownNodeList)) {
+			// replace unknown node with integral node
+			node.removeChildren();
+			node.removeDependencies();
+			final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
+			replaceNode(node, newNode);
+		}
+		rootNode.addIntegrals(List.copyOf(integralNodeMap.values()));
+		return rootNode;
 	}
 
 	private <E extends INode, B extends INode.INodeBuilder<E, B>>
@@ -92,6 +106,29 @@ final class AstBuilder {
 			node.replaceDependency(oldNode, newNode);
 			if (node == oldNode) entry.setValue(newNode);
 		}
+		for (final ListIterator<INode> iterator = unknownNodeList.listIterator(); iterator.hasNext(); ) {
+			final INode node = iterator.next();
+			if (node != oldNode) {
+				if (node instanceof ITypeContainer) {
+					final ITypeContainer typeContainerNode = (ITypeContainer) node;
+					if (typeContainerNode.getType() == oldNode) {
+						typeContainerNode.setType(newNode);
+					}
+				}
+				if (node instanceof IClass) {
+					final IClass classNode = (IClass) node;
+					classNode.replaceBase(oldNode, newNode);
+				}
+				if (node instanceof IFunction) {
+					final IFunction functionNode = (IFunction) node;
+					functionNode.replaceParameter(oldNode, newNode);
+				}
+				node.replaceChild(oldNode, newNode);
+				node.replaceDependency(oldNode, newNode);
+			} else {
+				iterator.remove();
+			}
+		}
 		newNode.addChildren(oldNode.removeChildren());
 		newNode.addDependencies(oldNode.removeDependencies());
 	}
@@ -108,13 +145,9 @@ final class AstBuilder {
 		}
 
 		final String name = astName != null ? astName.toString() : binding != null ? binding.getName() : "";
-		final String uniqueName = binding instanceof ICPPBinding ? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("^\\{ROOT:\\d+}::", "{ROOT}::")
+		final String uniqueName = binding instanceof ICPPBinding
+				? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("^\\{ROOT:\\d+}", "{ROOT}")
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : name;
-
-		if (uniqueName.contains("{ROOT:")) {
-			if (binding instanceof ICPPBinding) System.out.println("ASTTypeUtil = " + ASTTypeUtil.getQualifiedName((ICPPBinding) binding));
-			if (astName != null) System.out.println("ASTStringUtil = " + ASTStringUtil.getQualifiedName(astName));
-		}
 
 		final INode newNode = builder instanceof IUnknown.IUnknownBuilder && binding instanceof IProblemBinding
 				? createIntegralNode(uniqueName, IntegralNode.builder())
@@ -124,7 +157,8 @@ final class AstBuilder {
 
 		if (existNode != null) replaceNode(existNode, newNode);
 
-		bindingNodeMap.put(binding, newNode);
+		if (newNode instanceof IUnknown) unknownNodeList.add(newNode);
+		if (binding != null) bindingNodeMap.put(binding, newNode);
 		return newNode;
 	}
 
@@ -149,7 +183,6 @@ final class AstBuilder {
 				final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
 
 				((IFunction) functionNode).addParameter(parameterNode);
-				functionNode.addChild(parameterNode);
 				functionNode.addDependency(parameterNode).setType(Dependency.Type.MEMBER);
 				functionNode.addDependency(parameterType).setType(Dependency.Type.USE);
 				//}
@@ -236,6 +269,15 @@ final class AstBuilder {
 			final ICPPASTElaboratedTypeSpecifier elaboratedSpecifier = (ICPPASTElaboratedTypeSpecifier) declSpecifier;
 			final IASTName elaboratedName = elaboratedSpecifier.getName();
 			final IBinding elaboratedBinding = elaboratedName.resolveBinding();
+
+			switch (elaboratedSpecifier.getKind()) {
+				case IASTElaboratedTypeSpecifier.k_enum:
+					return createNode(elaboratedBinding, elaboratedName, signature, EnumNode.builder());
+				case IASTElaboratedTypeSpecifier.k_struct:
+				case IASTElaboratedTypeSpecifier.k_union:
+				case ICPPASTElaboratedTypeSpecifier.k_class:
+					return createNode(elaboratedBinding, elaboratedName, signature, ClassNode.builder());
+			}
 
 			//noinspection UnnecessaryLocalVariable
 			final INode elaboratedNode = createNode(elaboratedBinding, elaboratedName, signature, UnknownNode.builder());

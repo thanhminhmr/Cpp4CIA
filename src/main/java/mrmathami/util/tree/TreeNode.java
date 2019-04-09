@@ -1,12 +1,14 @@
 package mrmathami.util.tree;
 
+import mrmathami.util.Utilities;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.*;
 
 public final class TreeNode<Value> implements Iterable<TreeNode<Value>>, Serializable {
-	private static final long serialVersionUID = -6927375627214127129L;
+	private static final long serialVersionUID = 1228966256662524207L;
 
 	@Nullable
 	private final Value value;
@@ -17,16 +19,6 @@ public final class TreeNode<Value> implements Iterable<TreeNode<Value>>, Seriali
 
 	public TreeNode(@Nullable Value value) {
 		this.value = value;
-	}
-
-	@Nonnull
-	private static <Value> String internalValueToString(Value value) {
-		if (value == null) return "null";
-		return String.format("(%s@%08X) \"%s\"",
-				value.getClass().getName(),
-				System.identityHashCode(value),
-				value.toString()
-		);
 	}
 
 	/**
@@ -162,7 +154,7 @@ public final class TreeNode<Value> implements Iterable<TreeNode<Value>>, Seriali
 		if (children.isEmpty()) return "{ value: " + value + " }";
 
 		StringBuilder builder = new StringBuilder()
-				.append("{ value: ").append(internalValueToString(value)).append(", children: [\n");
+				.append("{ value: ").append(Utilities.objectToString(value)).append(", children: [\n");
 
 		children.get(0).internalToString(builder, 1);
 		for (int i = 1; i < children.size(); i++) {
@@ -178,9 +170,9 @@ public final class TreeNode<Value> implements Iterable<TreeNode<Value>>, Seriali
 		final String alignString = "\t".repeat(level);
 
 		if (children.isEmpty()) {
-			builder.append(alignString).append("{ value: ").append(internalValueToString(value)).append(" }");
+			builder.append(alignString).append("{ value: ").append(Utilities.objectToString(value)).append(" }");
 		} else {
-			builder.append(alignString).append("{ value: ").append(internalValueToString(value)).append(", children: [\n");
+			builder.append(alignString).append("{ value: ").append(Utilities.objectToString(value)).append(", children: [\n");
 
 			children.get(0).internalToString(builder, level + 1);
 			for (int i = 1; i < children.size(); i++) {

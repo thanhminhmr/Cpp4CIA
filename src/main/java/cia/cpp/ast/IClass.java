@@ -8,11 +8,17 @@ public interface IClass extends IClassContainer, IEnumContainer, IFunctionContai
 	@Nonnull
 	List<INode> getBases();
 
+	boolean addBases(@Nonnull List<INode> bases);
+
+	List<INode> removeBases();
+
 	boolean addBase(@Nonnull INode base);
 
 	boolean removeBase(@Nonnull INode base);
 
 	boolean replaceBase(@Nonnull INode oldBase, @Nonnull INode newBase);
+
+	boolean equalsBase(@Nonnull INode node);
 
 	/**
 	 * The class builder

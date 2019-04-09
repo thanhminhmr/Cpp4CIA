@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = 7638006855749287476L;
+	private static final long serialVersionUID = -5538726025004995091L;
 
 	@Nonnull
 	private final List<INode> bases;
@@ -28,6 +28,30 @@ public final class ClassNode extends Node implements IClass {
 	@Override
 	public final List<INode> getBases() {
 		return Collections.unmodifiableList(bases);
+	}
+
+	@Override
+	public final boolean addBases(@Nonnull List<INode> bases) {
+		if (bases.isEmpty()) return true;
+		if (this.bases.isEmpty()) {
+			this.bases.addAll(bases);
+			return true;
+		}
+
+		for (final INode base : bases) {
+			if (this.bases.contains(base)) return false;
+		}
+
+		return this.bases.addAll(bases);
+	}
+
+	@Override
+	public final List<INode> removeBases() {
+		if (bases.isEmpty()) return List.of();
+
+		final List<INode> oldBases = List.copyOf(bases);
+		bases.clear();
+		return oldBases;
 	}
 
 	@Override
@@ -53,6 +77,16 @@ public final class ClassNode extends Node implements IClass {
 		return true;
 	}
 
+	@Override
+	public final boolean equalsBase(@Nonnull INode node) {
+		if (node instanceof IClass) {
+			final Set<INode> baseA = Set.copyOf(bases);
+			final Set<INode> baseB = Set.copyOf(((IClass) node).getBases());
+			return baseA.equals(baseB);
+		}
+		return false;
+	}
+
 	@Nonnull
 	@Override
 	public final List<INode> getClasses() {
@@ -75,23 +109,6 @@ public final class ClassNode extends Node implements IClass {
 	@Override
 	public final List<INode> getVariables() {
 		return getChildrenList(IVariable.class);
-	}
-
-	@Override
-	public final boolean equals(Object object) {
-		if (!super.equals(object)) return false;
-		final ClassNode node = (ClassNode) object;
-		final Set<INode> myBaseSet = Set.copyOf(bases);
-		final Set<INode> yourBaseSet = Set.copyOf(node.bases);
-		return myBaseSet.equals(yourBaseSet);
-	}
-
-	@Override
-	public final int hashCode() {
-		int result = super.hashCode();
-		//noinspection ConstantConditions
-		result = 31 * result + (bases != null ? bases.hashCode() : 0);
-		return result;
 	}
 
 	@Nonnull

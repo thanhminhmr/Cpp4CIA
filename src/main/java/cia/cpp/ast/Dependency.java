@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
-	private static final long serialVersionUID = 5603557269009278757L;
+	private static final long serialVersionUID = -6916548911262334697L;
 
 	private int type = 0;
 	private int count = 1;
@@ -53,6 +53,22 @@ public final class Dependency implements Serializable {
 				+ ") { type: " + getType()
 				+ ", count: " + count
 				+ " }";
+	}
+
+	@Override
+	public final boolean equals(Object object) {
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass()) return false;
+		final Dependency dependency = (Dependency) object;
+		return type == dependency.type && count == dependency.count;
+
+	}
+
+	@Override
+	public final int hashCode() {
+		int result = type;
+		result = 31 * result + count;
+		return result;
 	}
 
 	public enum Type {

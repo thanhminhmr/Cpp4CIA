@@ -8,6 +8,10 @@ public interface IFunction extends ITypeContainer, IClassContainer, IEnumContain
 	@Nonnull
 	List<INode> getParameters();
 
+	boolean addParameters(@Nonnull List<INode> parameters);
+
+	List<INode> removeParameters();
+
 	boolean addParameter(@Nonnull INode parameter);
 
 	boolean removeParameter(@Nonnull INode parameter);

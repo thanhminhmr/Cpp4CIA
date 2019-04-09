@@ -10,7 +10,7 @@ import java.util.*;
  * Base of nay AST TreeNode. Do not use TreeNode class directly.
  */
 public abstract class Node extends TreeNode implements INode {
-	private static final long serialVersionUID = 2977623392166713480L;
+	private static final long serialVersionUID = -5916999721452652716L;
 
 	@Nonnull
 	private final String name;
@@ -64,6 +64,38 @@ public abstract class Node extends TreeNode implements INode {
 		return Collections.unmodifiableMap(dependencyMap);
 	}
 
+	@Override
+	public final void addDependencies(@Nonnull Map<INode, Dependency> dependencyMap) {
+		if (dependencyMap.isEmpty()) return;
+		if (this.dependencyMap.isEmpty()) {
+			this.dependencyMap.putAll(dependencyMap);
+			return;
+		}
+
+		for (final Map.Entry<INode, Dependency> entry : dependencyMap.entrySet()) {
+			final INode node = entry.getKey();
+			final Dependency dependency = entry.getValue();
+			final Dependency oldDependency = this.dependencyMap.get(node);
+			if (oldDependency != null) {
+				oldDependency.setCount(oldDependency.getCount() + dependency.getCount());
+			} else {
+				final Dependency newDependency = new Dependency(dependency.getType());
+				newDependency.setCount(dependency.getCount());
+				this.dependencyMap.put(node, newDependency);
+			}
+		}
+	}
+
+	@Nonnull
+	@Override
+	public final Map<INode, Dependency> removeDependencies() {
+		if (dependencyMap.isEmpty()) return Map.of();
+
+		final Map<INode, Dependency> oldDependencyMap = Map.copyOf(dependencyMap);
+		dependencyMap.clear();
+		return oldDependencyMap;
+	}
+
 	@Nullable
 	@Override
 	public final Dependency getDependency(@Nonnull INode node) {
@@ -77,6 +109,11 @@ public abstract class Node extends TreeNode implements INode {
 		final Dependency dependency = new Dependency();
 		dependencyMap.put(node, dependency);
 		return dependency;
+	}
+
+	@Override
+	public final boolean removeDependency(@Nonnull INode node) {
+		return dependencyMap.remove(node) != null;
 	}
 
 	@Nullable
@@ -97,36 +134,8 @@ public abstract class Node extends TreeNode implements INode {
 	}
 
 	@Override
-	public final boolean removeDependency(@Nonnull INode node) {
-		return dependencyMap.remove(node) != null;
-	}
-
-	@Override
-	public void addDependencies(Map<INode, Dependency> newDependencyMap) {
-		if (newDependencyMap.isEmpty()) return;
-
-		for (final Map.Entry<INode, Dependency> entry : newDependencyMap.entrySet()) {
-			final INode node = entry.getKey();
-			final Dependency dependency = entry.getValue();
-			final Dependency oldDependency = dependencyMap.get(node);
-			if (oldDependency != null) {
-				oldDependency.setCount(oldDependency.getCount() + dependency.getCount());
-			} else {
-				final Dependency newDependency = new Dependency(dependency.getType());
-				newDependency.setCount(dependency.getCount());
-				dependencyMap.put(node, newDependency);
-			}
-		}
-	}
-
-	@Nonnull
-	@Override
-	public Map<INode, Dependency> removeDependencies() {
-		if (dependencyMap.isEmpty()) return Map.of();
-
-		final Map<INode, Dependency> oldDependencyMap = Map.copyOf(dependencyMap);
-		dependencyMap.clear();
-		return oldDependencyMap;
+	public final boolean equalsDependencies(@Nonnull INode node) {
+		return dependencyMap.equals(node.getDependencies());
 	}
 
 	@Override
