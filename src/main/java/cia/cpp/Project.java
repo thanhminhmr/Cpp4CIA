@@ -7,7 +7,7 @@ import java.io.*;
 import java.util.List;
 
 public final class Project implements Serializable {
-	private static final long serialVersionUID = 4215704611904157468L;
+	private static final long serialVersionUID = -9079954477430291810L;
 
 	@Nonnull
 	private final String projectName;
@@ -41,10 +41,15 @@ public final class Project implements Serializable {
 		}
 	}
 
-	public final synchronized void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
+	public final void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
 		final ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 		objectOutputStream.writeObject(this);
 		objectOutputStream.flush();
+	}
+
+	@Nonnull
+	public String getProjectName() {
+		return projectName;
 	}
 
 	@Nonnull

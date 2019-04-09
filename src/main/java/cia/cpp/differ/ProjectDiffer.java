@@ -81,6 +81,6 @@ public final class ProjectDiffer {
 			}
 		}
 
-		return ProjectDifference.of(addedNodes, changedNodes, removedNodes);
+		return ProjectDifference.of(projectA, projectB, addedNodes, changedNodes, removedNodes);
 	}
 }

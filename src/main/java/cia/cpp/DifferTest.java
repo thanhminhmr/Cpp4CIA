@@ -82,7 +82,6 @@ public final class DifferTest {
 			}
 		}
 
-
 		Project project, project2;
 
 		try (final FileInputStream fileInputStream = new FileInputStream("R:\\project1.proj")) {
@@ -94,10 +93,12 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
+		final ProjectDifference difference = ProjectDiffer.compare(project, project2);
 
-		ProjectDiffer.compare(project, project2);
-
-
+		System.out.println((System.nanoTime() - start_time) / 1000000.0);
+		try (final FileOutputStream fos = new FileOutputStream("R:\\project_project2.pcmp")) {
+			difference.toOutputStream(fos);
+		}
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 	}
 }
