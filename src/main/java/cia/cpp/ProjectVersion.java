@@ -5,29 +5,29 @@ import cia.cpp.ast.IRoot;
 import java.io.*;
 import java.util.List;
 
-public final class Version implements Serializable {
-	private static final long serialVersionUID = 1965669891965632678L;
+public final class ProjectVersion implements Serializable {
+	private static final long serialVersionUID = 8469860416876982231L;
 
 	private final String versionName;
 	private final List<File> projectFiles;
 	private final List<File> includePaths;
 	private final IRoot rootNode;
 
-	private Version(String versionName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
+	private ProjectVersion(String versionName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
 		this.versionName = versionName;
 		this.projectFiles = projectFiles;
 		this.includePaths = includePaths;
 		this.rootNode = rootNode;
 	}
 
-	public static Version of(String projectName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
-		return new Version(projectName, projectFiles, includePaths, rootNode);
+	public static ProjectVersion of(String projectName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
+		return new ProjectVersion(projectName, projectFiles, includePaths, rootNode);
 	}
 
-	public static Version fromInputStream(InputStream inputStream) throws IOException {
+	public static ProjectVersion fromInputStream(InputStream inputStream) throws IOException {
 		final ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 		try {
-			return (Version) objectInputStream.readObject();
+			return (ProjectVersion) objectInputStream.readObject();
 		} catch (ClassNotFoundException | ClassCastException e) {
 			throw new IOException("Wrong input file format!", e);
 		}

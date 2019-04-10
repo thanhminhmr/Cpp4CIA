@@ -1,6 +1,6 @@
 package cia.cpp.differ;
 
-import cia.cpp.Version;
+import cia.cpp.ProjectVersion;
 import cia.cpp.VersionDifference;
 import cia.cpp.ast.*;
 import mrmathami.util.ImmutablePair;
@@ -13,11 +13,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public final class VersionDiffer {
-	private VersionDiffer() {
+public final class ProjectVersionDiffer {
+	private ProjectVersionDiffer() {
 	}
 
-	public static VersionDifference compare(Version versionA, Version versionB) {
+	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB) {
 		final IRoot rootA = versionA.getRootNode();
 		final IRoot rootB = versionB.getRootNode();
 

@@ -1,25 +1,22 @@
 package cia.cpp;
 
-import mrmathami.util.ImmutablePair;
-
 import java.io.*;
-import java.util.Collections;
-import java.util.Map;
+import java.util.List;
 
 public final class Project implements Serializable {
-	private static final long serialVersionUID = -2746772526823166486L;
+	private static final long serialVersionUID = 6617345373264477890L;
 
 	private final String projectName;
-	private final Map<String, Version> versions;
-	private final Map<ImmutablePair<Version, Version>, VersionDifference> differences;
+	private final List<ProjectVersion> versionList;
+	private final List<VersionDifference> differenceList;
 
-	private Project(String projectName, Map<String, Version> versions, Map<ImmutablePair<Version, Version>, VersionDifference> differences) {
+	private Project(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
 		this.projectName = projectName;
-		this.versions = versions;
-		this.differences = differences;
+		this.versionList = versionList;
+		this.differenceList = differenceList;
 	}
 
-	public static Project of(String projectName, Map<String, Version> versionList, Map<ImmutablePair<Version, Version>, VersionDifference> differenceList) {
+	public static Project of(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
 		return new Project(projectName, versionList, differenceList);
 	}
 
@@ -42,11 +39,11 @@ public final class Project implements Serializable {
 		return projectName;
 	}
 
-	public final Map<String, Version> getVersions() {
-		return Collections.unmodifiableMap(versions);
+	public final List<ProjectVersion> getVersionList() {
+		return versionList;
 	}
 
-	public final Map<ImmutablePair<Version, Version>, VersionDifference> getDifferences() {
-		return Collections.unmodifiableMap(differences);
+	public final List<VersionDifference> getDifferenceList() {
+		return differenceList;
 	}
 }

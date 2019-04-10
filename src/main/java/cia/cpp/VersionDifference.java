@@ -7,16 +7,16 @@ import java.io.*;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
-	private static final long serialVersionUID = 8631661649798016080L;
+	private static final long serialVersionUID = 5005107530392882555L;
 
-	private final Version versionA;
-	private final Version versionB;
+	private final ProjectVersion versionA;
+	private final ProjectVersion versionB;
 	private final Set<INode> addedNodes;
 	private final Set<ImmutablePair<INode, INode>> changedNodes;
 	private final Set<ImmutablePair<INode, INode>> unchangedNodes;
 	private final Set<INode> removedNodes;
 
-	private VersionDifference(Version versionA, Version versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = addedNodes;
@@ -25,7 +25,7 @@ public final class VersionDifference implements Serializable {
 		this.removedNodes = removedNodes;
 	}
 
-	public static VersionDifference of(Version versionA, Version versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}
 
@@ -44,11 +44,11 @@ public final class VersionDifference implements Serializable {
 		objectOutputStream.flush();
 	}
 
-	public final Version getVersionA() {
+	public final ProjectVersion getVersionA() {
 		return versionA;
 	}
 
-	public final Version getVersionB() {
+	public final ProjectVersion getVersionB() {
 		return versionB;
 	}
 

@@ -1,11 +1,14 @@
 package cia.cpp.builder;
 
-import cia.cpp.Version;
+import cia.cpp.ProjectVersion;
 import cia.cpp.ast.IRoot;
 import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.util.*;
 
 public final class VersionBuilder {
@@ -86,7 +89,7 @@ public final class VersionBuilder {
 		}
 	}
 
-	public static Version build(String versionName, List<File> projectFiles, List<File> includePaths, boolean isReadable) {
+	public static ProjectVersion build(String versionName, List<File> projectFiles, List<File> includePaths, boolean isReadable) {
 		final List<File> projectFileList = createCanonicalAbsoluteFileList(projectFiles);
 		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePaths);
 		final List<File> internalIncludePaths = createInternalIncludePaths(projectFileList);
@@ -131,6 +134,6 @@ public final class VersionBuilder {
 			}
 		}
 
-		return Version.of(versionName, projectFiles, includePaths, root);
+		return ProjectVersion.of(versionName, projectFiles, includePaths, root);
 	}
 }
