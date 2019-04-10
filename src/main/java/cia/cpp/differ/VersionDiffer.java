@@ -1,7 +1,7 @@
 package cia.cpp.differ;
 
-import cia.cpp.ProjectVersion;
-import cia.cpp.ProjectVersionDifference;
+import cia.cpp.Version;
+import cia.cpp.VersionDifference;
 import cia.cpp.ast.*;
 import mrmathami.util.ImmutablePair;
 import mrmathami.util.Utilities;
@@ -13,11 +13,11 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public final class ProjectVersionDiffer {
-	private ProjectVersionDiffer() {
+public final class VersionDiffer {
+	private VersionDiffer() {
 	}
 
-	public static ProjectVersionDifference compare(ProjectVersion versionA, ProjectVersion versionB) {
+	public static VersionDifference compare(Version versionA, Version versionB) {
 		final IRoot rootA = versionA.getRootNode();
 		final IRoot rootB = versionB.getRootNode();
 
@@ -81,6 +81,6 @@ public final class ProjectVersionDiffer {
 			}
 		}
 
-		return ProjectVersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
+		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}
 }

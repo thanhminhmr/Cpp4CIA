@@ -1,6 +1,6 @@
 package cia.cpp;
 
-import cia.cpp.builder.ProjectVersionBuilder;
+import cia.cpp.builder.VersionBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -64,14 +64,14 @@ public final class BuilderTest {
 //				);
 
 		final List<File> includePaths = List.of();
-		final ProjectVersion projectVersion = ProjectVersionBuilder.build("tesseract", projectFiles, includePaths, false);
+		final Version version = VersionBuilder.build("tesseract", projectFiles, includePaths, false);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		if (projectVersion == null) return;
+		if (version == null) return;
 
 		try (final FileOutputStream fos = new FileOutputStream("R:\\output.proj")) {
-			projectVersion.toOutputStream(fos);
+			version.toOutputStream(fos);
 		}
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);

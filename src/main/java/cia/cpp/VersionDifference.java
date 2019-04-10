@@ -6,17 +6,17 @@ import mrmathami.util.ImmutablePair;
 import java.io.*;
 import java.util.Set;
 
-public final class ProjectVersionDifference implements Serializable {
-	private static final long serialVersionUID = 3589355933372731081L;
+public final class VersionDifference implements Serializable {
+	private static final long serialVersionUID = 8631661649798016080L;
 
-	private final ProjectVersion versionA;
-	private final ProjectVersion versionB;
+	private final Version versionA;
+	private final Version versionB;
 	private final Set<INode> addedNodes;
 	private final Set<ImmutablePair<INode, INode>> changedNodes;
 	private final Set<ImmutablePair<INode, INode>> unchangedNodes;
 	private final Set<INode> removedNodes;
 
-	private ProjectVersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	private VersionDifference(Version versionA, Version versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = addedNodes;
@@ -25,14 +25,14 @@ public final class ProjectVersionDifference implements Serializable {
 		this.removedNodes = removedNodes;
 	}
 
-	public static ProjectVersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
-		return new ProjectVersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
+	public static VersionDifference of(Version versionA, Version versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}
 
-	public static ProjectVersionDifference fromInputStream(InputStream inputStream) throws IOException {
+	public static VersionDifference fromInputStream(InputStream inputStream) throws IOException {
 		final ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 		try {
-			return (ProjectVersionDifference) objectInputStream.readObject();
+			return (VersionDifference) objectInputStream.readObject();
 		} catch (ClassNotFoundException | ClassCastException e) {
 			throw new IOException("Wrong input file format!", e);
 		}
@@ -44,11 +44,11 @@ public final class ProjectVersionDifference implements Serializable {
 		objectOutputStream.flush();
 	}
 
-	public final ProjectVersion getVersionA() {
+	public final Version getVersionA() {
 		return versionA;
 	}
 
-	public final ProjectVersion getVersionB() {
+	public final Version getVersionB() {
 		return versionB;
 	}
 
