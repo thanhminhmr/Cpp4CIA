@@ -33,6 +33,7 @@ final class AstBuilder {
 		for (final INode node : bindingNodeMap.values()) {
 			if (node instanceof IUnknown || node instanceof IIntegral) {
 				// replace unknown node with integral node
+				node.removeFromParent();
 				node.removeChildren();
 				node.removeDependencies();
 				if (node instanceof IUnknown) {
@@ -72,6 +73,8 @@ final class AstBuilder {
 
 	private <E extends INode, B extends INode.INodeBuilder<E, B>>
 	INode createIntegralNode(String typeName, B builder) {
+		if (typeName.isBlank()) return null;
+
 		final INode existNode = integralNodeMap.get(typeName);
 		if (existNode != null) return existNode;
 
@@ -286,7 +289,7 @@ final class AstBuilder {
 		} else if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier) {
 			// region
 			//noinspection UnnecessaryLocalVariable
-			final INode simpleNode = signature.isBlank() ? null : createIntegralNode(signature, IntegralNode.builder());
+			final INode simpleNode = createIntegralNode(signature, IntegralNode.builder());
 			// endregion
 			return simpleNode;
 		} else {

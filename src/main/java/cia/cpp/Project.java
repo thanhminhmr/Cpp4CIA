@@ -1,38 +1,26 @@
 package cia.cpp;
 
-import cia.cpp.ast.IRoot;
-
-import javax.annotation.Nonnull;
 import java.io.*;
 import java.util.List;
 
 public final class Project implements Serializable {
-	private static final long serialVersionUID = -9079954477430291810L;
+	private static final long serialVersionUID = 6617345373264477890L;
 
-	@Nonnull
 	private final String projectName;
+	private final List<ProjectVersion> versionList;
+	private final List<ProjectVersionDifference> differenceList;
 
-	@Nonnull
-	private final List<File> projectFiles;
-
-	@Nonnull
-	private final List<File> includePaths;
-
-	@Nonnull
-	private final IRoot rootNode;
-
-	private Project(@Nonnull String projectName, @Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
+	private Project(String projectName, List<ProjectVersion> versionList, List<ProjectVersionDifference> differenceList) {
 		this.projectName = projectName;
-		this.projectFiles = projectFiles;
-		this.includePaths = includePaths;
-		this.rootNode = rootNode;
+		this.versionList = versionList;
+		this.differenceList = differenceList;
 	}
 
-	public static Project of(@Nonnull String projectName, @Nonnull List<File> projectFiles, @Nonnull List<File> includePaths, @Nonnull IRoot rootNode) {
-		return new Project(projectName, projectFiles, includePaths, rootNode);
+	public static Project of(String projectName, List<ProjectVersion> versionList, List<ProjectVersionDifference> differenceList) {
+		return new Project(projectName, versionList, differenceList);
 	}
 
-	public static Project fromInputStream(@Nonnull InputStream inputStream) throws IOException {
+	public static Project fromInputStream(InputStream inputStream) throws IOException {
 		final ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 		try {
 			return (Project) objectInputStream.readObject();
@@ -41,29 +29,21 @@ public final class Project implements Serializable {
 		}
 	}
 
-	public final void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
+	public final void toOutputStream(OutputStream outputStream) throws IOException {
 		final ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 		objectOutputStream.writeObject(this);
 		objectOutputStream.flush();
 	}
 
-	@Nonnull
-	public String getProjectName() {
+	public final String getProjectName() {
 		return projectName;
 	}
 
-	@Nonnull
-	public List<File> getProjectFiles() {
-		return projectFiles;
+	public final List<ProjectVersion> getVersionList() {
+		return versionList;
 	}
 
-	@Nonnull
-	public List<File> getIncludePaths() {
-		return includePaths;
-	}
-
-	@Nonnull
-	public IRoot getRootNode() {
-		return rootNode;
+	public final List<ProjectVersionDifference> getDifferenceList() {
+		return differenceList;
 	}
 }

@@ -14,9 +14,8 @@ public final class Utilities {
 	}
 
 	public static String objectToString(Object object) {
-		return object != null ? String.format("%s,0x%08X,0x%08X",
+		return object != null ? String.format("%s,0x%08X",
 				object.getClass().getSimpleName(),
-				System.identityHashCode(object),
 				object.hashCode()) : "null";
 	}
 

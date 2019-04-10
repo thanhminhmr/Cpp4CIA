@@ -1,7 +1,7 @@
 package cia.cpp;
 
-import cia.cpp.builder.ProjectBuilder;
-import cia.cpp.differ.ProjectDiffer;
+import cia.cpp.builder.ProjectVersionBuilder;
+import cia.cpp.differ.ProjectVersionDiffer;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,9 +39,9 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths = List.of();
-			final Project project = ProjectBuilder.build("project1", projectFiles, includePaths, false);
+			final ProjectVersion projectVersion = ProjectVersionBuilder.build("project1", projectFiles, includePaths, false);
 
-			if (project == null) return;
+			if (projectVersion == null) return;
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
@@ -69,31 +69,31 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths2 = List.of();
-			final Project project2 = ProjectBuilder.build("project2", projectFiles2, includePaths2, false);
+			final ProjectVersion projectVersion2 = ProjectVersionBuilder.build("project2", projectFiles2, includePaths2, false);
 
-			if (project2 == null) return;
+			if (projectVersion2 == null) return;
 
 
 			try (final FileOutputStream fos = new FileOutputStream("R:\\project1.proj")) {
-				project.toOutputStream(fos);
+				projectVersion.toOutputStream(fos);
 			}
 			try (final FileOutputStream fos = new FileOutputStream("R:\\project2.proj")) {
-				project2.toOutputStream(fos);
+				projectVersion2.toOutputStream(fos);
 			}
 		}
 
-		Project project, project2;
+		ProjectVersion projectVersion, projectVersion2;
 
 		try (final FileInputStream fileInputStream = new FileInputStream("R:\\project1.proj")) {
-			project = Project.fromInputStream(fileInputStream);
+			projectVersion = ProjectVersion.fromInputStream(fileInputStream);
 		}
 		try (final FileInputStream fileInputStream = new FileInputStream("R:\\project2.proj")) {
-			project2 = Project.fromInputStream(fileInputStream);
+			projectVersion2 = ProjectVersion.fromInputStream(fileInputStream);
 		}
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final ProjectDifference difference = ProjectDiffer.compare(project, project2);
+		final ProjectVersionDifference difference = ProjectVersionDiffer.compare(projectVersion, projectVersion2);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		try (final FileOutputStream fos = new FileOutputStream("R:\\project_project2.pcmp")) {
