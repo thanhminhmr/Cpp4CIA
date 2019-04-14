@@ -1,18 +1,20 @@
 package cia.cpp;
 
-import cia.cpp.builder.ProjectVersionBuilder;
-import cia.cpp.differ.ProjectVersionDiffer;
+import cia.cpp.builder.VersionBuilder;
+import cia.cpp.database.Database;
+import cia.cpp.differ.VersionDiffer;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.List;
 
 public final class DifferTest {
 	private DifferTest() {
 	}
 
-	public static void main(String[] args) throws Exception {
+	public static void main(String[] args) throws IOException {
 		//System.in.read();
 		long start_time = System.nanoTime();
 		{
@@ -22,7 +24,7 @@ public final class DifferTest {
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-//				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+//				BuilderTest.readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 					List.of(
 							new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
 							new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
@@ -39,7 +41,7 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths = List.of();
-			final ProjectVersion projectVersion = ProjectVersionBuilder.build("project1", projectFiles, includePaths, false);
+			final ProjectVersion projectVersion = VersionBuilder.build("project1", projectFiles, includePaths, false);
 
 			if (projectVersion == null) return;
 
@@ -52,7 +54,7 @@ public final class DifferTest {
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-//				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+//				BuilderTest.readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 					List.of(
 							new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
 							new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
@@ -69,7 +71,7 @@ public final class DifferTest {
 //				);
 
 			final List<File> includePaths2 = List.of();
-			final ProjectVersion projectVersion2 = ProjectVersionBuilder.build("project2", projectFiles2, includePaths2, false);
+			final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectFiles2, includePaths2, false);
 
 			if (projectVersion2 == null) return;
 
@@ -93,12 +95,17 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final VersionDifference difference = ProjectVersionDiffer.compare(projectVersion, projectVersion2);
+		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		try (final FileOutputStream fos = new FileOutputStream("R:\\project_project2.pcmp")) {
 			difference.toOutputStream(fos);
 		}
+		System.out.println((System.nanoTime() - start_time) / 1000000.0);
+
+		final Project project = Project.of("project", List.of(projectVersion, projectVersion2), List.of(difference));
+
+		Database.exportProject(project, new File("R:\\"));
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 	}
 }

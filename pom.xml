@@ -13,7 +13,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>LATEST</version>
+                <version>3.8.0</version>
                 <configuration>
                     <source>11</source>
                     <target>11</target>
@@ -87,7 +87,6 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/org.eclipse.osgi_3.13.200.v20181130-2106.jar</systemPath>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/com.ibm.icu/icu4j -->
         <dependency>
             <groupId>com.ibm.icu</groupId>
             <artifactId>icu4j</artifactId>
@@ -113,12 +112,16 @@
         </dependency>
         <!-- endregion jCPP -->
 
-<!--        &lt;!&ndash; https://mvnrepository.com/artifact/org.apache.commons/commons-collections4 &ndash;&gt;-->
 <!--        <dependency>-->
 <!--            <groupId>org.apache.commons</groupId>-->
 <!--            <artifactId>commons-collections4</artifactId>-->
 <!--            <version>4.3</version>-->
 <!--        </dependency>-->
 
+        <dependency>
+            <groupId>org.xerial</groupId>
+            <artifactId>sqlite-jdbc</artifactId>
+            <version>3.25.2</version>
+        </dependency>
     </dependencies>
 </project>

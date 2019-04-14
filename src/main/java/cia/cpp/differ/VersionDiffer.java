@@ -13,8 +13,8 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public final class ProjectVersionDiffer {
-	private ProjectVersionDiffer() {
+public final class VersionDiffer {
+	private VersionDiffer() {
 	}
 
 	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB) {
@@ -71,7 +71,7 @@ public final class ProjectVersionDiffer {
 					fileWriter.write(Utilities.collectionToString(changedNodes));
 				}
 				try (final FileWriter fileWriter = new FileWriter("R:\\unchangedNodes.log")) {
-					fileWriter.write(Utilities.collectionToString(changedNodes));
+					fileWriter.write(Utilities.collectionToString(unchangedNodes));
 				}
 				try (final FileWriter fileWriter = new FileWriter("R:\\removedNodes.log")) {
 					fileWriter.write(Utilities.collectionToString(removedNodes));

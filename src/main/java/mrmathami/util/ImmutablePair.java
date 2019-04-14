@@ -1,13 +1,14 @@
 package mrmathami.util;
 
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * <p>A convenience class to represent name-value pairs.</p>
  */
-public final class ImmutablePair<K, V> implements Serializable {
-	private static final long serialVersionUID = -414869439023237103L;
+public final class ImmutablePair<K, V> implements Map.Entry<K, V>, Serializable {
+	private static final long serialVersionUID = 807778764362463727L;
 
 	private static final ImmutablePair EMPTY = new ImmutablePair<>(null, null);
 
@@ -54,6 +55,7 @@ public final class ImmutablePair<K, V> implements Serializable {
 	 *
 	 * @return key for this pair
 	 */
+	@Override
 	public final K getKey() {
 		return key;
 	}
@@ -64,8 +66,14 @@ public final class ImmutablePair<K, V> implements Serializable {
 	 * @return value for this pair
 	 */
 
+	@Override
 	public final V getValue() {
 		return value;
+	}
+
+	@Override
+	public final V setValue(V value) {
+		throw new UnsupportedOperationException("Immutable pair can't be modified.");
 	}
 
 	/**

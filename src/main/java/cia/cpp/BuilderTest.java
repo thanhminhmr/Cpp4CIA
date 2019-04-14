@@ -1,6 +1,6 @@
 package cia.cpp;
 
-import cia.cpp.builder.ProjectVersionBuilder;
+import cia.cpp.builder.VersionBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -15,7 +15,7 @@ public final class BuilderTest {
 	private BuilderTest() {
 	}
 
-	private static List<File> readConfigFile(File file) throws IOException {
+	public static List<File> readConfigFile(File file) throws IOException {
 		final StringBuilder content = new StringBuilder();
 		final char[] fileBuffer = new char[65536]; // 64k at a time, fast
 		try (final FileReader fileReader = new FileReader(file)) {
@@ -64,11 +64,10 @@ public final class BuilderTest {
 //				);
 
 		final List<File> includePaths = List.of();
-		final ProjectVersion projectVersion = ProjectVersionBuilder.build("tesseract", projectFiles, includePaths, false);
+		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectFiles, includePaths, false);
+		if (projectVersion == null) return;
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-
-		if (projectVersion == null) return;
 
 		try (final FileOutputStream fos = new FileOutputStream("R:\\output.proj")) {
 			projectVersion.toOutputStream(fos);

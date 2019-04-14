@@ -2,13 +2,14 @@ package mrmathami.util;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Objects;
 
 /**
  * <p>A convenience class to represent name-value pairs.</p>
  */
-public final class Pair<K, V> implements Serializable {
-	private static final long serialVersionUID = 2312500632450504945L;
+public final class Pair<K, V> implements Map.Entry<K, V>, Serializable {
+	private static final long serialVersionUID = -3462418631316367048L;
 	
 	/**
 	 * Key of this <code>Pair</code>.
@@ -64,8 +65,10 @@ public final class Pair<K, V> implements Serializable {
 	/**
 	 * Set the value for this pair.
 	 */
-	public final void setValue(V value) {
+	public final V setValue(V value) {
+		V oldValue = this.value;
 		this.value = value;
+		return oldValue;
 	}
 
 	/**

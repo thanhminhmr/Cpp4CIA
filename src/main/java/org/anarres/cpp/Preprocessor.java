@@ -34,8 +34,8 @@ import java.util.Stack;
 import java.util.TreeMap;
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 import static org.anarres.cpp.PreprocessorCommand.*;
 import org.anarres.cpp.PreprocessorListener.SourceChangeEvent;
 import static org.anarres.cpp.Token.*;
@@ -77,7 +77,7 @@ import static org.anarres.cpp.Token.*;
  */
 public class Preprocessor implements Closeable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Preprocessor.class);
+//    private static final Logger LOG = LoggerFactory.getLogger(Preprocessor.class);
 
     private static final Source INTERNAL = new Source() {
         @Override
@@ -622,8 +622,8 @@ public class Preprocessor implements Closeable {
         if (source_token != null) {
             Token tok = source_token;
             source_token = null;
-            if (getFeature(Feature.DEBUG))
-                LOG.debug("Returning unget token " + tok);
+//            if (getFeature(Feature.DEBUG))
+//                LOG.debug("Returning unget token " + tok);
             return tok;
         }
 
@@ -644,8 +644,8 @@ public class Preprocessor implements Closeable {
                     return mark;
                 continue;
             }
-            if (getFeature(Feature.DEBUG))
-                LOG.debug("Returning fresh token " + tok);
+//            if (getFeature(Feature.DEBUG))
+//                LOG.debug("Returning fresh token " + tok);
             return tok;
         }
     }
@@ -1099,8 +1099,8 @@ public class Preprocessor implements Closeable {
             tok = source_token();
         }
 
-        if (getFeature(Feature.DEBUG))
-            LOG.debug("Defined macro " + m);
+//        if (getFeature(Feature.DEBUG))
+//            LOG.debug("Defined macro " + m);
         addMacro(m);
 
         return tok;	/* NL or EOF. */
@@ -1142,8 +1142,8 @@ public class Preprocessor implements Closeable {
         // System.out.println("Try to include " + ((File)file).getAbsolutePath());
         if (!file.isFile())
             return false;
-        if (getFeature(Feature.DEBUG))
-            LOG.debug("pp: including " + file);
+//        if (getFeature(Feature.DEBUG))
+//            LOG.debug("pp: including " + file);
         includes.add(file);
         push_source(file.getSource(), true);
         return true;
@@ -2143,8 +2143,8 @@ public class Preprocessor implements Closeable {
             throws IOException,
             LexerException {
         Token tok = _token();
-        if (getFeature(Feature.DEBUG))
-            LOG.debug("pp: Returning " + tok);
+//        if (getFeature(Feature.DEBUG))
+//            LOG.debug("pp: Returning " + tok);
         return tok;
     }
 

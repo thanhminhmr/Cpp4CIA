@@ -46,7 +46,10 @@ public final class FunctionNode extends Node implements IFunction {
 	@Override
 	public final List<INode> removeParameters() {
 		final List<INode> oldParameters = List.copyOf(parameters);
-		for (final INode parameter : parameters) removeChild(parameter);
+		for (final INode parameter : oldParameters) {
+			parameter.removeFromParent();
+			removeDependency(parameter);
+		}
 		parameters.clear();
 		return oldParameters;
 	}

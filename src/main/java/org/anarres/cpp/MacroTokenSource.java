@@ -21,15 +21,15 @@ import java.util.Iterator;
 import java.util.List;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 import static org.anarres.cpp.Token.*;
 
 /* This source should always be active, since we don't expand macros
  * in any inactive context. */
 /* pp */ class MacroTokenSource extends Source {
 
-    private static final Logger LOG = LoggerFactory.getLogger(MacroTokenSource.class);
+    //private static final Logger LOG = LoggerFactory.getLogger(MacroTokenSource.class);
     private final Macro macro;
     private final Iterator<Token> tokens;	/* Pointer into the macro.  */
 

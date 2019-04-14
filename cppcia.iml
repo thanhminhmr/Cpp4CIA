@@ -1,2 +1,99 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module type="JAVA_MODULE" version="4" />
+<module org.jetbrains.idea.maven.project.MavenProjectsManager.isMavenModule="true" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" LANGUAGE_LEVEL="JDK_11">
+    <output url="file://$MODULE_DIR$/target/classes" />
+    <output-test url="file://$MODULE_DIR$/target/test-classes" />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.cdt:core:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.cdt.core_6.6.0.201812101042.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.core:contenttype:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.contenttype_3.7.200.v20181107-1343.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.core:jobs:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.jobs_3.10.200.v20180912-1356.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.core:resources:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.resources_3.13.200.v20181121-1020.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.core:runtime:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.runtime_3.15.100.v20181107-1343.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.equinox:common:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.common_3.10.200.v20181021-1645.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.equinox:preferences:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.preferences_3.7.200.v20180827-1235.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.equinox:registry:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.registry_3.8.200.v20181008-1820.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library name="Maven: org.eclipse.osgi:main:unknown">
+        <CLASSES>
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.osgi_3.13.200.v20181130-2106.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="library" name="Maven: com.ibm.icu:icu4j:64.1" level="project" />
+    <orderEntry type="library" name="Maven: com.google.code.findbugs:jsr305:2.0.1" level="project" />
+    <orderEntry type="library" name="Maven: net.sf.jopt-simple:jopt-simple:5.0.4" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.6" level="project" />
+    <orderEntry type="library" name="Maven: org.xerial:sqlite-jdbc:3.25.2" level="project" />
+  </component>
+</module>

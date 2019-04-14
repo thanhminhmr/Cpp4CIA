@@ -200,7 +200,7 @@ abstract class TreeNode implements ITreeNode {
 		if (children.isEmpty()) return List.of();
 
 		final List<ITreeNode> oldChildren = List.copyOf(children);
-		children.clear();
+		for (final ITreeNode child : oldChildren) child.removeFromParent();
 		return oldChildren;
 	}
 

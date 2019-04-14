@@ -51,12 +51,17 @@ final class AstBuilder {
 				if (node instanceof IVariable) {
 					// remove all children
 					node.removeChildren();
+					node.removeDependencies();
+
 				} else if (node instanceof IFunction) {
 					final IFunction function = (IFunction) node;
 					final List<INode> parameters = List.copyOf(function.getParameters());
 					final List<INode> variables = new ArrayList<>(function.getVariables());
 					variables.removeAll(parameters);
-					for (final INode variable : variables) function.removeChild(variable);
+					for (final INode variable : variables) {
+						function.removeChild(variable);
+						function.removeDependency(variable);
+					}
 				}
 			}
 		}

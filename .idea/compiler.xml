@@ -2,7 +2,7 @@
 <project version="4">
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
-      <module name="jcpplib" target="11" />
+      <module name="cppcia" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>
