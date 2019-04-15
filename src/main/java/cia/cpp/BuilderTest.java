@@ -6,6 +6,10 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -15,24 +19,14 @@ public final class BuilderTest {
 	private BuilderTest() {
 	}
 
-	public static List<File> readConfigFile(File file) throws IOException {
-		final StringBuilder content = new StringBuilder();
-		final char[] fileBuffer = new char[65536]; // 64k at a time, fast
-		try (final FileReader fileReader = new FileReader(file)) {
-			int length = fileReader.read(fileBuffer);
-			while (length != -1) {
-				content.append(fileBuffer, 0, length);
-				length = fileReader.read(fileBuffer);
-			}
-		}
-		final List<File> fileList = new ArrayList<>();
-		final Set<File> fileSet = new HashSet<>();
-		for (final String filePath : content.toString().split("[\r\n]+")) {
-			if (filePath != null && !filePath.isBlank()) {
-				final File fileInSet = new File(filePath);
-				if (fileInSet.exists() && fileSet.add(fileInSet)) {
-					fileList.add(fileInSet);
-				}
+	public static List<Path> readConfigFile(Path configPath) throws IOException {
+		final List<String> filePaths = Files.readAllLines(configPath, StandardCharsets.UTF_8);
+		final List<Path> fileList = new ArrayList<>();
+		final Set<Path> fileSet = new HashSet<>();
+		for (final String pathString : filePaths) {
+			if (!pathString.isBlank()) {
+				final Path filePath = Paths.get(pathString).toRealPath();
+				if (fileSet.add(filePath)) fileList.add(filePath);
 			}
 		}
 		return fileList;
@@ -41,30 +35,32 @@ public final class BuilderTest {
 	public static void main(String[] args) throws Exception {
 		//System.in.read();
 		long start_time = System.nanoTime();
-		final List<File> projectFiles =
+
+		final Path projectRoot = Paths.get("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src");
+		final List<Path> projectFiles =
 //				List.of(
-//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-				readConfigFile(new File("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+				readConfigFile(Paths.get("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 //				List.of(
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
 //				);
 //				List.of(
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Array.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Bitmap.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Buffer.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\NeuralNetwork.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Pixel.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Randomizer.h"),
-//						new File("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Trainer.cpp")
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Array.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Bitmap.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Buffer.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\NeuralNetwork.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Pixel.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Randomizer.h"),
+//						Paths.get("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Trainer.cpp")
 //				);
 
-		final List<File> includePaths = List.of();
-		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectFiles, includePaths, false);
+		final List<Path> includePaths = List.of();
+		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectRoot, projectFiles, includePaths, false);
 		if (projectVersion == null) return;
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);

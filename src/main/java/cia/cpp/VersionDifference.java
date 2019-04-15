@@ -4,6 +4,7 @@ import cia.cpp.ast.INode;
 import mrmathami.util.ImmutablePair;
 
 import java.io.*;
+import java.util.Map;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
@@ -12,11 +13,11 @@ public final class VersionDifference implements Serializable {
 	private final ProjectVersion versionA;
 	private final ProjectVersion versionB;
 	private final Set<INode> addedNodes;
-	private final Set<ImmutablePair<INode, INode>> changedNodes;
-	private final Set<ImmutablePair<INode, INode>> unchangedNodes;
+	private final Set<Map.Entry<INode, INode>> changedNodes;
+	private final Set<Map.Entry<INode, INode>> unchangedNodes;
 	private final Set<INode> removedNodes;
 
-	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = addedNodes;
@@ -25,7 +26,7 @@ public final class VersionDifference implements Serializable {
 		this.removedNodes = removedNodes;
 	}
 
-	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<ImmutablePair<INode, INode>> changedNodes, Set<ImmutablePair<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}
 
@@ -56,11 +57,11 @@ public final class VersionDifference implements Serializable {
 		return addedNodes;
 	}
 
-	public final Set<ImmutablePair<INode, INode>> getChangedNodes() {
+	public final Set<Map.Entry<INode, INode>> getChangedNodes() {
 		return changedNodes;
 	}
 
-	public final Set<ImmutablePair<INode, INode>> getUnchangedNodes() {
+	public final Set<Map.Entry<INode, INode>> getUnchangedNodes() {
 		return unchangedNodes;
 	}
 

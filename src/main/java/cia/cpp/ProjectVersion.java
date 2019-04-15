@@ -3,24 +3,25 @@ package cia.cpp;
 import cia.cpp.ast.IRoot;
 
 import java.io.*;
+import java.nio.file.Path;
 import java.util.List;
 
 public final class ProjectVersion implements Serializable {
 	private static final long serialVersionUID = 8469860416876982231L;
 
 	private final String versionName;
-	private final List<File> projectFiles;
-	private final List<File> includePaths;
+	private final List<String> projectFiles;
+	private final List<String> includePaths;
 	private final IRoot rootNode;
 
-	private ProjectVersion(String versionName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
+	private ProjectVersion(String versionName, List<String> projectFiles, List<String> includePaths, IRoot rootNode) {
 		this.versionName = versionName;
 		this.projectFiles = projectFiles;
 		this.includePaths = includePaths;
 		this.rootNode = rootNode;
 	}
 
-	public static ProjectVersion of(String projectName, List<File> projectFiles, List<File> includePaths, IRoot rootNode) {
+	public static ProjectVersion of(String projectName, List<String> projectFiles, List<String> includePaths, IRoot rootNode) {
 		return new ProjectVersion(projectName, projectFiles, includePaths, rootNode);
 	}
 
@@ -43,11 +44,11 @@ public final class ProjectVersion implements Serializable {
 		return versionName;
 	}
 
-	public final List<File> getProjectFiles() {
+	public final List<String> getProjectFiles() {
 		return projectFiles;
 	}
 
-	public final List<File> getIncludePaths() {
+	public final List<String> getIncludePaths() {
 		return includePaths;
 	}
 

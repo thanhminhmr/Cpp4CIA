@@ -137,12 +137,6 @@ public final class Tables {
 
 	public static void create(Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
-			statement.addBatch("drop table if exists `bases`;");
-			statement.addBatch("drop table if exists `differences`;");
-			statement.addBatch("drop table if exists `nodes`;");
-			statement.addBatch("drop table if exists `parameters`;");
-			statement.addBatch("drop table if exists `uses`;");
-			statement.addBatch("drop table if exists `versions`;");
 			statement.addBatch("create table `nodes` (\n" +
 					"\t`id` integer primary key autoincrement,\n" +
 					"\t`typeEnum` integer not null,\n" +

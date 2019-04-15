@@ -1,13 +1,11 @@
 package cia.cpp.builder;
 
 
-import mrmathami.util.Utilities;
 import org.anarres.cpp.*;
 
 import javax.annotation.Nonnull;
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -17,19 +15,19 @@ final class PreprocessorBuilder implements PreprocessorListener {
 	private PreprocessorBuilder() {
 	}
 
-	private static String getFileExtension(File file) {
-		final String filename = file.getName();
+	private static String getFileExtension(Path file) {
+		final String filename = file.getFileName().toString();
 		final int dot = filename.lastIndexOf('.');
 		return dot >= 0 ? filename.substring(dot) : "";
 	}
 
-	private static int fileCompare(File fileA, File fileB) {
+	private static int fileCompare(Path fileA, Path fileB) {
 		final int compare = getFileExtension(fileA).compareToIgnoreCase(getFileExtension(fileB));
 		if (compare != 0) return compare;
-		return fileA.getPath().compareToIgnoreCase(fileB.getPath());
+		return fileA.toString().compareToIgnoreCase(fileB.toString());
 	}
 
-	public static char[] build(List<File> projectFiles, List<File> includePaths, boolean isReadable) {
+	public static char[] build(List<Path> projectFiles, List<Path> includePaths, boolean isReadable) {
 		try {
 			final Preprocessor preprocessor = new Preprocessor();
 			preprocessor.setListener(EMPTY_PREPROCESSOR_LISTENER);
@@ -41,20 +39,20 @@ final class PreprocessorBuilder implements PreprocessorListener {
 //		    preprocessor.addMacro("__JCPP__");
 			{
 				final List<String> includePathStrings = new ArrayList<>();
-				for (final File file : includePaths) {
-					includePathStrings.add(file.getPath());
+				for (final Path file : includePaths) {
+					includePathStrings.add(file.toRealPath().toString());
 				}
 				preprocessor.setQuoteIncludePath(includePathStrings);
 				preprocessor.setSystemIncludePath(includePathStrings);
 
-				final List<File> projectFileList = new ArrayList<>();
-				for (final File projectFile : projectFiles) {
-					projectFileList.add(Utilities.getCanonicalAbsoluteFile(projectFile));
+				final List<Path> projectFileList = new ArrayList<>();
+				for (final Path projectFile : projectFiles) {
+					projectFileList.add(projectFile.toRealPath());
 				}
 				projectFileList.sort(PreprocessorBuilder::fileCompare);
 
-				for (final File sourceFile : projectFileList) {
-					preprocessor.addInput(sourceFile);
+				for (final Path sourceFile : projectFileList) {
+					preprocessor.addInput(sourceFile.toFile());
 				}
 			}
 			// =====

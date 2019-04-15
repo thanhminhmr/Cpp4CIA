@@ -33,8 +33,8 @@ public final class VersionDiffer {
 		}
 
 		final Set<INode> addedNodes = new HashSet<>();
-		final Set<ImmutablePair<INode, INode>> changedNodes = new HashSet<>();
-		final Set<ImmutablePair<INode, INode>> unchangedNodes = new HashSet<>();
+		final Set<Map.Entry<INode, INode>> changedNodes = new HashSet<>();
+		final Set<Map.Entry<INode, INode>> unchangedNodes = new HashSet<>();
 		final Set<INode> removedNodes = new HashSet<>();
 
 		for (final INode nodeA : nodeMapA.keySet()) {

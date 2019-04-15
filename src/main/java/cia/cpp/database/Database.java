@@ -12,7 +12,7 @@ import mrmathami.util.Utilities;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -34,7 +34,7 @@ public final class Database {
 
 	private final String databaseUrl;
 	private final Project project;
-	private final Map<INode, Node> nodeMap = new HashMap<>();
+	private final Map<Map.Entry<INode, Integer>, Node> nodeMap = new HashMap<>();
 	private final Map<ProjectVersion, Version> versionMap = new HashMap<>();
 
 	private Database(Project project, File outputPath) throws IOException {
@@ -52,11 +52,11 @@ public final class Database {
 		this.databaseUrl = DATABASE_URL_PREFIX + Utilities.getCanonicalAbsolutePath(outputFile).replace('\\', '/');
 	}
 
-	private static String fileListToString(List<File> fileList) {
+	private static String pathListToString(List<String> pathList) {
 		final StringBuilder builder = new StringBuilder();
-		for (final File file : fileList) {
+		for (final String path : pathList) {
 			if (builder.length() > 0) builder.append('\n');
-			builder.append(Utilities.getCanonicalAbsolutePath(file));
+			builder.append(path);
 		}
 		return builder.toString();
 	}
@@ -117,7 +117,7 @@ public final class Database {
 			final Version dbVersionB = internalExportVersion(versionB);
 			if (dbVersionB == null) return false;
 
-			for (final ImmutablePair<INode, INode> unchangedPair : difference.getUnchangedNodes()) {
+			for (final Map.Entry<INode, INode> unchangedPair : difference.getUnchangedNodes()) {
 				final INode nodeA = unchangedPair.getKey();
 				final INode nodeB = unchangedPair.getValue();
 
@@ -136,7 +136,7 @@ public final class Database {
 				);
 				if (dbDifference == null) return false;
 			}
-			for (final ImmutablePair<INode, INode> changedPair : difference.getChangedNodes()) {
+			for (final Map.Entry<INode, INode> changedPair : difference.getChangedNodes()) {
 				final INode nodeA = changedPair.getKey();
 				final INode nodeB = changedPair.getValue();
 
@@ -192,8 +192,8 @@ public final class Database {
 
 		final Version dbVersion = Versions.add(getConnection(), new Version()
 				.setName(version.getVersionName())
-				.setFiles(fileListToString(version.getProjectFiles()))
-				.setPaths(fileListToString(version.getIncludePaths())));
+				.setFiles(pathListToString(version.getProjectFiles()))
+				.setPaths(pathListToString(version.getIncludePaths())));
 		if (dbVersion == null) return null;
 
 		versionMap.put(version, dbVersion);
@@ -210,7 +210,7 @@ public final class Database {
 		if (treeNode == null) return null;
 		final INode node = INode.getNode(treeNode);
 
-		final Node dbNodeFromMap = nodeMap.get(node);
+		final Node dbNodeFromMap = nodeMap.get(Map.entry(node, System.identityHashCode(node)));
 		if (dbNodeFromMap != null) return dbNodeFromMap;
 
 		final Node dbParentNode = internalExportNode(dbVersion, node.getParent());
@@ -231,7 +231,7 @@ public final class Database {
 				.setVersionId(dbVersion.getId()));
 		if (dbNode == null) return null;
 
-		nodeMap.put(node, dbNode);
+		nodeMap.put(Map.entry(node, System.identityHashCode(node)), dbNode);
 
 		if (node instanceof IClass) {
 			for (final INode baseNode : ((IClass) node).getBases()) {

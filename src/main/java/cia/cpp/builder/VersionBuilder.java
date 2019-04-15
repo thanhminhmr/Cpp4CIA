@@ -5,21 +5,33 @@ import cia.cpp.ast.IRoot;
 import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.*;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.*;
 
 public final class VersionBuilder {
 	private VersionBuilder() {
 	}
 
-	private static List<File> createInternalIncludePaths(List<File> projectFiles) {
-		final List<File> includePaths = new ArrayList<>();
-		final Set<File> includePathSet = new HashSet<>();
-		for (final File projectFile : projectFiles) {
-			final File canonicalAbsoluteFile = Utilities.getCanonicalAbsoluteFile(projectFile.getParentFile());
+	private static List<Path> createPathList(List<Path> pathList) throws IOException {
+		final List<Path> includePaths = new ArrayList<>();
+		final Set<Path> includePathSet = new HashSet<>();
+		for (final Path path : pathList) {
+			final Path realPath = path.toRealPath();
+			if (includePathSet.add(realPath)) {
+				includePaths.add(realPath);
+			}
+		}
+		return includePaths;
+	}
+
+	private static List<Path> createInternalIncludePaths(List<Path> projectFiles) {
+		final List<Path> includePaths = new ArrayList<>();
+		final Set<Path> includePathSet = new HashSet<>();
+		for (final Path projectFile : projectFiles) {
+			final Path canonicalAbsoluteFile = projectFile.getParent();
 			if (includePathSet.add(canonicalAbsoluteFile)) {
 				includePaths.add(canonicalAbsoluteFile);
 			}
@@ -27,23 +39,11 @@ public final class VersionBuilder {
 		return includePaths;
 	}
 
-	private static List<File> createCanonicalAbsoluteFileList(List<File> fileList) {
-		final List<File> includePaths = new ArrayList<>();
-		final Set<File> includePathSet = new HashSet<>();
-		for (final File file : fileList) {
-			final File canonicalAbsoluteFile = Utilities.getCanonicalAbsoluteFile(file);
-			if (includePathSet.add(canonicalAbsoluteFile)) {
-				includePaths.add(canonicalAbsoluteFile);
-			}
-		}
-		return includePaths;
-	}
-
-	private static List<File> combineCanonicalAbsoluteFileList(List<File> fileListA, List<File> fileListB) {
-		final List<File> newList = new ArrayList<>();
-		final Set<File> newSet = new HashSet<>();
-		for (final File file : fileListA) if (newSet.add(file)) newList.add(file);
-		for (final File file : fileListB) if (newSet.add(file)) newList.add(file);
+	private static List<Path> combinePathList(List<Path> pathListA, List<Path> pathListB) {
+		final List<Path> newList = new ArrayList<>();
+		final Set<Path> newSet = new HashSet<>();
+		for (final Path path : pathListA) if (newSet.add(path)) newList.add(path);
+		for (final Path path : pathListB) if (newSet.add(path)) newList.add(path);
 		return newList;
 	}
 
@@ -89,28 +89,29 @@ public final class VersionBuilder {
 		}
 	}
 
-	public static ProjectVersion build(String versionName, List<File> projectFiles, List<File> includePaths, boolean isReadable) {
-		final List<File> projectFileList = createCanonicalAbsoluteFileList(projectFiles);
-		final List<File> externalIncludePaths = createCanonicalAbsoluteFileList(includePaths);
-		final List<File> internalIncludePaths = createInternalIncludePaths(projectFileList);
-		final List<File> includePathList = combineCanonicalAbsoluteFileList(externalIncludePaths, internalIncludePaths);
+	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, boolean isReadable) {
+		try {
+			final List<Path> projectFileList = createPathList(projectFiles);
+			final List<Path> externalIncludePaths = createPathList(includePaths);
+			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
+			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
 
-		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, isReadable);
-		if (fileContentCharArray == null) return null;
+			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, isReadable);
+			if (fileContentCharArray == null) return null;
 
-		// todo: dbg
-		{
-			try (final FileWriter writer = new FileWriter("R:\\output_" + versionName + ".cpp")) {
-				writer.write(fileContentCharArray);
-			} catch (IOException e) {
-				e.printStackTrace();
+			// todo: dbg
+			{
+				try (final FileWriter writer = new FileWriter("R:\\output_" + versionName + ".cpp")) {
+					writer.write(fileContentCharArray);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-		}
 
-		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
-		if (translationUnit == null) return null;
+			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
+			if (translationUnit == null) return null;
 
-		// todo: dbg
+			// todo: dbg
 //		{
 //			try (final FileOutputStream fileOutputStream = new FileOutputStream("R:\\preprocessed_" + versionName + ".log")) {
 //				try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
@@ -123,17 +124,31 @@ public final class VersionBuilder {
 //			}
 //		}
 
-		final IRoot root = AstBuilder.build(translationUnit);
+			final IRoot root = AstBuilder.build(translationUnit);
 
-		// todo: dbg
-		{
-			try (final FileWriter fileWriter = new FileWriter("R:\\tree_new_" + versionName + ".log")) {
-				fileWriter.write(root.toTreeString());
-			} catch (IOException e) {
-				e.printStackTrace();
+			// todo: dbg
+			{
+				try (final FileWriter fileWriter = new FileWriter("R:\\tree_new_" + versionName + ".log")) {
+					fileWriter.write(root.toTreeString());
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
-		}
 
-		return ProjectVersion.of(versionName, projectFiles, includePaths, root);
+			final Path projectRootPath = projectRoot.toRealPath();
+			final List<String> projectFilePaths = new ArrayList<>();
+			for (final Path path : projectFileList) {
+				projectFilePaths.add(projectRootPath.relativize(path).toString());
+			}
+			final List<String> projectIncludePaths = new ArrayList<>();
+			for (final Path path : externalIncludePaths) {
+				projectIncludePaths.add(projectRootPath.relativize(path).toString());
+			}
+
+			return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }
