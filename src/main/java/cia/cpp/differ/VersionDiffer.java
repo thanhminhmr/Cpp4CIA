@@ -62,24 +62,24 @@ public final class VersionDiffer {
 		}
 
 		// todo: dbg
-		{
-			try {
-				try (final FileWriter fileWriter = new FileWriter("R:\\addedNodes.log")) {
-					fileWriter.write(Utilities.collectionToString(addedNodes));
-				}
-				try (final FileWriter fileWriter = new FileWriter("R:\\changedNodes.log")) {
-					fileWriter.write(Utilities.collectionToString(changedNodes));
-				}
-				try (final FileWriter fileWriter = new FileWriter("R:\\unchangedNodes.log")) {
-					fileWriter.write(Utilities.collectionToString(unchangedNodes));
-				}
-				try (final FileWriter fileWriter = new FileWriter("R:\\removedNodes.log")) {
-					fileWriter.write(Utilities.collectionToString(removedNodes));
-				}
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-		}
+//	    {
+//	    	try {
+//	    		try (final FileWriter fileWriter = new FileWriter("R:\\addedNodes.log")) {
+//	    			fileWriter.write(Utilities.collectionToString(addedNodes));
+//	    		}
+//	    		try (final FileWriter fileWriter = new FileWriter("R:\\changedNodes.log")) {
+//	    			fileWriter.write(Utilities.collectionToString(changedNodes));
+//	    		}
+//	    		try (final FileWriter fileWriter = new FileWriter("R:\\unchangedNodes.log")) {
+//	    			fileWriter.write(Utilities.collectionToString(unchangedNodes));
+//	    		}
+//	    		try (final FileWriter fileWriter = new FileWriter("R:\\removedNodes.log")) {
+//	    			fileWriter.write(Utilities.collectionToString(removedNodes));
+//	    		}
+//	    	} catch (IOException e) {
+//	    		e.printStackTrace();
+//	    	}
+//	    }
 
 		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}

@@ -137,6 +137,10 @@ public final class Tables {
 
 	public static void create(Connection connection) throws SQLException {
 		try (Statement statement = connection.createStatement()) {
+			statement.execute("PRAGMA synchronous = OFF;");
+			statement.execute("PRAGMA journal_mode = OFF;");
+			statement.execute("PRAGMA locking_mode = EXCLUSIVE;");
+			statement.execute("PRAGMA temp_store = MEMORY;");
 			statement.addBatch("create table `nodes` (\n" +
 					"\t`id` integer primary key autoincrement,\n" +
 					"\t`typeEnum` integer not null,\n" +

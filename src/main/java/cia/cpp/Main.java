@@ -25,8 +25,10 @@ public final class Main {
 	}
 
 	public static void main(String[] argv) {
-		System.out.println("Usage: VersionBuilder.jar <input.ini> <output_path>");
-		if (argv.length != 2) return;
+		if (argv.length != 2) {
+			System.out.println("Usage: VersionBuilder.jar <input.ini> <output_path>");
+			return;
+		}
 		new Main().build(Path.of(argv[0]), Path.of(argv[1]));
 	}
 
@@ -42,13 +44,13 @@ public final class Main {
 			//noinspection MismatchedQueryAndUpdateOfCollection
 			final Ini inputFile = new Ini(Files.newInputStream(inputFilePath, StandardOpenOption.READ));
 			for (final Profile.Section section : inputFile.values()) {
-				if (section.getName().equals("ProjectVersion")) {
+				if (section.getName().startsWith("ProjectVersion")) {
 					final ProjectVersion projectVersion = buildProjectVersion(section, outputPath);
 					if (projectVersion != null) versionMap.put(projectVersion.getVersionName(), projectVersion);
 				}
 			}
 			for (final Profile.Section section : inputFile.values()) {
-				if (section.getName().equals("VersionDifference")) {
+				if (section.getName().startsWith("VersionDifference")) {
 					final VersionDifference difference = buildVersionDifference(section, outputPath, versionMap);
 					if (difference != null) differenceList.add(difference);
 				}
@@ -96,7 +98,7 @@ public final class Main {
 			final ProjectVersion projectVersion = VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, false);
 			if (projectVersion != null) {
 				final String outputFileString = section.get("outputFile", "");
-				final Path outputFilePath = outputFileString != null ? Path.of(outputFileString) : outputPath.resolve(versionName + ".ProjectVersion");
+				final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(versionName + ".ProjectVersion") : Path.of(outputFileString);
 				try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 					projectVersion.toOutputStream(outputStream);
 					doLogging("Success building ProjectVersion " + versionName);
@@ -130,14 +132,14 @@ public final class Main {
 				return null;
 			}
 
-			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionA.getVersionName() + "...");
+			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName() + "...");
 
 			final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB);
 			final String outputFileString = section.get("outputFile", "");
-			final Path outputFilePath = outputFileString != null ? Path.of(outputFileString) : outputPath.resolve(versionA.getVersionName() + "-" + versionA.getVersionName() + ".VersionDifference");
+			final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(versionA.getVersionName() + "-" + versionB.getVersionName() + ".VersionDifference") : Path.of(outputFileString);
 			try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				versionDifference.toOutputStream(outputStream);
-				doLogging("Success building VersionDifference " + versionA.getVersionName() + "-" + versionA.getVersionName());
+				doLogging("Success building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName());
 				return versionDifference;
 			} catch (IOException e) {
 				doLogging("Failed writing to output file! Output file: " + outputFilePath.toString());
@@ -168,7 +170,7 @@ public final class Main {
 
 			final Project project = Project.of(projectName, versionList, differenceList);
 			final String outputFileString = section.get("outputFile", "");
-			final Path outputFilePath = outputFileString != null ? Path.of(outputFileString) : outputPath.resolve(projectName + ".Project");
+			final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(projectName + ".Project") : Path.of(outputFileString);
 			try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
 				project.toOutputStream(outputStream);
 				doLogging("Success building Project " + projectName);

@@ -31,25 +31,24 @@ public final class Database {
 		}
 	}
 
-	private final String databaseUrl;
 	private final Project project;
 	private final Map<Map.Entry<INode, Integer>, Node> nodeMap = new HashMap<>();
 	private final Map<ProjectVersion, Version> versionMap = new HashMap<>();
+	private final Connection connection;
 
-	private Database(Project project, Path outputPath) throws IOException {
+	private Database(Project project, Path outputPath) throws IOException, SQLException {
 		this.project = project;
 
 		if (Files.isDirectory(outputPath)) {
 			final Path outputFile = outputPath.resolve(project.getProjectName() + ".sqLite");
 			if (Files.exists(outputFile)) Files.delete(outputFile);
 
-			this.databaseUrl = DATABASE_URL_PREFIX + outputFile.toRealPath().toUri().toString();
+			this.connection = DriverManager.getConnection(DATABASE_URL_PREFIX + outputFile.toUri().toString());
 		} else {
 			if (Files.exists(outputPath)) Files.delete(outputPath);
 
-			this.databaseUrl = DATABASE_URL_PREFIX + outputPath.toRealPath().toUri().toString();
+			this.connection = DriverManager.getConnection(DATABASE_URL_PREFIX + outputPath.toUri().toString());
 		}
-
 	}
 
 	private static String pathListToString(List<String> pathList) {
@@ -94,8 +93,9 @@ public final class Database {
 		return type.ordinal(); // TODO: fix me
 	}
 
-	private Connection getConnection() throws SQLException {
-		return DriverManager.getConnection(databaseUrl);
+	private Connection getConnection() {
+//		final Connection connection = DriverManager.getConnection(databaseUrl);
+		return connection;
 	}
 
 	private boolean internalExportProject() throws SQLException {

@@ -44,7 +44,7 @@ final class AstBuilder {
 				// remove all dependency to unknown node and integral node
 				final Set<INode> keySet = Set.copyOf(node.getDependencies().keySet());
 				for (final INode dependencyNode : keySet) {
-					if (dependencyNode instanceof IUnknown || dependencyNode instanceof IIntegral) {
+					if (dependencyNode instanceof IUnknown || dependencyNode instanceof IIntegral || dependencyNode.getParent() == null) {
 						node.removeDependency(dependencyNode);
 					}
 				}
@@ -349,6 +349,8 @@ final class AstBuilder {
 	private List<INode> createChildrenFromDeclaration(INode parentNode, IASTDeclaration declaration) {
 		if (declaration instanceof ICPPASTVisibilityLabel
 				|| declaration instanceof ICPPASTUsingDeclaration
+				|| declaration instanceof ICPPASTUsingDirective
+				|| declaration instanceof ICPPASTNamespaceAlias
 				|| declaration instanceof IASTProblemDeclaration
 				|| declaration instanceof ICPPASTStaticAssertDeclaration) {
 			// skipped
