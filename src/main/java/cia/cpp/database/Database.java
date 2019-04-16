@@ -7,11 +7,10 @@ import cia.cpp.ast.*;
 import cia.cpp.database.bean.Node;
 import cia.cpp.database.bean.*;
 import cia.cpp.database.dao.*;
-import mrmathami.util.ImmutablePair;
 import mrmathami.util.Utilities;
 
-import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -37,19 +36,20 @@ public final class Database {
 	private final Map<Map.Entry<INode, Integer>, Node> nodeMap = new HashMap<>();
 	private final Map<ProjectVersion, Version> versionMap = new HashMap<>();
 
-	private Database(Project project, File outputPath) throws IOException {
-		if (!outputPath.isDirectory()) {
-			throw new IOException("Output path is not a directory! outputPath = " + outputPath);
-		}
-
-		final File outputFile = new File(outputPath, project.getProjectName() + ".sqLite");
-		if (outputFile.isFile() && !outputFile.delete() || outputFile.exists()) {
-			throw new IOException("Output file already exist! outputFile = " + outputFile);
-		}
-
+	private Database(Project project, Path outputPath) throws IOException {
 		this.project = project;
 
-		this.databaseUrl = DATABASE_URL_PREFIX + Utilities.getCanonicalAbsolutePath(outputFile).replace('\\', '/');
+		if (Files.isDirectory(outputPath)) {
+			final Path outputFile = outputPath.resolve(project.getProjectName() + ".sqLite");
+			if (Files.exists(outputFile)) Files.delete(outputFile);
+
+			this.databaseUrl = DATABASE_URL_PREFIX + outputFile.toRealPath().toUri().toString();
+		} else {
+			if (Files.exists(outputPath)) Files.delete(outputPath);
+
+			this.databaseUrl = DATABASE_URL_PREFIX + outputPath.toRealPath().toUri().toString();
+		}
+
 	}
 
 	private static String pathListToString(List<String> pathList) {
@@ -61,7 +61,7 @@ public final class Database {
 		return builder.toString();
 	}
 
-	public static boolean exportProject(Project project, File outputPath) {
+	public static boolean exportProject(Project project, Path outputPath) {
 		try {
 			final Database database = new Database(project, outputPath);
 			return database.internalExportProject();

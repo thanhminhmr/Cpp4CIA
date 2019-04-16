@@ -16,8 +16,8 @@ public final class ProjectVersion implements Serializable {
 
 	private ProjectVersion(String versionName, List<String> projectFiles, List<String> includePaths, IRoot rootNode) {
 		this.versionName = versionName;
-		this.projectFiles = projectFiles;
-		this.includePaths = includePaths;
+		this.projectFiles = List.copyOf(projectFiles);
+		this.includePaths = List.copyOf(includePaths);
 		this.rootNode = rootNode;
 	}
 

@@ -2,7 +2,6 @@ package cia.cpp.builder;
 
 import cia.cpp.ProjectVersion;
 import cia.cpp.ast.IRoot;
-import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.*;
 
 import java.io.FileWriter;

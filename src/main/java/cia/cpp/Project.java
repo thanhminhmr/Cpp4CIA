@@ -12,8 +12,8 @@ public final class Project implements Serializable {
 
 	private Project(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
 		this.projectName = projectName;
-		this.versionList = versionList;
-		this.differenceList = differenceList;
+		this.versionList = List.copyOf(versionList);
+		this.differenceList = List.copyOf(differenceList);
 	}
 
 	public static Project of(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {

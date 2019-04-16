@@ -1,0 +1,27 @@
+<component name="ArtifactManager">
+  <artifact name="cppcia:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/cppcia_jar</output-path>
+    <root id="root">
+      <element id="archive" name="cppcia.jar">
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="$PROJECT_DIR$/src/main/manifest/VersionBuilderMain/META-INF/MANIFEST.MF" />
+        </element>
+        <element id="module-output" name="cppcia" />
+      </element>
+      <element id="library" level="module" name="Maven: org.eclipse.core:runtime:unknown" module-name="cppcia" />
+      <element id="library" level="module" name="Maven: org.eclipse.core:resources:unknown" module-name="cppcia" />
+      <element id="library" level="module" name="Maven: org.eclipse.core:contenttype:unknown" module-name="cppcia" />
+      <element id="library" level="project" name="Maven: com.google.code.findbugs:jsr305:2.0.1" />
+      <element id="library" level="module" name="Maven: org.eclipse.equinox:registry:unknown" module-name="cppcia" />
+      <element id="library" level="project" name="Maven: org.slf4j:slf4j-api:1.7.6" />
+      <element id="library" level="module" name="Maven: org.eclipse.osgi:main:unknown" module-name="cppcia" />
+      <element id="library" level="project" name="Maven: org.xerial:sqlite-jdbc:3.25.2" />
+      <element id="library" level="project" name="Maven: org.ini4j:ini4j:0.5.4" />
+      <element id="library" level="module" name="Maven: org.eclipse.equinox:common:unknown" module-name="cppcia" />
+      <element id="library" level="module" name="Maven: org.eclipse.equinox:preferences:unknown" module-name="cppcia" />
+      <element id="library" level="module" name="Maven: org.eclipse.cdt:core:unknown" module-name="cppcia" />
+      <element id="library" level="module" name="Maven: org.eclipse.core:jobs:unknown" module-name="cppcia" />
+      <element id="library" level="project" name="Maven: com.ibm.icu:icu4j:64.1" />
+    </root>
+  </artifact>
+</component>

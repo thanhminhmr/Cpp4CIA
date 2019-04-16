@@ -1,15 +1,10 @@
 package cia.cpp.builder;
 
-import mrmathami.util.Utilities;
-import org.eclipse.cdt.core.dom.ast.IASTPreprocessorIncludeStatement;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
 import org.eclipse.cdt.core.model.ILanguage;
 import org.eclipse.cdt.core.parser.*;
 import org.eclipse.core.runtime.CoreException;
-
-import java.io.File;
-import java.util.*;
 
 final class TranslationUnitBuilder {
 	private static final IncludeFileContentProvider EMPTY_PROVIDER = IncludeFileContentProvider.getEmptyFilesProvider();
@@ -20,6 +15,7 @@ final class TranslationUnitBuilder {
 	private TranslationUnitBuilder() {
 	}
 
+/*
 	private static List<File> createFileIncludes(IASTTranslationUnit translationUnit, List<File> projectFiles, List<File> internalIncludePaths, File currentFolder) {
 		final List<File> includeList = new ArrayList<>();
 		final Set<File> includeSet = new HashSet<>();
@@ -65,6 +61,7 @@ final class TranslationUnitBuilder {
 		}
 		return includeMap;
 	}
+*/
 
 	public static IASTTranslationUnit build(char[] fileContentChars) {
 		final FileContent fileContent = FileContent.create("ROOT", fileContentChars);

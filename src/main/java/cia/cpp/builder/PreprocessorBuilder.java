@@ -142,12 +142,12 @@ final class PreprocessorBuilder implements PreprocessorListener {
 
 	@Override
 	public void handleWarning(@Nonnull Source source, int line, int column, @Nonnull String msg) {
-		System.out.println(source.getName() + ":" + line + ":" + column + ": warning: " + msg);
+//		System.out.println(source.getName() + ":" + line + ":" + column + ": warning: " + msg);
 	}
 
 	@Override
 	public void handleError(@Nonnull Source source, int line, int column, @Nonnull String msg) {
-		System.out.println(source.getName() + ":" + line + ":" + column + ": error: " + msg);
+//		System.out.println(source.getName() + ":" + line + ":" + column + ": error: " + msg);
 	}
 
 	@Override

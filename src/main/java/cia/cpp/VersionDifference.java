@@ -20,10 +20,10 @@ public final class VersionDifference implements Serializable {
 	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
 		this.versionA = versionA;
 		this.versionB = versionB;
-		this.addedNodes = addedNodes;
-		this.changedNodes = changedNodes;
-		this.unchangedNodes = unchangedNodes;
-		this.removedNodes = removedNodes;
+		this.addedNodes = Set.copyOf(addedNodes);
+		this.changedNodes = Set.copyOf(changedNodes);
+		this.unchangedNodes = Set.copyOf(unchangedNodes);
+		this.removedNodes = Set.copyOf(removedNodes);
 	}
 
 	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {

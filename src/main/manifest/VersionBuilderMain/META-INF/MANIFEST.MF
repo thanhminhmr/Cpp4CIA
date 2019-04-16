@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Class-Path: org.eclipse.core.runtime_3.15.100.v20181107-1343.jar org.e
+ clipse.core.resources_3.13.200.v20181121-1020.jar org.eclipse.core.co
+ ntenttype_3.7.200.v20181107-1343.jar jsr305-2.0.1.jar org.eclipse.equ
+ inox.registry_3.8.200.v20181008-1820.jar slf4j-api-1.7.6.jar org.ecli
+ pse.osgi_3.13.200.v20181130-2106.jar sqlite-jdbc-3.25.2.jar ini4j-0.5
+ .4.jar org.eclipse.equinox.common_3.10.200.v20181021-1645.jar org.ecl
+ ipse.equinox.preferences_3.7.200.v20180827-1235.jar org.eclipse.cdt.c
+ ore_6.6.0.201812101042.jar org.eclipse.core.jobs_3.10.200.v20180912-1
+ 356.jar icu4j-64.1.jar
+Main-Class: cia.cpp.Main
+
