@@ -6,7 +6,7 @@ import java.util.Objects;
 public final class Use extends BeanClass {
 	private static final BeanInfo BEAN_INFO = BeanInfo.register(
 			"uses",
-			List.of("id", "nodeA", "nodeB", "typeEnum", "count"),
+			List.of("versionId", "nodeA", "nodeB", "typeEnum", "count"),
 			List.of(Integer.class, Integer.class, Integer.class, Integer.class, Integer.class)
 	);
 
@@ -14,12 +14,12 @@ public final class Use extends BeanClass {
 		super(BEAN_INFO);
 	}
 
-	public final Integer getId() {
-		return (Integer) get("id");
+	public final Integer getVersionId() {
+		return (Integer) get("versionId");
 	}
 
-	public final Use setId(Integer id) {
-		put("id", id);
+	public final Use setVersionId(Integer id) {
+		put("versionId", id);
 		return this;
 	}
 
@@ -64,11 +64,13 @@ public final class Use extends BeanClass {
 		if (this == object) return true;
 		if (object == null || getClass() != object.getClass()) return false;
 		final Use use = (Use) object;
-		return Objects.equals(getId(), use.getId());
+		return Objects.equals(getVersionId(), use.getVersionId())
+				&& Objects.equals(getNodeA(), use.getNodeA())
+				&& Objects.equals(getNodeB(), use.getNodeB());
 	}
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(getId());
+		return Objects.hash(getVersionId(), getNodeA(), getNodeB());
 	}
 }

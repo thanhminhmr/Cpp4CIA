@@ -86,7 +86,7 @@ public final class ImmutablePair<K, V> implements Map.Entry<K, V>, Serializable 
 	 */
 	@Override
 	public final String toString() {
-		return String.format("%s = %s", key, value);
+		return key + " = " + value;
 	}
 
 	/**

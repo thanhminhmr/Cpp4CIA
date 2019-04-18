@@ -20,7 +20,7 @@ public final class Uses {
 	}
 
 	public static Use add(Connection connection, Use value) throws SQLException {
-		return Tables.insert(connection, Use::new, value, "id");
+		return Tables.insert(connection, Use::new, value, null);
 	}
 
 	public static Use update(Connection connection, Use whatValue, Use toValue) throws SQLException {

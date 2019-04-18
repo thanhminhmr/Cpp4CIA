@@ -3,6 +3,7 @@ package cia.cpp.builder;
 import cia.cpp.ast.IFunction;
 import cia.cpp.ast.IVariable;
 import cia.cpp.ast.*;
+import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.*;
 import org.eclipse.cdt.core.dom.ast.cpp.*;
 import org.eclipse.cdt.internal.core.model.ASTStringUtil;
@@ -15,10 +16,6 @@ final class AstBuilder {
 	private final List<INode> unknownNodeList = new LinkedList<>();
 
 	private AstBuilder() {
-	}
-
-	private static String objectToString(Object object) {
-		return object != null ? String.format("(0x%08X) %s", object.hashCode(), object.getClass().getSimpleName()) : "null";
 	}
 
 	public static IRoot build(IASTTranslationUnit translationUnit) {
@@ -44,7 +41,7 @@ final class AstBuilder {
 				// remove all dependency to unknown node and integral node
 				final Set<INode> keySet = Set.copyOf(node.getDependencies().keySet());
 				for (final INode dependencyNode : keySet) {
-					if (dependencyNode instanceof IUnknown || dependencyNode instanceof IIntegral || dependencyNode.getParent() == null) {
+					if (dependencyNode instanceof IUnknown || dependencyNode instanceof IIntegral) {
 						node.removeDependency(dependencyNode);
 					}
 				}
@@ -53,7 +50,7 @@ final class AstBuilder {
 					node.removeChildren();
 					node.removeDependencies();
 
-				} else if (node instanceof IFunction) {
+				} /*else if (node instanceof IFunction) {
 					final IFunction function = (IFunction) node;
 					final List<INode> parameters = List.copyOf(function.getParameters());
 					final List<INode> variables = new ArrayList<>(function.getVariables());
@@ -62,7 +59,7 @@ final class AstBuilder {
 						function.removeChild(variable);
 						function.removeDependency(variable);
 					}
-				}
+				}*/
 			}
 		}
 		for (final INode node : List.copyOf(unknownNodeList)) {
@@ -72,25 +69,14 @@ final class AstBuilder {
 			final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
 			replaceNode(node, newNode);
 		}
-		rootNode.addIntegrals(List.copyOf(integralNodeMap.values()));
+		final List<INode> integralNodeList = List.copyOf(integralNodeMap.values());
+		for (final INode node : integralNodeList) {
+			node.removeFromParent();
+			node.removeChildren();
+			node.removeDependencies();
+		}
+		rootNode.addIntegrals(integralNodeList);
 		return rootNode;
-	}
-
-	private <E extends INode, B extends INode.INodeBuilder<E, B>>
-	INode createIntegralNode(String typeName, B builder) {
-		if (typeName.isBlank()) return null;
-
-		final INode existNode = integralNodeMap.get(typeName);
-		if (existNode != null) return existNode;
-
-		final INode newNode = builder
-				.setName(typeName)
-				.setUniqueName(typeName)
-				.setSignature(typeName)
-				.build();
-
-		integralNodeMap.put(typeName, newNode);
-		return newNode;
 	}
 
 	private void replaceNode(INode oldNode, INode newNode) {
@@ -137,8 +123,31 @@ final class AstBuilder {
 				iterator.remove();
 			}
 		}
-		newNode.addChildren(oldNode.removeChildren());
-		newNode.addDependencies(oldNode.removeDependencies());
+		if (newNode instanceof IIntegral) {
+			newNode.removeFromParent();
+			oldNode.removeChildren();
+			oldNode.removeDependencies();
+		} else {
+			newNode.addChildren(oldNode.removeChildren());
+			newNode.addDependencies(oldNode.removeDependencies());
+		}
+	}
+
+	private <E extends INode, B extends INode.INodeBuilder<E, B>>
+	INode createIntegralNode(String typeName, B builder) {
+		if (typeName.isBlank()) return null;
+
+		final INode existNode = integralNodeMap.get(typeName);
+		if (existNode != null) return existNode;
+
+		final INode newNode = builder
+				.setName(typeName)
+				.setUniqueName(typeName)
+				.setSignature(typeName)
+				.build();
+
+		integralNodeMap.put(typeName, newNode);
+		return newNode;
 	}
 
 	private <E extends INode, B extends INode.INodeBuilder<E, B>>
@@ -206,8 +215,8 @@ final class AstBuilder {
 			return node;
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromDeclarator(typeNode = " + objectToString(typeNode)
-					+ ", declarator = " + objectToString(declarator) + ")");
+			throw new IllegalArgumentException("createFromDeclarator(typeNode = (" + Utilities.objectToString(typeNode)
+					+ "), declarator = (" + Utilities.objectToString(declarator) + "))");
 		}
 	}
 
@@ -299,7 +308,7 @@ final class AstBuilder {
 			return simpleNode;
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromDeclSpecifier(declSpecifier = " + objectToString(declSpecifier) + ")");
+			throw new IllegalArgumentException("createFromDeclSpecifier(declSpecifier = (" + Utilities.objectToString(declSpecifier) + "))");
 		}
 	}
 
@@ -341,8 +350,8 @@ final class AstBuilder {
 			return nestedTemplateNode;
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromTemplateParameter(parentNode = " + objectToString(parentNode)
-					+ ", templateParameter = " + objectToString(templateParameter) + ")");
+			throw new IllegalArgumentException("createFromTemplateParameter(parentNode = (" + Utilities.objectToString(parentNode)
+					+ "), templateParameter = (" + Utilities.objectToString(templateParameter) + "))");
 		}
 	}
 
@@ -355,6 +364,14 @@ final class AstBuilder {
 				|| declaration instanceof ICPPASTStaticAssertDeclaration) {
 			// skipped
 			return List.of();
+
+		} else if (declaration instanceof ICPPASTLinkageSpecification) {
+			final ICPPASTLinkageSpecification linkageSpecification = (ICPPASTLinkageSpecification) declaration;
+			final List<INode> childrenNode = new ArrayList<>();
+			for (final IASTDeclaration linkageDeclaration : linkageSpecification.getDeclarations(false)) {
+				childrenNode.addAll(createChildrenFromDeclaration(parentNode, linkageDeclaration));
+			}
+			return childrenNode;
 
 		} else if (declaration instanceof ICPPASTNamespaceDefinition) {
 			// region
@@ -379,7 +396,15 @@ final class AstBuilder {
 			final IASTDeclSpecifier simpleSpecifier = simpleDeclaration.getDeclSpecifier();
 			final INode simpleNodeType = createFromDeclSpecifier(parentNode, simpleSpecifier);
 
-			if (simpleNodeType != null) parentNode.addDependency(simpleNodeType).setType(Dependency.Type.USE);
+			if (simpleNodeType != null) {
+				if (!(simpleNodeType instanceof IUnknown || simpleNodeType instanceof IIntegral)
+						&& simpleNodeType.getParent() == null && parentNode != simpleNodeType) {
+					parentNode.addChild(simpleNodeType);
+					parentNode.addDependency(simpleNodeType).setType(Dependency.Type.MEMBER);
+				} else {
+					parentNode.addDependency(simpleNodeType).setType(Dependency.Type.USE);
+				}
+			}
 
 			final List<INode> simpleNodeList = new ArrayList<>();
 			for (final IASTDeclarator simpleDeclarator : simpleDeclaration.getDeclarators()) {
@@ -429,12 +454,17 @@ final class AstBuilder {
 			final IASTDeclaration innerDeclaration = templateDeclaration.getDeclaration();
 			final List<INode> innerNodeList = createChildrenFromDeclaration(parentNode, innerDeclaration);
 
+			for (final INode innerNode : innerNodeList) {
+				parentNode.addChild(innerNode);
+				parentNode.addDependency(innerNode).setType(Dependency.Type.MEMBER);
+			}
+
+			final INode innerNode = innerNodeList.get(0);
+
 			for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
-				final INode templateNode = createFromTemplateParameter(parentNode, templateParameter);
-				for (final INode innerNode : innerNodeList) {
-					innerNode.addChild(templateNode);
-					innerNode.addDependency(templateNode).setType(Dependency.Type.MEMBER);
-				}
+				final INode templateNode = createFromTemplateParameter(innerNode, templateParameter);
+				innerNode.addChild(templateNode);
+				innerNode.addDependency(templateNode).setType(Dependency.Type.MEMBER);
 			}
 			return innerNodeList;
 
@@ -465,8 +495,8 @@ final class AstBuilder {
 
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = " + objectToString(parentNode)
-					+ ", declaration = " + objectToString(declaration) + ")");
+			throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = (" + Utilities.objectToString(parentNode)
+					+ "), declaration = (" + Utilities.objectToString(declaration) + "))");
 		}
 	}
 

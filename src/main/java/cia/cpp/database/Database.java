@@ -259,18 +259,22 @@ public final class Database {
 			final Dependency dependency = entry.getValue();
 
 			final Node dbUseNode = internalExportNode(dbVersion, entry.getKey());
-			if (dbUseNode == null) return null;
+			if (dbUseNode == null)
+				return null;
 
 			final Use dbUse = Uses.add(getConnection(), new Use()
+					.setVersionId(dbVersion.getId())
 					.setNodeA(dbNode.getId())
 					.setNodeB(dbUseNode.getId())
 					.setTypeEnum(getDependencyType(dependency.getType()))
 					.setCount(dependency.getCount()));
-			if (dbUse == null) return null;
+			if (dbUse == null)
+				return null;
 		}
 
 		for (final ITreeNode childTreeNode : node) {
-			if (internalExportNode(dbVersion, childTreeNode) == null) return null;
+			if (internalExportNode(dbVersion, childTreeNode) == null)
+				return null;
 		}
 
 		return dbNode;

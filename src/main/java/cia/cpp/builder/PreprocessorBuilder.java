@@ -31,12 +31,8 @@ final class PreprocessorBuilder implements PreprocessorListener {
 		try {
 			final Preprocessor preprocessor = new Preprocessor();
 			preprocessor.setListener(EMPTY_PREPROCESSOR_LISTENER);
-			preprocessor.addFeature(Feature.DIGRAPHS);
-			preprocessor.addFeature(Feature.TRIGRAPHS);
-			preprocessor.addFeature(Feature.INCLUDENEXT);
-			preprocessor.addFeature(Feature.PRAGMA_ONCE);
-			preprocessor.addFeature(Feature.LINEMARKERS);
-//		    preprocessor.addMacro("__JCPP__");
+			preprocessor.addFeatures(Feature.DIGRAPHS, Feature.TRIGRAPHS, Feature.INCLUDENEXT, Feature.PRAGMA_ONCE, Feature.LINEMARKERS);
+
 			{
 				final List<String> includePathStrings = new ArrayList<>();
 				for (final Path file : includePaths) {

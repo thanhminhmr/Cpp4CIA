@@ -168,6 +168,14 @@ public final class Tables {
 					"\t`parameterId` integer not null references `node` (`id`),\n" +
 					"\tprimary key (`functionId`, `parameterId`)\n" +
 					");");
+			statement.addBatch("create table `uses` (\n" +
+					"\t`versionId` integer not null references `versions` (`id`),\n" +
+					"\t`nodeA` integer not null references `node` (`id`),\n" +
+					"\t`nodeB` integer not null references `node` (`id`),\n" +
+					"\t`typeEnum` integer not null,\n" +
+					"\t`count` integer not null,\n" +
+					"\tprimary key (`versionId`, `nodeA`, `nodeB`)\n" +
+					");");
 			statement.addBatch("create table `differences` (\n" +
 					"\t`id` integer primary key autoincrement,\n" +
 					"\t`versionA` integer not null references `versions` (`id`),\n" +
@@ -176,13 +184,6 @@ public final class Tables {
 					"\t`nodeB` integer default null references `node` (`id`),\n" +
 					"\t`typeEnum` integer not null,\n" +
 					"\tunique (`versionA`, `versionB`, `nodeA`, `nodeB`)\n" +
-					");");
-			statement.addBatch("create table `uses` (\n" +
-					"\t`id` integer primary key autoincrement,\n" +
-					"\t`nodeA` integer not null references `node` (`id`),\n" +
-					"\t`nodeB` integer not null references `node` (`id`),\n" +
-					"\t`typeEnum` integer not null,\n" +
-					"\t`count` integer not null\n" +
 					");");
 			statement.executeBatch();
 		}

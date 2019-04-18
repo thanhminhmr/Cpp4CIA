@@ -4,6 +4,9 @@ import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.*;
 
 /**
@@ -177,6 +180,13 @@ public abstract class Node extends TreeNode implements INode {
 				+ "\", signature: \"" + signature
 				+ "\", dependencyMap: " + Utilities.mapToString(dependencyMap)
 				+ " }";
+	}
+
+	private void writeObject(ObjectOutputStream out) throws IOException {
+		if (this.getParent() == null && !(this instanceof IRoot)) {
+			throw new IOException("Null parent!");
+		}
+		out.defaultWriteObject();
 	}
 
 	protected static abstract class NodeBuilder<E extends INode, B extends INodeBuilder> implements INodeBuilder<E, B> {
