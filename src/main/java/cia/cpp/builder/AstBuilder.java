@@ -10,7 +10,7 @@ import org.eclipse.cdt.internal.core.model.ASTStringUtil;
 
 import java.util.*;
 
-final class AstBuilder {
+public final class AstBuilder {
 	private final Map<String, INode> integralNodeMap = new HashMap<>();
 	private final Map<IBinding, INode> bindingNodeMap = new HashMap<>();
 	private final List<INode> unknownNodeList = new LinkedList<>();

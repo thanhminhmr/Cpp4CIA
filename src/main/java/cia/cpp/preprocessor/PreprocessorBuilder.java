@@ -1,4 +1,4 @@
-package cia.cpp.builder;
+package cia.cpp.preprocessor;
 
 
 import org.anarres.cpp.*;
@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-final class PreprocessorBuilder implements PreprocessorListener {
+public final class PreprocessorBuilder implements PreprocessorListener {
 	private static final PreprocessorBuilder EMPTY_PREPROCESSOR_LISTENER = new PreprocessorBuilder();
 
 	private PreprocessorBuilder() {

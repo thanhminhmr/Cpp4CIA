@@ -6,7 +6,7 @@ import org.eclipse.cdt.core.model.ILanguage;
 import org.eclipse.cdt.core.parser.*;
 import org.eclipse.core.runtime.CoreException;
 
-final class TranslationUnitBuilder {
+public final class TranslationUnitBuilder {
 	private static final IncludeFileContentProvider EMPTY_PROVIDER = IncludeFileContentProvider.getEmptyFilesProvider();
 	private static final IParserLogService LOG_SERVICE = new DefaultLogService();
 	private static final GPPLanguage GPP_LANGUAGE = GPPLanguage.getDefault();
