@@ -1,13 +1,13 @@
 package cia.cpp.preprocessor;
 
 
+import cia.cpp.builder.TranslationUnitBuilder;
 import org.anarres.cpp.*;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public final class PreprocessorBuilder implements PreprocessorListener {
 	private static final PreprocessorBuilder EMPTY_PREPROCESSOR_LISTENER = new PreprocessorBuilder();
@@ -27,6 +27,48 @@ public final class PreprocessorBuilder implements PreprocessorListener {
 		return fileA.toString().compareToIgnoreCase(fileB.toString());
 	}
 
+	private static List<Path> includeList(List<Path> projectFiles, List<Path> includePaths) throws IOException {
+		// includeMap is modified !!
+		final Map<Path, Set<Path>> includeMap = TranslationUnitBuilder.createIncludeMap(projectFiles, includePaths);
+
+		final Map<Path, Integer> includeScoreMap = new HashMap<>();
+		final List<Path> includeList = new ArrayList<>(includeMap.size());
+
+		final List<Path> minIncludeFiles = new ArrayList<>();
+
+		while (!includeMap.isEmpty()) {
+			long minCount = Long.MAX_VALUE;
+
+			includeScoreMap.clear();
+			for (final Map.Entry<Path, Set<Path>> entry : includeMap.entrySet()) {
+				includeScoreMap.put(entry.getKey(), 0);
+				for (final Path sourceIncludePath : entry.getValue()) {
+					if (includeMap.containsKey(sourceIncludePath)) {
+						final Integer count = includeScoreMap.get(sourceIncludePath);
+						includeScoreMap.put(sourceIncludePath, count != null ? count + 1 : 1);
+					}
+				}
+			}
+
+			minIncludeFiles.clear();
+			for (final Map.Entry<Path, Integer> entry : includeScoreMap.entrySet()) {
+				if (entry.getValue() <= minCount) {
+					if (entry.getValue() < minCount) {
+						minCount = entry.getValue();
+						minIncludeFiles.clear();
+					}
+					minIncludeFiles.add(entry.getKey());
+				}
+			}
+
+			minIncludeFiles.sort(PreprocessorBuilder::fileCompare);
+			for (final Path includeFile : minIncludeFiles) includeMap.remove(includeFile);
+			includeList.addAll(minIncludeFiles);
+		}
+
+		return includeList;
+	}
+
 	public static char[] build(List<Path> projectFiles, List<Path> includePaths, boolean isReadable) {
 		try {
 			final Preprocessor preprocessor = new Preprocessor();
@@ -35,8 +77,8 @@ public final class PreprocessorBuilder implements PreprocessorListener {
 
 			{
 				final List<String> includePathStrings = new ArrayList<>();
-				for (final Path file : includePaths) {
-					includePathStrings.add(file.toRealPath().toString());
+				for (final Path path : includeList(projectFiles, includePaths)) {
+					includePathStrings.add(path.toRealPath().toString());
 				}
 				preprocessor.setQuoteIncludePath(includePathStrings);
 				preprocessor.setSystemIncludePath(includePathStrings);
@@ -45,7 +87,7 @@ public final class PreprocessorBuilder implements PreprocessorListener {
 				for (final Path projectFile : projectFiles) {
 					projectFileList.add(projectFile.toRealPath());
 				}
-				projectFileList.sort(PreprocessorBuilder::fileCompare);
+				//projectFileList.sort(PreprocessorBuilder::fileCompare);
 
 				for (final Path sourceFile : projectFileList) {
 					preprocessor.addInput(sourceFile.toFile());
@@ -78,11 +120,10 @@ public final class PreprocessorBuilder implements PreprocessorListener {
 			switch (token.getType()) {
 				case Token.NL:
 				case Token.WHITESPACE:
-					haveEndSpace = true;
-
 				case Token.CCOMMENT:
 				case Token.CPPCOMMENT:
 				case Token.P_LINE:
+					haveEndSpace = true;
 					continue;
 
 				case Token.EOF:

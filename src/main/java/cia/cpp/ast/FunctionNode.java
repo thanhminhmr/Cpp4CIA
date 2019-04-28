@@ -106,9 +106,10 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Override
 	public final boolean equals(Object object) {
-		if (!super.equals(object)) return false;
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass()) return false;
 		final FunctionNode node = (FunctionNode) object;
-		return Objects.equals(type, node.type);
+		return Objects.equals(type, node.type) && super.equals(object);
 	}
 
 	@Override

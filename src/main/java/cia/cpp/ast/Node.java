@@ -143,10 +143,11 @@ public abstract class Node extends TreeNode implements INode {
 
 	@Override
 	public boolean equals(Object object) {
-		if (!super.equals(object)) return false;
+		if (this == object) return true;
+		if (object == null || getClass() != object.getClass()) return false;
 		final Node node = (Node) object;
 		return name.equals(node.name) && uniqueName.equals(node.uniqueName)
-				&& signature.equals(node.signature);
+				&& signature.equals(node.signature) && super.equals(object);
 	}
 
 	@Override

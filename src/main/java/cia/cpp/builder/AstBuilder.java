@@ -35,7 +35,7 @@ public final class AstBuilder {
 				node.removeDependencies();
 				if (node instanceof IUnknown) {
 					final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
-					replaceNode(node, newNode);
+					if (newNode != null) replaceNode(node, newNode);
 				}
 			} else {
 				// remove all dependency to unknown node and integral node
@@ -67,7 +67,7 @@ public final class AstBuilder {
 			node.removeChildren();
 			node.removeDependencies();
 			final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
-			replaceNode(node, newNode);
+			if (newNode != null) replaceNode(node, newNode);
 		}
 		final List<INode> integralNodeList = List.copyOf(integralNodeMap.values());
 		for (final INode node : integralNodeList) {
@@ -191,18 +191,18 @@ public final class AstBuilder {
 			final INode functionNode = createNode(declaratorBinding, declaratorName, signature,
 					FunctionNode.builder().setType(typeNode));
 
-			//if (functionNode instanceof IFunction) {
-			for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
-				final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
-				final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
+			if (functionNode instanceof IFunction) {
+				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
+					final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
+					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
 
-				final INode parameterType = createFromDeclSpecifier(typeNode, parameterSpecifier);
-				final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
+					final INode parameterType = createFromDeclSpecifier(typeNode, parameterSpecifier);
+					final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
 
-				((IFunction) functionNode).addParameter(parameterNode);
-				functionNode.addDependency(parameterNode).setType(Dependency.Type.MEMBER);
-				functionNode.addDependency(parameterType).setType(Dependency.Type.USE);
-				//}
+					((IFunction) functionNode).addParameter(parameterNode);
+					functionNode.addDependency(parameterNode).setType(Dependency.Type.MEMBER);
+					functionNode.addDependency(parameterType).setType(Dependency.Type.USE);
+				}
 			}
 			// endregion
 			return functionNode;
@@ -253,16 +253,16 @@ public final class AstBuilder {
 
 			final INode classNode = createNode(classBinding, className, signature, ClassNode.builder());
 
-			//if (classNode instanceof IClass) {
-			for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
-				final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
-				final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
+			if (classNode instanceof IClass) {
+				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
+					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
+					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
 
-				final INode classBaseNode = createNode(classBaseNameBinding, null, null, UnknownNode.builder());
-				((IClass) classNode).addBase(classBaseNode);
-				classNode.addDependency(classBaseNode).setType(Dependency.Type.INHERITANCE);
+					final INode classBaseNode = createNode(classBaseNameBinding, null, null, UnknownNode.builder());
+					((IClass) classNode).addBase(classBaseNode);
+					classNode.addDependency(classBaseNode).setType(Dependency.Type.INHERITANCE);
+				}
 			}
-			//}
 
 			for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
 				createChildrenFromDeclaration(classNode, classChildDeclaration);
@@ -361,7 +361,9 @@ public final class AstBuilder {
 				|| declaration instanceof ICPPASTUsingDirective
 				|| declaration instanceof ICPPASTNamespaceAlias
 				|| declaration instanceof IASTProblemDeclaration
-				|| declaration instanceof ICPPASTStaticAssertDeclaration) {
+				|| declaration instanceof ICPPASTStaticAssertDeclaration
+				|| declaration instanceof ICPPASTExplicitTemplateInstantiation
+		) {
 			// skipped
 			return List.of();
 

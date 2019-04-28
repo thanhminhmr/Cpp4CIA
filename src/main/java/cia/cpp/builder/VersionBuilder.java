@@ -98,20 +98,20 @@ public final class VersionBuilder {
 			if (fileContentCharArray == null) return null;
 
 			// todo: dbg
-//	    	{
-//	    		try (final FileWriter writer = new FileWriter("R:\\output_" + versionName + ".cpp")) {
-//	    			writer.write(fileContentCharArray);
-//	    		} catch (IOException e) {
-//	    			e.printStackTrace();
-//	    		}
-//	    	}
+	    	{
+	    		try (final FileWriter writer = new FileWriter(projectRoot.resolve("output_" + versionName + ".cpp").toString())) {
+	    			writer.write(fileContentCharArray);
+	    		} catch (IOException e) {
+	    			e.printStackTrace();
+	    		}
+	    	}
 
 			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 			if (translationUnit == null) return null;
 
 			// todo: dbg
 //		    {
-//		    	try (final FileOutputStream fileOutputStream = new FileOutputStream("R:\\preprocessed_" + versionName + ".log")) {
+//		    	try (final FileOutputStream fileOutputStream = new FileOutputStream(projectRoot.resolve("preprocessed_" + versionName + ".log").toString())) {
 //		    		try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
 //		    			try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
 //		    				_debugPrinter(printStream, 0, translationUnit, translationUnit);
@@ -125,13 +125,13 @@ public final class VersionBuilder {
 			final IRoot root = AstBuilder.build(translationUnit);
 
 			// todo: dbg
-//		    {
-//		    	try (final FileWriter fileWriter = new FileWriter("R:\\tree_new_" + versionName + ".log")) {
-//		    		fileWriter.write(root.toTreeString());
-//		    	} catch (IOException e) {
-//		    		e.printStackTrace();
-//		    	}
-//		    }
+		    {
+		    	try (final FileWriter fileWriter = new FileWriter(projectRoot.resolve("tree_" + versionName + ".log").toString())) {
+		    		fileWriter.write(root.toTreeString());
+		    	} catch (IOException e) {
+		    		e.printStackTrace();
+		    	}
+		    }
 
 			final Path projectRootPath = projectRoot.toRealPath();
 			final List<String> projectFilePaths = new ArrayList<>();
