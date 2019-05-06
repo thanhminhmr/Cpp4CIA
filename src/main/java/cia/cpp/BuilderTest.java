@@ -1,6 +1,7 @@
 package cia.cpp;
 
 import cia.cpp.builder.VersionBuilder;
+import cia.cpp.builder.VersionBuilderDebugger;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -60,12 +61,20 @@ public final class BuilderTest {
 //				);
 
 		final List<Path> includePaths = List.of();
-		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectRoot, projectFiles, includePaths, false);
+
+		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
+		debugger.setSaveFileContent(true);
+		debugger.setSaveTranslationUnit(true);
+		debugger.setSaveRoot(true);
+
+		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, debugger);
 		if (projectVersion == null) return;
+
+		debugger.debugOutput(projectRoot);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		try (final FileOutputStream fos = new FileOutputStream("R:\\output.proj")) {
+		try (final FileOutputStream fos = new FileOutputStream("R:\\CmderLauncher.proj")) {
 			projectVersion.toOutputStream(fos);
 		}
 

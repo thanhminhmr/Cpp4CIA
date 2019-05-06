@@ -36,9 +36,9 @@ public final class VariableNode extends Node implements IVariable {
 	@Override
 	public boolean equals(Object object) {
 		if (this == object) return true;
-		if (object == null || getClass() != object.getClass()) return false;
+		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
 		final VariableNode that = (VariableNode) object;
-		return Objects.equals(type, that.type) && super.equals(object);
+		return Objects.equals(type, that.type);
 
 	}
 

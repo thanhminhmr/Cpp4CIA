@@ -45,93 +45,28 @@ public final class VersionBuilder {
 		return newList;
 	}
 
-	private static void _debugPrinter(PrintStream printStream, int level, IASTNode node, IASTTranslationUnit translationUnit) {
-		final String raw = node.getRawSignature();
-		final int cr = raw.indexOf('\r');
-		final int lf = raw.indexOf('\n');
-		final int line = (cr < 0 || lf < 0) ? Integer.max(cr, lf) : Integer.min(cr, lf);
-		final String rawSub = (line < 0 || line > 60) ? (raw.length() > 60 ? raw.substring(0, 60) : raw) : raw.substring(0, line);
-
-		if (node instanceof IASTName) {
-			IBinding iBinding = ((IASTName) node).resolveBinding();
-			IASTName[] names = iBinding != null ? translationUnit.getDeclarationsInAST(iBinding) : null;
-
-			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
-					"",
-					node.getClass().getSimpleName(), node.hashCode(),
-					rawSub,
-					node.getFileLocation(),
-					iBinding != null ? String.format("(0x%08X) %s", iBinding.hashCode(), iBinding.getClass().getSimpleName()) : null,
-					iBinding != null ? iBinding.getName() : null,
-					iBinding != null ? Arrays.toString(Arrays.stream(names).map(iastName -> {
-						if (iastName == null) return "{ null } ";
-						IASTImageLocation location = iastName.getImageLocation();
-						if (location == null) return "{ " + iastName.toString() + " } ";
-						return "{ " + iastName.toString() + ", " + location.getFileName() + "["
-								+ location.getNodeOffset() + ", " + (location.getNodeOffset()
-								+ location.getNodeLength()) + "] } ";
-					}).toArray()) : null
-			);
-		} else {
-			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) | %-60s | %s\n",
-					"",
-					node.getClass().getSimpleName(), node.hashCode(),
-					rawSub,
-					node.getFileLocation()
-			);
-
-		}
-
-		for (IASTNode child : node.getChildren()) {
-			_debugPrinter(printStream, level + 1, child, translationUnit);
-		}
-	}
-
-	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, boolean isReadable) {
+	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, VersionBuilderDebugger debugger) {
 		try {
 			final List<Path> projectFileList = createPathList(projectFiles);
 			final List<Path> externalIncludePaths = createPathList(includePaths);
 			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
 			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
 
-			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, isReadable);
+			if (debugger != null) debugger.setVersionName(versionName);
+
+			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, debugger != null && debugger.isReadable());
 			if (fileContentCharArray == null) return null;
 
-			// todo: dbg
-	    	{
-	    		try (final FileWriter writer = new FileWriter(projectRoot.resolve("output_" + versionName + ".cpp").toString())) {
-	    			writer.write(fileContentCharArray);
-	    		} catch (IOException e) {
-	    			e.printStackTrace();
-	    		}
-	    	}
+			if (debugger != null && debugger.isSaveFileContent()) debugger.setFileContent(fileContentCharArray);
 
 			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 			if (translationUnit == null) return null;
 
-			// todo: dbg
-//		    {
-//		    	try (final FileOutputStream fileOutputStream = new FileOutputStream(projectRoot.resolve("preprocessed_" + versionName + ".log").toString())) {
-//		    		try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
-//		    			try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
-//		    				_debugPrinter(printStream, 0, translationUnit, translationUnit);
-//		    			}
-//		    		}
-//		    	} catch (IOException e) {
-//		    		e.printStackTrace();
-//		    	}
-//		    }
+			if (debugger != null && debugger.isSaveTranslationUnit()) debugger.setTranslationUnit(translationUnit);
 
 			final IRoot root = AstBuilder.build(translationUnit);
 
-			// todo: dbg
-		    {
-		    	try (final FileWriter fileWriter = new FileWriter(projectRoot.resolve("tree_" + versionName + ".log").toString())) {
-		    		fileWriter.write(root.toTreeString());
-		    	} catch (IOException e) {
-		    		e.printStackTrace();
-		    	}
-		    }
+			if (debugger != null && debugger.isSaveRoot()) debugger.setRoot(root);
 
 			final Path projectRootPath = projectRoot.toRealPath();
 			final List<String> projectFilePaths = new ArrayList<>();

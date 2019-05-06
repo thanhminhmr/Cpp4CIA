@@ -1,8 +1,8 @@
 <component name="ArtifactManager">
-  <artifact name="cppcia:jar">
-    <output-path>$PROJECT_DIR$/out/artifacts/cppcia_jar</output-path>
+  <artifact name="cpp4cia:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/cpp4cia_jar</output-path>
     <root id="root">
-      <element id="archive" name="cppcia.jar">
+      <element id="archive" name="cpp4cia.jar">
         <element id="directory" name="META-INF">
           <element id="file-copy" path="$PROJECT_DIR$/src/main/manifest/VersionBuilderMain/META-INF/MANIFEST.MF" />
         </element>

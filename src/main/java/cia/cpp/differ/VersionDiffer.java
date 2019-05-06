@@ -8,6 +8,7 @@ import mrmathami.util.Utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -17,7 +18,7 @@ public final class VersionDiffer {
 	private VersionDiffer() {
 	}
 
-	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB) {
+	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB, VersionDifferDebugger debugger) {
 		final IRoot rootA = versionA.getRootNode();
 		final IRoot rootB = versionB.getRootNode();
 
@@ -61,25 +62,13 @@ public final class VersionDiffer {
 			}
 		}
 
-		// todo: dbg
-//	    {
-//	    	try {
-//	    		try (final FileWriter fileWriter = new FileWriter("R:\\addedNodes.log")) {
-//	    			fileWriter.write(Utilities.collectionToString(addedNodes));
-//	    		}
-//	    		try (final FileWriter fileWriter = new FileWriter("R:\\changedNodes.log")) {
-//	    			fileWriter.write(Utilities.collectionToString(changedNodes));
-//	    		}
-//	    		try (final FileWriter fileWriter = new FileWriter("R:\\unchangedNodes.log")) {
-//	    			fileWriter.write(Utilities.collectionToString(unchangedNodes));
-//	    		}
-//	    		try (final FileWriter fileWriter = new FileWriter("R:\\removedNodes.log")) {
-//	    			fileWriter.write(Utilities.collectionToString(removedNodes));
-//	    		}
-//	    	} catch (IOException e) {
-//	    		e.printStackTrace();
-//	    	}
-//	    }
+		if (debugger != null) {
+			debugger.setVersionDifferenceName(versionA.getVersionName() + "-" + versionB.getVersionName());
+			debugger.setAddedNodes(addedNodes);
+			debugger.setRemovedNodes(removedNodes);
+			debugger.setChangedNodes(changedNodes);
+			debugger.setUnchangedNodes(unchangedNodes);
+		}
 
 		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}

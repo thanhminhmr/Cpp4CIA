@@ -1,6 +1,7 @@
 package cia.cpp;
 
 import cia.cpp.builder.VersionBuilder;
+import cia.cpp.builder.VersionBuilderDebugger;
 import cia.cpp.database.Database;
 
 import java.io.File;
@@ -40,8 +41,16 @@ public final class DatabaseTest {
 //				);
 
 		final List<Path> includePaths = List.of();
-		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectRoot, projectFiles, includePaths, false);
+
+		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
+		debugger.setSaveFileContent(true);
+		debugger.setSaveTranslationUnit(true);
+		debugger.setSaveRoot(true);
+
+		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectRoot, projectFiles, includePaths, debugger);
 		if (projectVersion == null) return;
+
+		debugger.debugOutput(projectRoot);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 

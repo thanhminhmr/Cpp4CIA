@@ -1,8 +1,10 @@
 package cia.cpp;
 
 import cia.cpp.builder.VersionBuilder;
+import cia.cpp.builder.VersionBuilderDebugger;
 import cia.cpp.database.Database;
 import cia.cpp.differ.VersionDiffer;
+import cia.cpp.differ.VersionDifferDebugger;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -43,9 +45,20 @@ public final class DifferTest {
 //				);
 
 			final List<Path> includePaths = List.of();
-			final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, false);
 
+			final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
+			debugger.setSaveFileContent(true);
+			debugger.setSaveTranslationUnit(true);
+			debugger.setSaveRoot(true);
+
+			final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, debugger);
 			if (projectVersion == null) return;
+
+			debugger.debugOutput(projectRoot);
+
+			try (final FileOutputStream fos = new FileOutputStream("R:\\project1.proj")) {
+				projectVersion.toOutputStream(fos);
+			}
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
@@ -74,17 +87,16 @@ public final class DifferTest {
 //				);
 
 			final List<Path> includePaths2 = List.of();
-			final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, false);
-
+			final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, debugger);
 			if (projectVersion2 == null) return;
 
+			debugger.debugOutput(projectRoot);
 
-			try (final FileOutputStream fos = new FileOutputStream("R:\\project1.proj")) {
-				projectVersion.toOutputStream(fos);
-			}
 			try (final FileOutputStream fos = new FileOutputStream("R:\\project2.proj")) {
 				projectVersion2.toOutputStream(fos);
 			}
+
+			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		}
 
 		ProjectVersion projectVersion, projectVersion2;
@@ -98,7 +110,11 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2);
+		final VersionDifferDebugger debugger = new VersionDifferDebugger();
+
+		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, debugger);
+
+		debugger.debugOutput(Path.of("R:\\"));
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		try (final FileOutputStream fos = new FileOutputStream("R:\\project_project2.pcmp")) {

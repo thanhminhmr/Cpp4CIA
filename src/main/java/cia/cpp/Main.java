@@ -1,8 +1,10 @@
 package cia.cpp;
 
 import cia.cpp.builder.VersionBuilder;
+import cia.cpp.builder.VersionBuilderDebugger;
 import cia.cpp.database.Database;
 import cia.cpp.differ.VersionDiffer;
+import cia.cpp.differ.VersionDifferDebugger;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
 import org.ini4j.Profile;
@@ -21,19 +23,29 @@ public final class Main {
 
 	private final long startTime = System.nanoTime();
 
-	private Main() {
+	private final VersionBuilderDebugger builderDebugger;
+	private final VersionDifferDebugger differDebugger;
+	private final int debugLevel;
+
+	private Main(int debugLevel) {
+		this.debugLevel = debugLevel;
+		this.builderDebugger = debugLevel > 0 ? new VersionBuilderDebugger() : null;
+		this.differDebugger = debugLevel > 0 ? new VersionDifferDebugger() : null;
+		if (debugLevel > 1) builderDebugger.setSaveRoot(true);
+		if (debugLevel > 2) builderDebugger.setSaveFileContent(true);
+		if (debugLevel > 3) builderDebugger.setSaveTranslationUnit(true);
 	}
 
 	public static void main(String[] argv) {
-		if (argv.length != 2) {
-			System.out.println("Usage: VersionBuilder.jar <input.ini> <output_path>");
+		if (argv.length != 3) {
+			System.out.println("Usage: cpp4cia.jar <input.ini> <output_path> <debugLevel>");
 			return;
 		}
-		new Main().build(Path.of(argv[0]), Path.of(argv[1]));
+		new Main(Integer.parseInt(argv[2])).build(Path.of(argv[0]), Path.of(argv[1]));
 	}
 
 	private void doLogging(String message) {
-		System.out.printf("[%4.3f] %s\n", (System.nanoTime() - startTime) / 1000000000.0, message);
+		System.out.printf("[%4.3fs] %s\n", (System.nanoTime() - startTime) / 1000000000.0, message);
 	}
 
 	private void build(Path inputFilePath, Path outputPath) {
@@ -57,7 +69,7 @@ public final class Main {
 			}
 			for (final Profile.Section section : inputFile.values()) {
 				if (section.getName().equals("Project")) {
-					final Project project = buildProject(section, outputPath, List.copyOf(versionMap.values()), differenceList);
+					final Project project = buildProject(section, List.copyOf(versionMap.values()), differenceList);
 					if (project != null) {
 						final String databaseFile = section.get("exportDatabase", "");
 						if (!databaseFile.isBlank()) {
@@ -83,7 +95,7 @@ public final class Main {
 		if (inputFile.isBlank()) {
 			final String versionName = section.get("versionName", "");
 			if (versionName.isBlank()) {
-				doLogging("Invalid config file format, missing versionName=\"" + versionName + "\"!");
+				doLogging("Invalid config file ProjectVersion format, missing versionName=\"" + versionName + "\"!");
 				return null;
 			}
 
@@ -95,17 +107,25 @@ public final class Main {
 
 			doLogging("Building ProjectVersion " + versionName + "...");
 
-			final ProjectVersion projectVersion = VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, false);
+			final ProjectVersion projectVersion = VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, builderDebugger);
 			if (projectVersion != null) {
+				if (builderDebugger != null) builderDebugger.debugOutput(projectRoot);
+
 				final String outputFileString = section.get("outputFile", "");
-				final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(versionName + ".ProjectVersion") : Path.of(outputFileString);
-				try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-					projectVersion.toOutputStream(outputStream);
-					doLogging("Success building ProjectVersion " + versionName);
+				if (!outputFileString.isBlank()) {
+					final Path outputFilePath = Path.of(outputFileString);
+					try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+						projectVersion.toOutputStream(outputStream);
+						doLogging("Success building ProjectVersion " + versionName);
+						return projectVersion;
+					} catch (IOException e) {
+						doLogging("Failed writing ProjectVersion to output file! ProjectVersion file: " + outputFilePath.toString());
+					}
+				} else {
+					doLogging("Skip writing ProjectVersion to output file.");
 					return projectVersion;
-				} catch (IOException e) {
-					doLogging("Failed writing to ProjectVersion file! ProjectVersion file: " + outputFilePath.toString());
 				}
+
 			} else {
 				doLogging("Failed building ProjectVersion " + versionName);
 			}
@@ -116,7 +136,7 @@ public final class Main {
 				doLogging("Success loading ProjectVersion from file " + inputFile);
 				return projectVersion;
 			} catch (IOException e) {
-				doLogging("Failed reading from file! ProjectVersion file: " + inputFile);
+				doLogging("Failed reading ProjectVersion from input file! ProjectVersion file: " + inputFile);
 			}
 		}
 		return null;
@@ -128,22 +148,31 @@ public final class Main {
 			final ProjectVersion versionA = versionMap.get(section.get("versionA", ""));
 			final ProjectVersion versionB = versionMap.get(section.get("versionB", ""));
 			if (versionA == null || versionB == null) {
-				doLogging("Invalid config file format, missing versionA=\"" + versionA + "\" or/and versionB=\"" + versionB + "\"!");
+				doLogging("Invalid config file VersionDifference format, missing versionA=\"" + versionA + "\" or/and versionB=\"" + versionB + "\"!");
 				return null;
 			}
 
 			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName() + "...");
 
-			final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB);
+			final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB, differDebugger);
+
+			if (differDebugger != null) differDebugger.debugOutput(outputPath);
+
 			final String outputFileString = section.get("outputFile", "");
-			final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(versionA.getVersionName() + "-" + versionB.getVersionName() + ".VersionDifference") : Path.of(outputFileString);
-			try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				versionDifference.toOutputStream(outputStream);
-				doLogging("Success building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName());
+			if (!outputFileString.isBlank()) {
+				final Path outputFilePath = Path.of(outputFileString);
+				try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+					versionDifference.toOutputStream(outputStream);
+					doLogging("Success building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName());
+					return versionDifference;
+				} catch (IOException e) {
+					doLogging("Failed writing VersionDifference to output file! Output file: " + outputFilePath.toString());
+				}
+			} else {
+				doLogging("Skip writing VersionDifference to output file.");
 				return versionDifference;
-			} catch (IOException e) {
-				doLogging("Failed writing to output file! Output file: " + outputFilePath.toString());
 			}
+
 		} else {
 			doLogging("Loading VersionDifference from file " + inputFile + "...");
 			try (final InputStream inputStream = Files.newInputStream(Path.of(inputFile), StandardOpenOption.READ)) {
@@ -151,18 +180,18 @@ public final class Main {
 				doLogging("Success loading VersionDifference from file " + inputFile);
 				return difference;
 			} catch (IOException e) {
-				doLogging("Failed reading from input file! Input file: " + inputFile);
+				doLogging("Failed reading VersionDifference from input file! Input file: " + inputFile);
 			}
 		}
 		return null;
 	}
 
-	private Project buildProject(Profile.Section section, Path outputPath, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
+	private Project buildProject(Profile.Section section, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
 		final String inputFile = section.get("inputFile", "");
 		if (inputFile.isBlank()) {
 			final String projectName = section.get("projectName", "");
 			if (projectName.isBlank()) {
-				doLogging("Invalid config file format, missing projectName=\"" + projectName + "\"!");
+				doLogging("Invalid config file Project format, missing projectName=\"" + projectName + "\"!");
 				return null;
 			}
 
@@ -170,13 +199,18 @@ public final class Main {
 
 			final Project project = Project.of(projectName, versionList, differenceList);
 			final String outputFileString = section.get("outputFile", "");
-			final Path outputFilePath = outputFileString.isBlank() ? outputPath.resolve(projectName + ".Project") : Path.of(outputFileString);
-			try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
-				project.toOutputStream(outputStream);
-				doLogging("Success building Project " + projectName);
+			if (!outputFileString.isBlank()) {
+				final Path outputFilePath = Path.of(outputFileString);
+				try (final OutputStream outputStream = Files.newOutputStream(outputFilePath, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+					project.toOutputStream(outputStream);
+					doLogging("Success building Project " + projectName);
+					return project;
+				} catch (IOException e) {
+					doLogging("Failed writing Project to output file! Project file: " + outputFilePath.toString());
+				}
+			} else {
+				doLogging("Skip writing Project to output file.");
 				return project;
-			} catch (IOException e) {
-				doLogging("Failed writing to Project file! Project file: " + outputFilePath.toString());
 			}
 		} else {
 			doLogging("Loading Project from file " + inputFile + "...");
@@ -185,7 +219,7 @@ public final class Main {
 				doLogging("Success loading Project from file " + inputFile);
 				return project;
 			} catch (IOException e) {
-				doLogging("Failed reading from input file! Input file: " + inputFile);
+				doLogging("Failed reading Project from input file! Input file: " + inputFile);
 			}
 		}
 		return null;
