@@ -25,10 +25,8 @@ public final class Main {
 
 	private final VersionBuilderDebugger builderDebugger;
 	private final VersionDifferDebugger differDebugger;
-	private final int debugLevel;
 
 	private Main(int debugLevel) {
-		this.debugLevel = debugLevel;
 		this.builderDebugger = debugLevel > 0 ? new VersionBuilderDebugger() : null;
 		this.differDebugger = debugLevel > 0 ? new VersionDifferDebugger() : null;
 		if (debugLevel > 1) builderDebugger.setSaveRoot(true);
