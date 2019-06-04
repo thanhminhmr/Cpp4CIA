@@ -3,7 +3,6 @@ package cia.cpp.ast;
 import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.io.Serializable;
 
 public final class Dependency implements Serializable {
@@ -72,14 +71,23 @@ public final class Dependency implements Serializable {
 	}
 
 	public enum Type {
-		UNKNOWN,
-		USE,
-		MEMBER,
-		INHERITANCE,
-		//CONTAINMENT,
-		INVOCATION,
-		OVERRIDE;
+		UNKNOWN(0.0),
+		USE(4.0),
+		MEMBER(3.0),
+		INHERITANCE(4.0),
+		INVOCATION(3.5),
+		OVERRIDE(3.3);
 
 		private static final Type[] values = Type.values();
+
+		private final double weight;
+
+		Type(double weight) {
+			this.weight = weight;
+		}
+
+		public double getWeight() {
+			return weight;
+		}
 	}
 }

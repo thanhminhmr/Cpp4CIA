@@ -19,6 +19,14 @@ public interface INode extends Iterable<INode>, Serializable {
 	@Nonnull
 	String getSignature();
 
+	double getDirectWeight();
+
+	void setDirectWeight(double directWeight);
+
+//	double getIndirectWeight();
+//
+//	void setIndirectWeight(double indirectWeight);
+
 	/**
 	 * @return read-only view of dependency info map
 	 */
@@ -82,7 +90,7 @@ public interface INode extends Iterable<INode>, Serializable {
 	 * @return result
 	 */
 	boolean equalsDependencies(@Nonnull INode node);
-	
+
 //==============================================================================
 
 	/**

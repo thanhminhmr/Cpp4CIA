@@ -118,7 +118,9 @@ public final class ClassNode extends Node implements IClass {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\" }";
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ " }";
 	}
 
 	@Nonnull
@@ -128,7 +130,9 @@ public final class ClassNode extends Node implements IClass {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
 				+ ", bases: " + Utilities.collectionToString(bases)
 				+ " }";
 	}

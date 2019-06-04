@@ -26,6 +26,10 @@ public abstract class Node implements INode {
 	@Nonnull
 	private final Map<INode, Dependency> dependencyMap = new HashMap<>();
 
+	private double directWeight;
+
+//	private double indirectWeight;
+
 	@Nullable
 	private INode parent;
 
@@ -41,6 +45,18 @@ public abstract class Node implements INode {
 	private static Node getNode(INode iNode) {
 		if (iNode instanceof Node) return (Node) iNode;
 		throw new IllegalStateException("Unexpected foreign node in tree.");
+	}
+
+	@Nonnull
+	protected final <E extends INode> List<E> getChildrenList(final Class<E> aClass) {
+		final List<INode> children = getChildren();
+		final List<E> list = new ArrayList<>(children.size());
+		for (final INode child : children) {
+			if (aClass.isInstance(child)) {
+				list.add(aClass.cast(child));
+			}
+		}
+		return list;
 	}
 
 	@Override
@@ -59,17 +75,25 @@ public abstract class Node implements INode {
 		return signature;
 	}
 
-	@Nonnull
-	protected final <E extends INode> List<E> getChildrenList(final Class<E> aClass) {
-		final List<INode> children = getChildren();
-		final List<E> list = new ArrayList<>(children.size());
-		for (final INode child : children) {
-			if (aClass.isInstance(child)) {
-				list.add(aClass.cast(child));
-			}
-		}
-		return list;
+	@Override
+	public final double getDirectWeight() {
+		return directWeight;
 	}
+
+	@Override
+	public final void setDirectWeight(double directWeight) {
+		this.directWeight = directWeight;
+	}
+
+//	@Override
+//	public final double getIndirectWeight() {
+//		return indirectWeight;
+//	}
+//
+//	@Override
+//	public final void setIndirectWeight(double indirectWeight) {
+//		this.indirectWeight = indirectWeight;
+//	}
 
 	@Nonnull
 	@Override
@@ -151,6 +175,14 @@ public abstract class Node implements INode {
 		return dependencyMap.equals(node.getDependencies());
 	}
 
+	// Prevent serialize empty object
+	private void writeObject(ObjectOutputStream out) throws IOException {
+		if (this.getParent() == null && !(this instanceof IRoot)) {
+			throw new IOException("Null parent!");
+		}
+		out.defaultWriteObject();
+	}
+
 	@Override
 	public boolean equals(Object object) {
 		if (this == object) return true;
@@ -179,7 +211,9 @@ public abstract class Node implements INode {
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\" }";
+				+ "\", directWeight: " + directWeight
+				+ ", indirectWeight: " + indirectWeight
+				+ " }";
 	}
 
 	@Nonnull
@@ -189,15 +223,10 @@ public abstract class Node implements INode {
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", dependencyMap: " + Utilities.mapToString(dependencyMap)
+				+ "\", directWeight: " + directWeight
+				+ ", indirectWeight: " + indirectWeight
+				+ ", dependencyMap: " + Utilities.mapToString(dependencyMap)
 				+ " }";
-	}
-
-	private void writeObject(ObjectOutputStream out) throws IOException {
-		if (this.getParent() == null && !(this instanceof IRoot)) {
-			throw new IOException("Null parent!");
-		}
-		out.defaultWriteObject();
 	}
 
 	@Nonnull
@@ -420,8 +449,8 @@ public abstract class Node implements INode {
 		private INode current;
 		private Stack<Iterator<INode>> iterators = new Stack<>();
 
-		private NodeIterator(INode treeNode) {
-			this.iterators.push(getNode(treeNode).children.iterator());
+		private NodeIterator(INode node) {
+			this.iterators.push(getNode(node).children.iterator());
 		}
 
 		@Override
@@ -450,7 +479,6 @@ public abstract class Node implements INode {
 			this.current = null;
 		}
 	}
-
 
 	protected static abstract class NodeBuilder<E extends INode, B extends INodeBuilder> implements INodeBuilder<E, B> {
 		@Nullable

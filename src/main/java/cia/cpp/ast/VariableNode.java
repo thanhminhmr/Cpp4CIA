@@ -56,7 +56,9 @@ public final class VariableNode extends Node implements IVariable {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", type: " + type
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", type: " + type
 				+ " }";
 	}
 
@@ -67,7 +69,9 @@ public final class VariableNode extends Node implements IVariable {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
 				+ ", type: " + type
 				+ " }";
 	}

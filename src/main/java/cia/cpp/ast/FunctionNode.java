@@ -126,7 +126,9 @@ public final class FunctionNode extends Node implements IFunction {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", type: " + type
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", type: " + type
 				+ " }";
 	}
 
@@ -137,7 +139,9 @@ public final class FunctionNode extends Node implements IFunction {
 				+ ") { name: \"" + getName()
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
-				+ "\", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ "\", directWeight: " + getDirectWeight()
+//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
 				+ ", parameters: " + Utilities.collectionToString(parameters)
 				+ ", type: " + type
 				+ " }";

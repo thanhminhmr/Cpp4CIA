@@ -132,9 +132,27 @@ public final class AstBuilder {
 
 	private void calculateDirectedWeight(IRoot rootNode) {
 		for (final INode node : rootNode) {
-
+			double directWeight = 0.0;
+			for (final Dependency dependency : node.getDependencies().values()) {
+				directWeight += dependency.getType().getWeight() * dependency.getCount();
+			}
+			node.setDirectWeight(directWeight);
 		}
 	}
+//
+//	private void calculateIndirectedWeight(IRoot rootNode) {
+//		for (final INode node : rootNode) {
+//			double indirectWeight = 0.0;
+//			for (final Map.Entry<INode, Dependency> entry : node.getDependencies().entrySet()) {
+//				final INode destNode = entry.getKey();
+//				final Dependency dependency = entry.getValue();
+//			}
+//			for (final Dependency dependency : node.getDependencies().values()) {
+//				indirectWeight += dependency.getType().getWeight() * dependency.getCount();
+//			}
+//			node.setDirectWeight(indirectWeight);
+//		}
+//	}
 
 	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
 		final IRoot rootNode = RootNode.builder().build();
@@ -144,6 +162,8 @@ public final class AstBuilder {
 
 		cleanUp(rootNode);
 		createOverride(rootNode);
+
+		calculateDirectedWeight(rootNode);
 		return rootNode;
 	}
 
