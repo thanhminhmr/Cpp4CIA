@@ -6,5 +6,5 @@ import java.util.List;
 @IAstFragment
 public interface IFunctionContainer extends INode {
 	@Nonnull
-	List<INode> getFunctions();
+	List<IFunction> getFunctions();
 }

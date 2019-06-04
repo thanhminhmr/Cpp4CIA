@@ -6,5 +6,5 @@ import java.util.List;
 @IAstFragment
 public interface IVariableContainer extends INode {
 	@Nonnull
-	List<INode> getVariables();
+	List<IVariable> getVariables();
 }

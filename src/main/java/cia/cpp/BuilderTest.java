@@ -3,14 +3,11 @@ package cia.cpp;
 import cia.cpp.builder.VersionBuilder;
 import cia.cpp.builder.VersionBuilderDebugger;
 
-import java.io.File;
 import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -37,14 +34,15 @@ public final class BuilderTest {
 		//System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test");
 		final List<Path> projectFiles =
+				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-				readConfigFile(Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+//              readConfigFile(Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),

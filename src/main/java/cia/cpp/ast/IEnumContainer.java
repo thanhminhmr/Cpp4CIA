@@ -6,5 +6,5 @@ import java.util.List;
 @IAstFragment
 public interface IEnumContainer extends INode {
 	@Nonnull
-	List<INode> getEnums();
+	List<IEnum> getEnums();
 }

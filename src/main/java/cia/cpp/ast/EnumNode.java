@@ -17,7 +17,7 @@ public final class EnumNode extends Node implements IEnum {
 
 	@Nonnull
 	@Override
-	public final List<INode> getVariables() {
+	public final List<IVariable> getVariables() {
 		return getChildrenList(IVariable.class);
 	}
 

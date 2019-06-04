@@ -17,25 +17,25 @@ public final class NamespaceNode extends Node implements INamespace {
 
 	@Nonnull
 	@Override
-	public final List<INode> getClasses() {
+	public final List<IClass> getClasses() {
 		return getChildrenList(IClass.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<INode> getEnums() {
+	public final List<IEnum> getEnums() {
 		return getChildrenList(IEnum.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<INode> getFunctions() {
+	public final List<IFunction> getFunctions() {
 		return getChildrenList(IFunction.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<INode> getVariables() {
+	public final List<IVariable> getVariables() {
 		return getChildrenList(IVariable.class);
 	}
 

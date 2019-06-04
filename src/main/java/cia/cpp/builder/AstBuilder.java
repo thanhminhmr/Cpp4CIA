@@ -22,11 +22,7 @@ public final class AstBuilder {
 		return new AstBuilder().internalBuild(translationUnit);
 	}
 
-	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
-		final IRoot rootNode = RootNode.builder().build();
-		for (final IASTDeclaration declaration : translationUnit.getDeclarations()) {
-			createChildrenFromDeclaration(rootNode, declaration);
-		}
+	private void cleanUp(IRoot rootNode) {
 		for (final INode node : bindingNodeMap.values()) {
 			if (node instanceof IUnknown || node instanceof IIntegral) {
 				// replace unknown node with integral node
@@ -50,7 +46,7 @@ public final class AstBuilder {
 					node.removeChildren();
 					node.removeDependencies();
 
-				} /*else if (node instanceof IFunction) {
+				} else if (node instanceof IFunction) {
 					final IFunction function = (IFunction) node;
 					final List<INode> parameters = List.copyOf(function.getParameters());
 					final List<INode> variables = new ArrayList<>(function.getVariables());
@@ -59,7 +55,7 @@ public final class AstBuilder {
 						function.removeChild(variable);
 						function.removeDependency(variable);
 					}
-				}*/
+				}
 			}
 		}
 		for (final INode node : List.copyOf(unknownNodeList)) {
@@ -76,6 +72,72 @@ public final class AstBuilder {
 			node.removeDependencies();
 		}
 		rootNode.addIntegrals(integralNodeList);
+	}
+
+	private void createOverride(IRoot rootNode) {
+		for (final IClass nodeClass : rootNode.getClasses()) {
+			final List<INode> classBases = nodeClass.getBases();
+			final List<IFunction> classFunctions = nodeClass.getFunctions();
+			if (classBases.isEmpty() || classFunctions.isEmpty()) continue;
+
+			final Queue<IClass> classQueue = new LinkedList<>();
+			final Set<IFunction> classFunctionsMatched = new HashSet<>();
+
+			for (final INode classBase : classBases) {
+				if (classBase instanceof IClass) classQueue.add((IClass) classBase);
+			}
+
+			while (!classQueue.isEmpty() && classFunctions.size() != classFunctionsMatched.size()) {
+				final IClass classBase = classQueue.poll();
+
+				for (final INode baseBase : classBase.getBases()) {
+					if (baseBase instanceof IClass) classQueue.add((IClass) baseBase);
+				}
+
+				final List<IFunction> baseFunctions = classBase.getFunctions();
+				if (baseFunctions.isEmpty()) continue;
+
+				for (final IFunction classFunction : classFunctions) {
+					if (classFunctionsMatched.contains(classFunction)) continue;
+
+					for (final IFunction baseFunction : baseFunctions) {
+						if (!baseFunction.getName().equals(classFunction.getName())
+								|| !Objects.equals(baseFunction.getType(), classFunction.getType())) continue;
+
+						final List<INode> classParameters = classFunction.getParameters();
+						final List<INode> baseParameters = baseFunction.getParameters();
+
+						if (classParameters.size() != baseParameters.size()) continue;
+
+						int i = -1;
+						while (++i < classParameters.size()) {
+							final INode classParameter = classParameters.get(i);
+							final INode baseParameter = baseParameters.get(i);
+							if (!classParameter.getClass().equals(baseParameter.getClass()) || classParameter instanceof IVariable
+									&& !Objects.equals(((IVariable) classParameter).getType(), ((IVariable) baseParameter).getType())) {
+								break;
+							}
+						}
+
+						if (i >= classParameters.size()) {
+							classFunction.addDependency(baseFunction).setType(Dependency.Type.OVERRIDE);
+							classFunctionsMatched.add(classFunction);
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
+		final IRoot rootNode = RootNode.builder().build();
+		for (final IASTDeclaration declaration : translationUnit.getDeclarations()) {
+			createChildrenFromDeclaration(rootNode, declaration);
+		}
+
+		cleanUp(rootNode);
+		createOverride(rootNode);
 		return rootNode;
 	}
 
@@ -208,7 +270,6 @@ public final class AstBuilder {
 			return functionNode;
 		} else if (declarator instanceof ICPPASTDeclarator) {
 			// region
-			// todo: array, field, typedef
 			//noinspection UnnecessaryLocalVariable
 			final INode node = createNode(declaratorBinding, declaratorName, signature, VariableNode.builder().setType(typeNode));
 			// endregion
@@ -430,7 +491,7 @@ public final class AstBuilder {
 
 			if (functionReturnType != null) functionNode.addDependency(functionReturnType).setType(Dependency.Type.USE);
 
-			// todo: function dependency
+			// function dependency
 			for (final ICPPASTConstructorChainInitializer memberChainInitializer : functionDefinition.getMemberInitializers()) {
 				final IASTName memberName = memberChainInitializer.getMemberInitializerId();
 				final IBinding memberBinding = memberName.resolveBinding();

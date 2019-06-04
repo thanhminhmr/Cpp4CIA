@@ -50,12 +50,12 @@ public abstract class Node extends TreeNode implements INode {
 	}
 
 	@Nonnull
-	protected final <E> List<INode> getChildrenList(final Class<E> aClass) {
+	protected final <E extends INode> List<E> getChildrenList(final Class<E> aClass) {
 		final List<ITreeNode> children = super.getChildren();
-		final List<INode> list = new ArrayList<>(children.size());
+		final List<E> list = new ArrayList<>(children.size());
 		for (final ITreeNode child : children) {
 			if (aClass.isInstance(child)) {
-				list.add((INode) child);
+				list.add(aClass.cast(child));
 			}
 		}
 		return list;

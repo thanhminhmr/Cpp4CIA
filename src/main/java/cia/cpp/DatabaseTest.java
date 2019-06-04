@@ -4,10 +4,9 @@ import cia.cpp.builder.VersionBuilder;
 import cia.cpp.builder.VersionBuilderDebugger;
 import cia.cpp.database.Database;
 
-import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 
 public final class DatabaseTest {
@@ -17,18 +16,19 @@ public final class DatabaseTest {
 	public static void main(String[] argv) throws IOException {
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\");
 		final List<Path> projectFiles =
+//				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
 //				);
-//				BuilderTest.readConfigFile(Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
+//              readConfigFile(Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\TinyEXIF.h")
+						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\main.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\TinyEXIF.h")
 				);
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\meo_nn\\Array.h"),
@@ -47,8 +47,16 @@ public final class DatabaseTest {
 		debugger.setSaveTranslationUnit(true);
 		debugger.setSaveRoot(true);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("tesseract", projectRoot, projectFiles, includePaths, debugger);
+		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, debugger);
 		if (projectVersion == null) return;
+
+		debugger.debugOutput(projectRoot);
+
+		System.out.println((System.nanoTime() - start_time) / 1000000.0);
+
+		try (final FileOutputStream fos = new FileOutputStream("R:\\CmderLauncher.proj")) {
+			projectVersion.toOutputStream(fos);
+		}
 
 		debugger.debugOutput(projectRoot);
 
