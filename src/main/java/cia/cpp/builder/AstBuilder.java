@@ -130,6 +130,12 @@ public final class AstBuilder {
 		}
 	}
 
+	private void calculateDirectedWeight(IRoot rootNode) {
+		for (final INode node : rootNode) {
+
+		}
+	}
+
 	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
 		final IRoot rootNode = RootNode.builder().build();
 		for (final IASTDeclaration declaration : translationUnit.getDeclarations()) {

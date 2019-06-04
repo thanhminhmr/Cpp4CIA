@@ -24,12 +24,10 @@ public final class VersionDiffer {
 
 		final Map<INode, INode> nodeMapA = new HashMap<>();
 		final Map<INode, INode> nodeMapB = new HashMap<>();
-		for (final ITreeNode node : rootA) {
-			final INode nodeA = INode.getNode(node);
+		for (final INode nodeA : rootA) {
 			nodeMapA.put(nodeA, nodeA);
 		}
-		for (final ITreeNode node : rootB) {
-			final INode nodeB = INode.getNode(node);
+		for (final INode nodeB : rootB) {
 			nodeMapB.put(nodeB, nodeB);
 		}
 

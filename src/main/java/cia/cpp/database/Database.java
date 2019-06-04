@@ -206,9 +206,8 @@ public final class Database {
 		return dbVersion;
 	}
 
-	private Node internalExportNode(Version dbVersion, ITreeNode treeNode) throws SQLException {
-		if (treeNode == null) return null;
-		final INode node = INode.getNode(treeNode);
+	private Node internalExportNode(Version dbVersion, INode node) throws SQLException {
+		if (node == null) return null;
 
 		final Node dbNodeFromMap = nodeMap.get(Map.entry(node, System.identityHashCode(node)));
 		if (dbNodeFromMap != null) return dbNodeFromMap;
@@ -219,7 +218,6 @@ public final class Database {
 		final Node dbTypeNode = node instanceof ITypeContainer
 				? internalExportNode(dbVersion, ((ITypeContainer) node).getType())
 				: null;
-		// todo
 
 		final Node dbNode = Nodes.add(getConnection(), new Node()
 				.setTypeEnum(getNodeType(node))
@@ -272,8 +270,8 @@ public final class Database {
 				return null;
 		}
 
-		for (final ITreeNode childTreeNode : node) {
-			if (internalExportNode(dbVersion, childTreeNode) == null)
+		for (final INode childNode : node) {
+			if (internalExportNode(dbVersion, childNode) == null)
 				return null;
 		}
 
