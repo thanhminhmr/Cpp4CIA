@@ -8,5 +8,5 @@ Class-Path: org.eclipse.core.runtime_3.15.100.v20181107-1343.jar org.e
  ipse.equinox.preferences_3.7.200.v20180827-1235.jar org.eclipse.cdt.c
  ore_6.6.0.201812101042.jar org.eclipse.core.jobs_3.10.200.v20180912-1
  356.jar icu4j-64.1.jar
-Main-Class: cia.cpp.Main
+Main-Class: mrmathami.cia.cpp.Main
 

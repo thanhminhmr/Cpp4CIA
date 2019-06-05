@@ -24,5 +24,15 @@
         <option name="ITERATION_ELEMENTS_WRAPPING" value="chop_down_if_not_single" />
       </formatting-settings>
     </DBN-SQL>
+    <JavaCodeStyleSettings>
+      <option name="GENERATE_FINAL_PARAMETERS" value="true" />
+      <option name="DO_NOT_WRAP_AFTER_SINGLE_ANNOTATION" value="true" />
+    </JavaCodeStyleSettings>
+    <codeStyleSettings language="JAVA">
+      <indentOptions>
+        <option name="USE_TAB_CHARACTER" value="true" />
+        <option name="SMART_TABS" value="true" />
+      </indentOptions>
+    </codeStyleSettings>
   </code_scheme>
 </component>
