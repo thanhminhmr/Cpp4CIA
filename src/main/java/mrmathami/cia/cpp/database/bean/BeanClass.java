@@ -1,6 +1,14 @@
 package mrmathami.cia.cpp.database.bean;
 
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.AbstractSet;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Set;
 
 public abstract class BeanClass extends AbstractMap<String, Object> implements Map<String, Object> {
 	private final BeanInfo beanInfo;

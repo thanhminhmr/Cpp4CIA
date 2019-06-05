@@ -1,9 +1,17 @@
 package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.ast.IRoot;
-import org.eclipse.cdt.core.dom.ast.*;
+import org.eclipse.cdt.core.dom.ast.IASTImageLocation;
+import org.eclipse.cdt.core.dom.ast.IASTName;
+import org.eclipse.cdt.core.dom.ast.IASTNode;
+import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
+import org.eclipse.cdt.core.dom.ast.IBinding;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.Arrays;
 
