@@ -4,54 +4,133 @@ import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import java.io.Serializable;
+import java.util.*;
 
 public final class Dependency implements Serializable {
-	private static final long serialVersionUID = -6916548911262334697L;
+	private static final long serialVersionUID = -1915308422101126082L;
+	private static final int[] ZERO = new int[Type.values.length];
 
-	private int type = 0;
-	private int count = 1;
-
-	Dependency(@Nonnull Type type) {
-		this.type = type.ordinal();
-	}
+	@Nonnull
+	private final Map<INode, int[]> map = new HashMap<>();
 
 	Dependency() {
 	}
 
-	public final int getCount() {
-		return count;
+	@Nonnull
+	private static String countsToString(int[] counts) {
+		final StringBuilder builder = new StringBuilder().append('{');
+		for (int type = 0; type < counts.length; type++) {
+			int typeCount = counts[type];
+			if (typeCount != 0) {
+				if (builder.length() > 1) builder.append(',');
+				builder.append(' ').append(Type.values[type]).append(": ").append(typeCount);
+			}
+		}
+		if (builder.length() > 1) builder.append(' ');
+		return builder.append('}').toString();
+	}
+
+	public final boolean isEmpty() {
+		return map.isEmpty();
 	}
 
 	@Nonnull
-	public final Dependency setCount(int count) {
-		this.count = count;
+	public final Dependency add(@Nonnull INode node, @Nonnull Type type) {
+		final int[] counts = map.get(node);
+		if (counts != null) {
+			counts[type.ordinal()] += 1;
+		} else {
+			final int[] newCounts = new int[Type.values.length];
+			newCounts[type.ordinal()] += 1;
+			map.put(node, newCounts);
+		}
 		return this;
 	}
 
 	@Nonnull
-	public final Dependency incrementCount() {
-		this.count += 1;
+	public final Dependency remove(@Nonnull INode node, @Nonnull Type type) {
+		final int[] counts = map.get(node);
+		if (counts != null) {
+			counts[type.ordinal()] = 0;
+			if (Arrays.equals(counts, ZERO)) {
+				map.remove(node);
+			}
+		}
 		return this;
 	}
 
 	@Nonnull
-	public final Type getType() {
-		if (type < 0 || type >= Type.values.length) throw new IndexOutOfBoundsException("Invalid type!");
-		return Type.values[type];
+	public Dependency remove(@Nonnull INode node) {
+		map.remove(node);
+		return this;
 	}
 
 	@Nonnull
-	public final Dependency setType(@Nonnull Type type) {
-		this.type = type.ordinal();
+	public final Dependency replace(@Nonnull INode oldNode, @Nonnull INode newNode) {
+		final int[] oldCounts = map.get(oldNode);
+		if (oldCounts == null) return this;
+		final int[] newCounts = map.get(newNode);
+		if (newCounts != null) {
+			for (int type = 0; type < oldCounts.length; type++) {
+				newCounts[type] += oldCounts[type];
+			}
+		} else {
+			map.put(newNode, oldCounts);
+		}
+		map.remove(oldNode);
 		return this;
+	}
+
+	public final Set<INode> getNodes() {
+		return Collections.unmodifiableSet(map.keySet());
+	}
+
+	public final int getCount(@Nonnull INode node, @Nonnull Type type) {
+		final int[] counts = map.get(node);
+		return counts != null ? counts[type.ordinal()] : 0;
+	}
+
+	@Nonnull
+	public final Dependency setCount(@Nonnull INode node, @Nonnull Type type, int count) {
+		final int[] counts = map.get(node);
+		if (counts != null) {
+			counts[type.ordinal()] = count;
+		} else {
+			final int[] newCounts = new int[Type.values.length];
+			map.put(node, newCounts);
+		}
+		return this;
+	}
+
+	final void merge(@Nonnull Dependency dependency) {
+		if (map.isEmpty()) {
+			map.putAll(dependency.map);
+			return;
+		}
+		if (dependency.map.isEmpty()) return;
+
+		for (final Map.Entry<INode, int[]> entry : dependency.map.entrySet()) {
+			final INode node = entry.getKey();
+			final int[] oldCounts = map.get(node);
+			final int[] newCounts = entry.getValue();
+			if (oldCounts != null) {
+				for (int type = 0; type < oldCounts.length; type++) {
+					oldCounts[type] += newCounts[type];
+				}
+			} else {
+				map.put(node, newCounts);
+			}
+		}
+	}
+
+	final void clear() {
+		map.clear();
 	}
 
 	@Override
 	public final String toString() {
-		return "(" + Utilities.objectToString(this)
-				+ ") { type: " + getType()
-				+ ", count: " + count
-				+ " }";
+		return "(" + Utilities.objectToString(this) + ") "
+				+ Utilities.mapToString(map, null, Dependency::countsToString);
 	}
 
 	@Override
@@ -59,34 +138,32 @@ public final class Dependency implements Serializable {
 		if (this == object) return true;
 		if (object == null || getClass() != object.getClass()) return false;
 		final Dependency dependency = (Dependency) object;
-		return type == dependency.type && count == dependency.count;
+		return map.equals(dependency.map);
 
 	}
 
 	@Override
-	public final int hashCode() {
-		int result = type;
-		result = 31 * result + count;
-		return result;
+	public int hashCode() {
+		return map.hashCode();
 	}
 
 	public enum Type {
-		UNKNOWN(0.0),
-		USE(4.0),
-		MEMBER(3.0),
-		INHERITANCE(4.0),
-		INVOCATION(3.5),
-		OVERRIDE(3.3);
+		UNKNOWN(0.0f),
+		USE(4.0f),
+		MEMBER(3.0f),
+		INHERITANCE(4.0f),
+		INVOCATION(3.5f),
+		OVERRIDE(3.3f);
 
 		private static final Type[] values = Type.values();
 
-		private final double weight;
+		private final float weight;
 
-		Type(double weight) {
+		Type(float weight) {
 			this.weight = weight;
 		}
 
-		public double getWeight() {
+		public float getWeight() {
 			return weight;
 		}
 	}

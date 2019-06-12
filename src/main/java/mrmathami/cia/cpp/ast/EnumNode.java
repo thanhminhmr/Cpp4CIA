@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class EnumNode extends Node implements IEnum {
-	private static final long serialVersionUID = -8311215223911382978L;
+	private static final long serialVersionUID = 5430786201807563723L;
 
 	private EnumNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		super(name, simpleName, uniqueName);

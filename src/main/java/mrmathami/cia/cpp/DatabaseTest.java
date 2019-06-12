@@ -16,7 +16,7 @@ public final class DatabaseTest {
 	public static void main(String[] argv) throws IOException {
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.1\\");
 		final List<Path> projectFiles =
 //				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
 //				List.of(

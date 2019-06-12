@@ -178,7 +178,7 @@ public final class Tables {
 					"\t`nodeB` integer not null references `node` (`id`),\n" +
 					"\t`typeEnum` integer not null,\n" +
 					"\t`count` integer not null,\n" +
-					"\tprimary key (`versionId`, `nodeA`, `nodeB`)\n" +
+					"\tprimary key (`versionId`, `nodeA`, `nodeB`, `typeEnum`)\n" +
 					");");
 			statement.addBatch("create table `differences` (\n" +
 					"\t`id` integer primary key autoincrement,\n" +

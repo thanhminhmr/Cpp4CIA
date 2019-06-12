@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = -5538726025004995091L;
+	private static final long serialVersionUID = 4481344544313254185L;
 
 	@Nonnull
 	private final List<INode> bases;
@@ -119,7 +119,7 @@ public final class ClassNode extends Node implements IClass {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", indirectWeight: " + getIndirectWeight()
 				+ " }";
 	}
 
@@ -131,8 +131,8 @@ public final class ClassNode extends Node implements IClass {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + getDependency()
 				+ ", bases: " + Utilities.collectionToString(bases)
 				+ " }";
 	}

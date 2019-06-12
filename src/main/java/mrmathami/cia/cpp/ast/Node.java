@@ -7,12 +7,17 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base of AST Tree.
  */
 public abstract class Node implements INode {
-	private static final long serialVersionUID = -6090578442390659268L;
+	private static final long serialVersionUID = -7829002077653496113L;
+
+	private static final AtomicInteger ID_COUNTER = new AtomicInteger();
+
+	private final int id;
 
 	@Nonnull
 	private final String name;
@@ -24,11 +29,11 @@ public abstract class Node implements INode {
 	private final String signature;
 
 	@Nonnull
-	private final Map<INode, Dependency> dependencyMap = new HashMap<>();
+	private final Dependency dependency = new Dependency();
 
-	private double directWeight;
+	private float directWeight;
 
-//	private double indirectWeight;
+	private float indirectWeight;
 
 	@Nullable
 	private INode parent;
@@ -37,6 +42,7 @@ public abstract class Node implements INode {
 	private List<INode> children = new ArrayList<>();
 
 	protected Node(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		this.id = ID_COUNTER.incrementAndGet();
 		this.name = name;
 		this.uniqueName = uniqueName;
 		this.signature = signature;
@@ -60,6 +66,11 @@ public abstract class Node implements INode {
 	}
 
 	@Override
+	public final int getId() {
+		return id;
+	}
+
+	@Override
 	@Nonnull
 	public final String getName() {
 		return name;
@@ -78,103 +89,43 @@ public abstract class Node implements INode {
 	}
 
 	@Override
-	public final double getDirectWeight() {
+	public final float getDirectWeight() {
 		return directWeight;
 	}
 
 	@Override
-	public final void setDirectWeight(double directWeight) {
+	public final void setDirectWeight(float directWeight) {
 		this.directWeight = directWeight;
 	}
 
-//	@Override
-//	public final double getIndirectWeight() {
-//		return indirectWeight;
-//	}
-//
-//	@Override
-//	public final void setIndirectWeight(double indirectWeight) {
-//		this.indirectWeight = indirectWeight;
-//	}
-
-	@Nonnull
 	@Override
-	public final Map<INode, Dependency> getDependencies() {
-		return Collections.unmodifiableMap(dependencyMap);
+	public final float getIndirectWeight() {
+		return indirectWeight;
 	}
 
 	@Override
-	public final void addDependencies(@Nonnull Map<INode, Dependency> dependencyMap) {
-		if (dependencyMap.isEmpty()) return;
-		if (this.dependencyMap.isEmpty()) {
-			this.dependencyMap.putAll(dependencyMap);
-			return;
-		}
-
-		for (final Map.Entry<INode, Dependency> entry : dependencyMap.entrySet()) {
-			final INode node = entry.getKey();
-			final Dependency dependency = entry.getValue();
-			final Dependency oldDependency = this.dependencyMap.get(node);
-			if (oldDependency != null) {
-				oldDependency.setCount(oldDependency.getCount() + dependency.getCount());
-			} else {
-				final Dependency newDependency = new Dependency(dependency.getType());
-				newDependency.setCount(dependency.getCount());
-				this.dependencyMap.put(node, newDependency);
-			}
-		}
+	public final void setIndirectWeight(float indirectWeight) {
+		this.indirectWeight = indirectWeight;
 	}
 
 	@Nonnull
 	@Override
-	public final Map<INode, Dependency> removeDependencies() {
-		if (dependencyMap.isEmpty()) return Map.of();
-
-		final Map<INode, Dependency> oldDependencyMap = Map.copyOf(dependencyMap);
-		dependencyMap.clear();
-		return oldDependencyMap;
-	}
-
-	@Nullable
-	@Override
-	public final Dependency getDependency(@Nonnull INode node) {
-		return dependencyMap.get(node);
-	}
-
-	@Nonnull
-	public final Dependency addDependency(@Nonnull INode node) {
-		final Dependency oldDependency = dependencyMap.get(node);
-		if (oldDependency != null) return oldDependency.incrementCount();
-		final Dependency dependency = new Dependency();
-		dependencyMap.put(node, dependency);
+	public final Dependency getDependency() {
 		return dependency;
 	}
 
 	@Override
-	public final boolean removeDependency(@Nonnull INode node) {
-		return dependencyMap.remove(node) != null;
+	public final void addDependency(@Nonnull Dependency dependency) {
+		dependency.merge(dependency);
 	}
 
-	@Nullable
+	@Nonnull
 	@Override
-	public final Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode) {
-		final Dependency oldDependency = dependencyMap.get(oldNode);
-		if (oldDependency == null) return null;
-		final Dependency newDependency = dependencyMap.get(newNode);
-		if (newDependency != null) {
-			newDependency.setCount(newDependency.getCount() + oldDependency.getCount());
-			dependencyMap.remove(oldNode);
-			return newDependency;
-		} else {
-			dependencyMap.put(newNode, oldDependency);
-			dependencyMap.remove(oldNode);
-			return oldDependency;
-		}
-	}
-
-	@Override
-	public final boolean equalsDependencies(@Nonnull INode node) {
-		return dependencyMap.equals(node.getDependencies());
+	public final Dependency removeDependency() {
+		final Dependency dependency = new Dependency();
+		dependency.merge(this.dependency);
+		this.dependency.clear();
+		return dependency;
 	}
 
 	// Prevent serialize empty object
@@ -214,7 +165,7 @@ public abstract class Node implements INode {
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
 				+ "\", directWeight: " + directWeight
-//				+ ", indirectWeight: " + indirectWeight
+				+ ", indirectWeight: " + indirectWeight
 				+ " }";
 	}
 
@@ -226,8 +177,8 @@ public abstract class Node implements INode {
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
 				+ "\", directWeight: " + directWeight
-//				+ ", indirectWeight: " + indirectWeight
-				+ ", dependencyMap: " + Utilities.mapToString(dependencyMap)
+				+ ", indirectWeight: " + indirectWeight
+				+ ", dependency: " + dependency
 				+ " }";
 	}
 
@@ -267,7 +218,9 @@ public abstract class Node implements INode {
 	@Nonnull
 	@Override
 	public final INode getRoot() {
-		return parent != null ? parent.getRoot() : this;
+		INode node = this;
+		while (node.getParent() != null) node = node.getParent();
+		return node;
 	}
 
 	/**
@@ -441,7 +394,7 @@ public abstract class Node implements INode {
 	@Nonnull
 	@Override
 	public final Iterator<INode> iterator() {
-		return new Node.NodeIterator(this);
+		return new NodeIterator(this);
 	}
 
 	/**

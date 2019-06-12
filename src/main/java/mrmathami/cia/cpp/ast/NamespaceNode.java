@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class NamespaceNode extends Node implements INamespace {
-	private static final long serialVersionUID = 5044228050020968914L;
+	private static final long serialVersionUID = 5599826257791515614L;
 
 	private NamespaceNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName) {
 		super(name, simpleName, uniqueName);

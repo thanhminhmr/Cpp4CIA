@@ -117,6 +117,7 @@ public final class Database {
 		return connection;
 	}
 
+	@SuppressWarnings("Duplicates")
 	private boolean internalExportProject() throws SQLException {
 		Tables.create(getConnection());
 
@@ -156,6 +157,7 @@ public final class Database {
 				if (dbDifference == null) return false;
 			}
 			for (final Map.Entry<INode, INode> changedPair : difference.getChangedNodes()) {
+				//noinspection Duplicates
 				final INode nodeA = changedPair.getKey();
 				final INode nodeB = changedPair.getValue();
 
@@ -272,21 +274,27 @@ public final class Database {
 			}
 		}
 
-		for (final Map.Entry<INode, Dependency> entry : node.getDependencies().entrySet()) {
-			final Dependency dependency = entry.getValue();
+		final Dependency dependency = node.getDependency();
+		for (final INode dependencyNode : dependency.getNodes()) {
+			//final Dependency dependency = dependencyNode.getValue();
 
-			final Node dbUseNode = internalExportNode(dbVersion, entry.getKey());
+			final Node dbUseNode = internalExportNode(dbVersion, dependencyNode);
 			if (dbUseNode == null)
 				return null;
 
-			final Use dbUse = Uses.add(getConnection(), new Use()
-					.setVersionId(dbVersion.getId())
-					.setNodeA(dbNode.getId())
-					.setNodeB(dbUseNode.getId())
-					.setTypeEnum(getDependencyType(dependency.getType()))
-					.setCount(dependency.getCount()));
-			if (dbUse == null)
-				return null;
+			for (final Dependency.Type dependencyType : Dependency.Type.values()) {
+				final int count = dependency.getCount(dependencyNode, dependencyType);
+				if (count == 0) continue;
+
+				final Use dbUse = Uses.add(getConnection(), new Use()
+						.setVersionId(dbVersion.getId())
+						.setNodeA(dbNode.getId())
+						.setNodeB(dbUseNode.getId())
+						.setTypeEnum(getDependencyType(dependencyType))
+						.setCount(count));
+				if (dbUse == null)
+					return null;
+			}
 		}
 
 		for (final INode childNode : node) {

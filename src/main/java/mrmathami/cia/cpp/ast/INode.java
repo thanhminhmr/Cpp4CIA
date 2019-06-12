@@ -4,12 +4,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Base node type
  */
 public interface INode extends Iterable<INode>, Serializable {
+	int getId();
+
 	@Nonnull
 	String getName();
 
@@ -19,26 +20,26 @@ public interface INode extends Iterable<INode>, Serializable {
 	@Nonnull
 	String getSignature();
 
-	double getDirectWeight();
+	float getDirectWeight();
 
-	void setDirectWeight(double directWeight);
+	void setDirectWeight(float directWeight);
 
-//	double getIndirectWeight();
-//
-//	void setIndirectWeight(double indirectWeight);
+	float getIndirectWeight();
+
+	void setIndirectWeight(float indirectWeight);
 
 	/**
 	 * @return read-only view of dependency info map
 	 */
 	@Nonnull
-	Map<INode, Dependency> getDependencies();
+	Dependency getDependency();
 
 	/**
 	 * Add multiple dependency info
 	 *
-	 * @param dependencyMap new dependency map
+	 * @param dependency new dependency info
 	 */
-	void addDependencies(@Nonnull Map<INode, Dependency> dependencyMap);
+	void addDependency(@Nonnull Dependency dependency);
 
 	/**
 	 * remove all dependency info
@@ -46,50 +47,7 @@ public interface INode extends Iterable<INode>, Serializable {
 	 * @return old dependency map
 	 */
 	@Nonnull
-	Map<INode, Dependency> removeDependencies();
-
-	/**
-	 * Get dependency info
-	 *
-	 * @param node the node
-	 * @return the dependency info, or null if not exist
-	 */
-	@Nullable
-	Dependency getDependency(@Nonnull INode node);
-
-	/**
-	 * Get dependency info, create new if not exist
-	 *
-	 * @param node the node
-	 * @return the dependency info
-	 */
-	@Nonnull
-	Dependency addDependency(@Nonnull INode node);
-
-	/**
-	 * Remove dependency info
-	 *
-	 * @param node the node
-	 * @return true if the dependency info exist, false otherwise
-	 */
-	boolean removeDependency(@Nonnull INode node);
-
-	/**
-	 * Replace node dependency with another node dependency
-	 *
-	 * @param oldNode the old node
-	 * @param newNode the new node
-	 * @return the dependency info, or null if oldNode not exist
-	 */
-	@Nullable
-	Dependency replaceDependency(@Nonnull INode oldNode, @Nonnull INode newNode);
-
-	/**
-	 * compare two dependency map
-	 *
-	 * @return result
-	 */
-	boolean equalsDependencies(@Nonnull INode node);
+	Dependency removeDependency();
 
 //==============================================================================
 

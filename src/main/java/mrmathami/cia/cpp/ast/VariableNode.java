@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IVariable {
-	private static final long serialVersionUID = 245317490612142346L;
+	private static final long serialVersionUID = -1582485064176543324L;
 
 	@Nullable
 	private INode type;
@@ -57,7 +57,7 @@ public final class VariableNode extends Node implements IVariable {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", indirectWeight: " + getIndirectWeight()
 				+ ", type: " + type
 				+ " }";
 	}
@@ -70,8 +70,8 @@ public final class VariableNode extends Node implements IVariable {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + getDependency()
 				+ ", type: " + type
 				+ " }";
 	}

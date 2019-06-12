@@ -6,7 +6,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class RootNode extends Node implements IRoot {
-	private static final long serialVersionUID = 3605965717499471633L;
+	private static final long serialVersionUID = 229987343657156125L;
 
 	@Nonnull
 	private final List<INode> integrals;

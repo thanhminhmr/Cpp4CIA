@@ -11,7 +11,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public final class ProjectVersion implements Serializable {
-	private static final long serialVersionUID = 8469860416876982231L;
+	private static final long serialVersionUID = 3690872070049507458L;
 
 	private final String versionName;
 	private final List<String> projectFiles;

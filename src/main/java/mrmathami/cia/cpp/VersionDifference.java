@@ -12,7 +12,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
-	private static final long serialVersionUID = 5005107530392882555L;
+	private static final long serialVersionUID = -7916436622963737241L;
 
 	private final ProjectVersion versionA;
 	private final ProjectVersion versionB;

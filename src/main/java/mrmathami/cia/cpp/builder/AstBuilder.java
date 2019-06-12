@@ -22,29 +22,48 @@ public final class AstBuilder {
 		return new AstBuilder().internalBuild(translationUnit);
 	}
 
+	private static void replaceNodeInsideNode(INode oldNode, INode newNode, INode node) {
+		if (node instanceof ITypeContainer) {
+			final ITypeContainer typeContainerNode = (ITypeContainer) node;
+			if (typeContainerNode.getType() == oldNode) {
+				typeContainerNode.setType(newNode);
+			}
+		}
+		if (node instanceof IClass) {
+			final IClass classNode = (IClass) node;
+			classNode.replaceBase(oldNode, newNode);
+		}
+		if (node instanceof IFunction) {
+			final IFunction functionNode = (IFunction) node;
+			functionNode.replaceParameter(oldNode, newNode);
+		}
+		node.replaceChild(oldNode, newNode);
+		node.getDependency().replace(oldNode, newNode);
+	}
+
 	private void cleanUp(IRoot rootNode) {
 		for (final INode node : bindingNodeMap.values()) {
 			if (node instanceof IUnknown || node instanceof IIntegral) {
 				// replace unknown node with integral node
 				node.removeFromParent();
 				node.removeChildren();
-				node.removeDependencies();
+				node.removeDependency();
 				if (node instanceof IUnknown) {
 					final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
 					if (newNode != null) replaceNode(node, newNode);
 				}
 			} else {
 				// remove all dependency to unknown node and integral node
-				final Set<INode> keySet = Set.copyOf(node.getDependencies().keySet());
-				for (final INode dependencyNode : keySet) {
+				final Dependency nodeDependency = node.getDependency();
+				for (final INode dependencyNode : Set.copyOf(nodeDependency.getNodes())) {
 					if (dependencyNode instanceof IUnknown || dependencyNode instanceof IIntegral) {
-						node.removeDependency(dependencyNode);
+						nodeDependency.remove(dependencyNode);
 					}
 				}
 				if (node instanceof IVariable) {
 					// remove all children
 					node.removeChildren();
-					node.removeDependencies();
+					node.removeDependency();
 
 				} else if (node instanceof IFunction) {
 					final IFunction function = (IFunction) node;
@@ -53,7 +72,7 @@ public final class AstBuilder {
 					variables.removeAll(parameters);
 					for (final INode variable : variables) {
 						function.removeChild(variable);
-						function.removeDependency(variable);
+						function.getDependency().remove(variable);
 					}
 				}
 			}
@@ -61,7 +80,7 @@ public final class AstBuilder {
 		for (final INode node : List.copyOf(unknownNodeList)) {
 			// replace unknown node with integral node
 			node.removeChildren();
-			node.removeDependencies();
+			node.removeDependency();
 			final INode newNode = createIntegralNode(node.getName(), IntegralNode.builder());
 			if (newNode != null) replaceNode(node, newNode);
 		}
@@ -69,7 +88,7 @@ public final class AstBuilder {
 		for (final INode node : integralNodeList) {
 			node.removeFromParent();
 			node.removeChildren();
-			node.removeDependencies();
+			node.removeDependency();
 		}
 		rootNode.addIntegrals(integralNodeList);
 	}
@@ -120,7 +139,7 @@ public final class AstBuilder {
 						}
 
 						if (i >= classParameters.size()) {
-							classFunction.addDependency(baseFunction).setType(Dependency.Type.OVERRIDE);
+							classFunction.getDependency().add(baseFunction, Dependency.Type.OVERRIDE);
 							classFunctionsMatched.add(classFunction);
 							break;
 						}
@@ -130,29 +149,29 @@ public final class AstBuilder {
 		}
 	}
 
-	private void calculateDirectedWeight(IRoot rootNode) {
+	private void calculateDirectWeight(IRoot rootNode) {
 		for (final INode node : rootNode) {
-			double directWeight = 0.0;
-			for (final Dependency dependency : node.getDependencies().values()) {
-				directWeight += dependency.getType().getWeight() * dependency.getCount();
+			float directWeight = 0.0f;
+			final Dependency dependency = node.getDependency();
+			for (final INode dependencyNode : dependency.getNodes()) {
+				for (final Dependency.Type type : Dependency.Type.values()) {
+					directWeight += dependency.getCount(dependencyNode, type) * type.getWeight();
+				}
 			}
 			node.setDirectWeight(directWeight);
 		}
 	}
-//
-//	private void calculateIndirectedWeight(IRoot rootNode) {
+
+	private void calculateIndirectWeight(IRoot rootNode) {
 //		for (final INode node : rootNode) {
-//			double indirectWeight = 0.0;
-//			for (final Map.Entry<INode, Dependency> entry : node.getDependencies().entrySet()) {
-//				final INode destNode = entry.getKey();
+//			float indirectWeight = 0.0f;
+//			for (final Map.Entry<INode, Dependency> entry : node.getDependency().entrySet()) {
 //				final Dependency dependency = entry.getValue();
+//				indirectWeight += dependency.getType().getWeight() * dependency.getCount() * entry.getKey().getDirectWeight();
 //			}
-//			for (final Dependency dependency : node.getDependencies().values()) {
-//				indirectWeight += dependency.getType().getWeight() * dependency.getCount();
-//			}
-//			node.setDirectWeight(indirectWeight);
+//			node.setIndirectWeight(indirectWeight);
 //		}
-//	}
+	}
 
 	private IRoot internalBuild(IASTTranslationUnit translationUnit) {
 		final IRoot rootNode = RootNode.builder().build();
@@ -163,50 +182,21 @@ public final class AstBuilder {
 		cleanUp(rootNode);
 		createOverride(rootNode);
 
-		calculateDirectedWeight(rootNode);
+		calculateDirectWeight(rootNode);
+		calculateIndirectWeight(rootNode);
 		return rootNode;
 	}
 
 	private void replaceNode(INode oldNode, INode newNode) {
 		for (final Map.Entry<IBinding, INode> entry : bindingNodeMap.entrySet()) {
 			final INode node = entry.getValue();
-			if (node instanceof ITypeContainer) {
-				final ITypeContainer typeContainerNode = (ITypeContainer) node;
-				if (typeContainerNode.getType() == oldNode) {
-					typeContainerNode.setType(newNode);
-				}
-			}
-			if (node instanceof IClass) {
-				final IClass classNode = (IClass) node;
-				classNode.replaceBase(oldNode, newNode);
-			}
-			if (node instanceof IFunction) {
-				final IFunction functionNode = (IFunction) node;
-				functionNode.replaceParameter(oldNode, newNode);
-			}
-			node.replaceChild(oldNode, newNode);
-			node.replaceDependency(oldNode, newNode);
+			replaceNodeInsideNode(oldNode, newNode, node);
 			if (node == oldNode) entry.setValue(newNode);
 		}
 		for (final ListIterator<INode> iterator = unknownNodeList.listIterator(); iterator.hasNext(); ) {
 			final INode node = iterator.next();
 			if (node != oldNode) {
-				if (node instanceof ITypeContainer) {
-					final ITypeContainer typeContainerNode = (ITypeContainer) node;
-					if (typeContainerNode.getType() == oldNode) {
-						typeContainerNode.setType(newNode);
-					}
-				}
-				if (node instanceof IClass) {
-					final IClass classNode = (IClass) node;
-					classNode.replaceBase(oldNode, newNode);
-				}
-				if (node instanceof IFunction) {
-					final IFunction functionNode = (IFunction) node;
-					functionNode.replaceParameter(oldNode, newNode);
-				}
-				node.replaceChild(oldNode, newNode);
-				node.replaceDependency(oldNode, newNode);
+				replaceNodeInsideNode(oldNode, newNode, node);
 			} else {
 				iterator.remove();
 			}
@@ -214,10 +204,10 @@ public final class AstBuilder {
 		if (newNode instanceof IIntegral) {
 			newNode.removeFromParent();
 			oldNode.removeChildren();
-			oldNode.removeDependencies();
+			oldNode.removeDependency();
 		} else {
 			newNode.addChildren(oldNode.removeChildren());
-			newNode.addDependencies(oldNode.removeDependencies());
+			newNode.addDependency(oldNode.removeDependency());
 		}
 	}
 
@@ -288,8 +278,9 @@ public final class AstBuilder {
 					final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
 
 					((IFunction) functionNode).addParameter(parameterNode);
-					functionNode.addDependency(parameterNode).setType(Dependency.Type.MEMBER);
-					functionNode.addDependency(parameterType).setType(Dependency.Type.USE);
+					functionNode.getDependency()
+							.add(parameterNode, Dependency.Type.MEMBER)
+							.add(parameterType, Dependency.Type.USE);
 				}
 			}
 			// endregion
@@ -326,11 +317,11 @@ public final class AstBuilder {
 				final INode enumeratorNode = createNode(enumeratorBinding, enumeratorName, null, VariableNode.builder().setType(nodeType));
 
 				enumNode.addChild(enumeratorNode);
-				enumNode.addDependency(enumeratorNode).setType(Dependency.Type.MEMBER);
+				enumNode.getDependency().add(enumeratorNode, Dependency.Type.MEMBER);
 			}
 			// endregion
 			parentNode.addChild(enumNode);
-			parentNode.addDependency(enumNode).setType(Dependency.Type.MEMBER);
+			parentNode.getDependency().add(enumNode, Dependency.Type.MEMBER);
 			return enumNode;
 		} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
 			// region
@@ -347,7 +338,7 @@ public final class AstBuilder {
 
 					final INode classBaseNode = createNode(classBaseNameBinding, null, null, UnknownNode.builder());
 					((IClass) classNode).addBase(classBaseNode);
-					classNode.addDependency(classBaseNode).setType(Dependency.Type.INHERITANCE);
+					classNode.getDependency().add(classBaseNode, Dependency.Type.INHERITANCE);
 				}
 			}
 
@@ -356,7 +347,7 @@ public final class AstBuilder {
 			}
 			// endregion
 			parentNode.addChild(classNode);
-			parentNode.addDependency(classNode).setType(Dependency.Type.MEMBER);
+			parentNode.getDependency().add(classNode, Dependency.Type.MEMBER);
 			return classNode;
 		} else if (declSpecifier instanceof ICPPASTNamedTypeSpecifier) {
 			// region
@@ -431,7 +422,7 @@ public final class AstBuilder {
 			for (final ICPPASTTemplateParameter nestedParameter : nestedTemplateParameter.getTemplateParameters()) {
 				final INode nestedNode = createFromTemplateParameter(nestedTemplateNode, nestedParameter);
 				nestedTemplateNode.addChild(nestedNode);
-				nestedTemplateNode.addDependency(nestedNode).setType(Dependency.Type.MEMBER);
+				nestedTemplateNode.getDependency().add(nestedNode, Dependency.Type.MEMBER);
 			}
 
 			return nestedTemplateNode;
@@ -475,7 +466,7 @@ public final class AstBuilder {
 			}
 			// endregion
 			parentNode.addChild(namespaceNode);
-			parentNode.addDependency(namespaceNode).setType(Dependency.Type.MEMBER);
+			parentNode.getDependency().add(namespaceNode, Dependency.Type.MEMBER);
 			return List.of(namespaceNode);
 
 		} else if (declaration instanceof IASTSimpleDeclaration) {
@@ -489,9 +480,9 @@ public final class AstBuilder {
 				if (!(simpleNodeType instanceof IUnknown || simpleNodeType instanceof IIntegral)
 						&& simpleNodeType.getParent() == null && parentNode != simpleNodeType) {
 					parentNode.addChild(simpleNodeType);
-					parentNode.addDependency(simpleNodeType).setType(Dependency.Type.MEMBER);
+					parentNode.getDependency().add(simpleNodeType, Dependency.Type.MEMBER);
 				} else {
-					parentNode.addDependency(simpleNodeType).setType(Dependency.Type.USE);
+					parentNode.getDependency().add(simpleNodeType, Dependency.Type.USE);
 				}
 			}
 
@@ -500,7 +491,7 @@ public final class AstBuilder {
 				final INode simpleNode = createFromDeclarator(simpleNodeType, simpleDeclarator);
 				simpleNodeList.add(simpleNode);
 				parentNode.addChild(simpleNode);
-				parentNode.addDependency(simpleNode).setType(Dependency.Type.MEMBER);
+				parentNode.getDependency().add(simpleNode, Dependency.Type.MEMBER);
 			}
 			// endregion
 			return simpleNodeList.size() > 0 ? simpleNodeList : simpleNodeType != null ? List.of(simpleNodeType) : List.of();
@@ -515,7 +506,7 @@ public final class AstBuilder {
 			final INode functionReturnType = createFromDeclSpecifier(parentNode, functionSpecifier);
 			final INode functionNode = createFromDeclarator(functionReturnType, functionDeclarator);
 
-			if (functionReturnType != null) functionNode.addDependency(functionReturnType).setType(Dependency.Type.USE);
+			if (functionReturnType != null) functionNode.getDependency().add(functionReturnType, Dependency.Type.USE);
 
 			// function dependency
 			for (final ICPPASTConstructorChainInitializer memberChainInitializer : functionDefinition.getMemberInitializers()) {
@@ -523,7 +514,7 @@ public final class AstBuilder {
 				final IBinding memberBinding = memberName.resolveBinding();
 
 				final INode memberNode = createNode(memberBinding, memberName, null, UnknownNode.builder());
-				functionNode.addDependency(memberNode).setType(Dependency.Type.MEMBER);
+				functionNode.getDependency().add(memberNode, Dependency.Type.MEMBER);
 
 				final IASTInitializer memberInitializer = memberChainInitializer.getInitializer();
 				createChildrenFromAstNode(functionNode, memberInitializer);
@@ -533,7 +524,7 @@ public final class AstBuilder {
 			if (functionBody != null) createChildrenFromAstNode(functionNode, functionBody);
 
 			parentNode.addChild(functionNode);
-			parentNode.addDependency(functionNode).setType(Dependency.Type.MEMBER);
+			parentNode.getDependency().add(functionNode, Dependency.Type.MEMBER);
 			return List.of(functionNode);
 			// endregion
 
@@ -545,7 +536,7 @@ public final class AstBuilder {
 
 			for (final INode innerNode : innerNodeList) {
 				parentNode.addChild(innerNode);
-				parentNode.addDependency(innerNode).setType(Dependency.Type.MEMBER);
+				parentNode.getDependency().add(innerNode, Dependency.Type.MEMBER);
 			}
 
 			final INode innerNode = innerNodeList.get(0);
@@ -553,7 +544,7 @@ public final class AstBuilder {
 			for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
 				final INode templateNode = createFromTemplateParameter(innerNode, templateParameter);
 				innerNode.addChild(templateNode);
-				innerNode.addDependency(templateNode).setType(Dependency.Type.MEMBER);
+				innerNode.getDependency().add(templateNode, Dependency.Type.MEMBER);
 			}
 			return innerNodeList;
 
@@ -577,9 +568,10 @@ public final class AstBuilder {
 
 			// endregion
 			parentNode.addChild(aliasNode);
-			parentNode.addDependency(aliasNode).setType(Dependency.Type.MEMBER);
-			parentNode.addDependency(aliasType).setType(Dependency.Type.USE);
-			parentNode.addDependency(aliasNodeType).setType(Dependency.Type.USE);
+			parentNode.getDependency()
+					.add(aliasNode, Dependency.Type.MEMBER)
+					.add(aliasType, Dependency.Type.USE)
+					.add(aliasNodeType, Dependency.Type.USE);
 			return List.of(aliasNode);
 
 		} else {
@@ -599,7 +591,7 @@ public final class AstBuilder {
 
 				final INode childNode = createNode(astBinding, astName, null, UnknownNode.builder());
 				if (!(childNode instanceof IIntegral)) {
-					parentNode.addDependency(childNode).setType(childNode instanceof IFunction
+					parentNode.getDependency().add(childNode, childNode instanceof IFunction
 							? Dependency.Type.INVOCATION : Dependency.Type.USE);
 				}
 			} else {

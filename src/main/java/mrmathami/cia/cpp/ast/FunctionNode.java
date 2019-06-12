@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = 7230219781784496872L;
+	private static final long serialVersionUID = -8884890609260876606L;
 
 	@Nonnull
 	private final List<INode> parameters;
@@ -48,7 +48,7 @@ public final class FunctionNode extends Node implements IFunction {
 		final List<INode> oldParameters = List.copyOf(parameters);
 		for (final INode parameter : oldParameters) {
 			parameter.removeFromParent();
-			removeDependency(parameter);
+			getDependency().remove(parameter);
 		}
 		parameters.clear();
 		return oldParameters;
@@ -127,7 +127,7 @@ public final class FunctionNode extends Node implements IFunction {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", indirectWeight: " + getIndirectWeight()
 				+ ", type: " + type
 				+ " }";
 	}
@@ -140,8 +140,8 @@ public final class FunctionNode extends Node implements IFunction {
 				+ "\", uniqueName: \"" + getUniqueName()
 				+ "\", signature: \"" + getSignature()
 				+ "\", directWeight: " + getDirectWeight()
-//				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", dependencyMap: " + Utilities.mapToString(getDependencies())
+				+ ", indirectWeight: " + getIndirectWeight()
+				+ ", dependencyMap: " + getDependency()
 				+ ", parameters: " + Utilities.collectionToString(parameters)
 				+ ", type: " + type
 				+ " }";

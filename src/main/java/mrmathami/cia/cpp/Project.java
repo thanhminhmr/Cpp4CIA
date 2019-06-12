@@ -9,7 +9,7 @@ import java.io.Serializable;
 import java.util.List;
 
 public final class Project implements Serializable {
-	private static final long serialVersionUID = 6617345373264477890L;
+	private static final long serialVersionUID = 4397888814551456285L;
 
 	private final String projectName;
 	private final List<ProjectVersion> versionList;
