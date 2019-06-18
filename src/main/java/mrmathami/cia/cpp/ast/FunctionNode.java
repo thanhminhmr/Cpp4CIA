@@ -48,7 +48,7 @@ public final class FunctionNode extends Node implements IFunction {
 		final List<INode> oldParameters = List.copyOf(parameters);
 		for (final INode parameter : oldParameters) {
 			parameter.removeFromParent();
-			getDependency().remove(parameter);
+			// removeNodeDependencyTo(parameter); // TODO: why should this be here?
 		}
 		parameters.clear();
 		return oldParameters;
@@ -121,30 +121,15 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Nonnull
 	@Override
-	public final String toString() {
-		return "(" + Utilities.objectToString(this)
-				+ ") { name: \"" + getName()
-				+ "\", uniqueName: \"" + getUniqueName()
-				+ "\", signature: \"" + getSignature()
-				+ "\", directWeight: " + getDirectWeight()
-				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", type: " + type
-				+ " }";
+	protected String partialToString() {
+		return ", type: " + type;
 	}
 
 	@Nonnull
 	@Override
-	public final String toTreeElementString() {
-		return "(" + Utilities.objectToString(this)
-				+ ") { name: \"" + getName()
-				+ "\", uniqueName: \"" + getUniqueName()
-				+ "\", signature: \"" + getSignature()
-				+ "\", directWeight: " + getDirectWeight()
-				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", dependencyMap: " + getDependency()
-				+ ", parameters: " + Utilities.collectionToString(parameters)
-				+ ", type: " + type
-				+ " }";
+	protected String partialTreeElementString() {
+		return ", type: " + type
+				+ ", parameters: " + Utilities.collectionToString(parameters);
 	}
 
 	public static final class FunctionNodeBuilder extends NodeBuilder<IFunction, IFunctionBuilder> implements IFunctionBuilder {

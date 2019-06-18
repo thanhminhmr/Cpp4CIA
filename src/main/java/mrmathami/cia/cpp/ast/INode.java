@@ -4,6 +4,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.Serializable;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Base node type
@@ -28,28 +29,193 @@ public interface INode extends Iterable<INode>, Serializable {
 
 	void setIndirectWeight(float indirectWeight);
 
-	/**
-	 * @return read-only view of dependency info map
-	 */
-	@Nonnull
-	Dependency getDependency();
+	//<editor-fold desc="Dependency">
+
+	//<editor-fold desc="All Dependency">
 
 	/**
-	 * Add multiple dependency info
+	 * transfer all dependency info to another node
 	 *
-	 * @param dependency new dependency info
+	 * @param node the node to transfer all dependencies to
 	 */
-	void addDependency(@Nonnull Dependency dependency);
+	void transferAllDependency(@Nonnull INode node);
 
 	/**
 	 * remove all dependency info
+	 */
+	void removeAllDependency();
+
+	/**
+	 * compare two nodes dependency
 	 *
-	 * @return old dependency map
+	 * @return result
+	 */
+	boolean equalsAllDependency(@Nonnull INode node);
+	//</editor-fold>
+
+	//<editor-fold desc="All Dependency From">
+
+	@Nonnull
+	List<INode> getAllDependencyFrom();
+
+	/**
+	 * transfer all dependency info to another node
+	 *
+	 * @param node the node to transfer all dependencies to
+	 */
+	void transferAllDependencyFrom(@Nonnull INode node);
+
+	/**
+	 * remove all dependency info
+	 */
+	void removeAllDependencyFrom();
+
+	/**
+	 * compare two nodes dependency
+	 *
+	 * @return result
+	 */
+	boolean equalsAllDependencyFrom(@Nonnull INode node);
+	//</editor-fold>
+
+	//<editor-fold desc="All Dependency To">
+
+	@Nonnull
+	List<INode> getAllDependencyTo();
+
+	/**
+	 * transfer all dependency info to another node
+	 *
+	 * @param node the node to transfer all dependencies to
+	 */
+	void transferAllDependencyTo(@Nonnull INode node);
+
+	/**
+	 * remove all dependency info
+	 */
+	void removeAllDependencyTo();
+
+	/**
+	 * compare two nodes dependency
+	 *
+	 * @return result
+	 */
+	boolean equalsAllDependencyTo(@Nonnull INode node);
+	//</editor-fold>
+
+	//<editor-fold desc="Node Dependency From">
+
+	/**
+	 * Get node dependency
+	 *
+	 * @param node the node
+	 * @return the read-only dependency map
 	 */
 	@Nonnull
-	Dependency removeDependency();
+	Map<DependencyType, Integer> getNodeDependencyFrom(@Nonnull INode node);
 
-//==============================================================================
+	/**
+	 * Add node dependency by dependency map
+	 *
+	 * @param node          the node
+	 * @param dependencyMap the dependency map
+	 */
+	void addNodeDependencyFrom(@Nonnull INode node, @Nonnull Map<DependencyType, Integer> dependencyMap);
+
+	/**
+	 * Remove node dependency
+	 *
+	 * @param node the node
+	 */
+	void removeNodeDependencyFrom(@Nonnull INode node);
+	//</editor-fold>
+
+	//<editor-fold desc="Node Dependency To">
+
+	/**
+	 * Get node dependency
+	 *
+	 * @param node the node
+	 * @return the read-only dependency map
+	 */
+	@Nonnull
+	Map<DependencyType, Integer> getNodeDependencyTo(@Nonnull INode node);
+
+	/**
+	 * Add node dependency by dependency map
+	 *
+	 * @param node          the node
+	 * @param dependencyMap the dependency map
+	 */
+	void addNodeDependencyTo(@Nonnull INode node, @Nonnull Map<DependencyType, Integer> dependencyMap);
+
+	/**
+	 * Remove node dependency
+	 *
+	 * @param node the node
+	 */
+	void removeNodeDependencyTo(@Nonnull INode node);
+	//</editor-fold>
+
+	//<editor-fold desc="Dependency From">
+
+	/**
+	 * Get dependency count
+	 *
+	 * @param node the node
+	 * @param type the type
+	 * @return the count of the dependency
+	 */
+	int getDependencyFrom(@Nonnull INode node, @Nonnull DependencyType type);
+
+	/**
+	 * Add dependency count
+	 *
+	 * @param node the node
+	 * @param type the type
+	 */
+	void addDependencyFrom(@Nonnull INode node, @Nonnull DependencyType type);
+
+	/**
+	 * Remove dependency
+	 *
+	 * @param node the node
+	 * @param type the type
+	 */
+	void removeDependencyFrom(@Nonnull INode node, @Nonnull DependencyType type);
+	//</editor-fold>
+
+	//<editor-fold desc="Dependency To">
+
+	/**
+	 * Get dependency count
+	 *
+	 * @param node the node
+	 * @param type the type
+	 * @return the count of the dependency
+	 */
+	int getDependencyTo(@Nonnull INode node, @Nonnull DependencyType type);
+
+	/**
+	 * Add dependency count
+	 *
+	 * @param node the node
+	 * @param type the type
+	 */
+	void addDependencyTo(@Nonnull INode node, @Nonnull DependencyType type);
+
+	/**
+	 * Remove dependency
+	 *
+	 * @param node the node
+	 * @param type the type
+	 */
+	void removeDependencyTo(@Nonnull INode node, @Nonnull DependencyType type);
+	//</editor-fold>
+
+	//</editor-fold>
+
+	//<editor-fold desc="TreeNode">
 
 	/**
 	 * Return the root node.
@@ -160,7 +326,8 @@ public interface INode extends Iterable<INode>, Serializable {
 	@Nonnull
 	String toTreeString();
 
-//==============================================================================
+	//</editor-fold>
+
 
 	/**
 	 * @param <E> the node

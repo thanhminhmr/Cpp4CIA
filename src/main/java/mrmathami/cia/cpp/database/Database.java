@@ -3,7 +3,7 @@ package mrmathami.cia.cpp.database;
 import mrmathami.cia.cpp.Project;
 import mrmathami.cia.cpp.ProjectVersion;
 import mrmathami.cia.cpp.VersionDifference;
-import mrmathami.cia.cpp.ast.Dependency;
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.IClass;
 import mrmathami.cia.cpp.ast.IEnum;
 import mrmathami.cia.cpp.ast.IFunction;
@@ -108,12 +108,11 @@ public final class Database {
 		throw new IllegalStateException(Utilities.objectToString(node));
 	}
 
-	private static int getDependencyType(Dependency.Type type) {
+	private static int getDependencyType(DependencyType type) {
 		return type.ordinal(); // TODO: fix me
 	}
 
 	private Connection getConnection() {
-//		final Connection connection = DriverManager.getConnection(databaseUrl);
 		return connection;
 	}
 
@@ -274,23 +273,20 @@ public final class Database {
 			}
 		}
 
-		final Dependency dependency = node.getDependency();
-		for (final INode dependencyNode : dependency.getNodes()) {
-			//final Dependency dependency = dependencyNode.getValue();
-
+		for (final INode dependencyNode : node.getAllDependencyTo()) {
 			final Node dbUseNode = internalExportNode(dbVersion, dependencyNode);
 			if (dbUseNode == null)
 				return null;
 
-			for (final Dependency.Type dependencyType : Dependency.Type.values()) {
-				final int count = dependency.getCount(dependencyNode, dependencyType);
+			for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
+				final int count = entry.getValue();
 				if (count == 0) continue;
 
 				final Use dbUse = Uses.add(getConnection(), new Use()
 						.setVersionId(dbVersion.getId())
 						.setNodeA(dbNode.getId())
 						.setNodeB(dbUseNode.getId())
-						.setTypeEnum(getDependencyType(dependencyType))
+						.setTypeEnum(getDependencyType(entry.getKey()))
 						.setCount(count));
 				if (dbUse == null)
 					return null;

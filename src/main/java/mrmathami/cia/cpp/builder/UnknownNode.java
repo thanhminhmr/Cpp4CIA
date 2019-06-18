@@ -14,6 +14,7 @@ final class UnknownNode extends Node implements IUnknown {
 		super(name, uniqueName, content);
 	}
 
+	@Nonnull
 	public static IUnknownBuilder builder() {
 		return new UnknownBuilder();
 	}

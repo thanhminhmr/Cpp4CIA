@@ -113,28 +113,8 @@ public final class ClassNode extends Node implements IClass {
 
 	@Nonnull
 	@Override
-	public final String toString() {
-		return "(" + Utilities.objectToString(this)
-				+ ") { name: \"" + getName()
-				+ "\", uniqueName: \"" + getUniqueName()
-				+ "\", signature: \"" + getSignature()
-				+ "\", directWeight: " + getDirectWeight()
-				+ ", indirectWeight: " + getIndirectWeight()
-				+ " }";
-	}
-
-	@Nonnull
-	@Override
-	public final String toTreeElementString() {
-		return "(" + Utilities.objectToString(this)
-				+ ") { name: \"" + getName()
-				+ "\", uniqueName: \"" + getUniqueName()
-				+ "\", signature: \"" + getSignature()
-				+ "\", directWeight: " + getDirectWeight()
-				+ ", indirectWeight: " + getIndirectWeight()
-				+ ", dependencyMap: " + getDependency()
-				+ ", bases: " + Utilities.collectionToString(bases)
-				+ " }";
+	protected String partialTreeElementString() {
+		return ", bases: " + Utilities.collectionToString(bases);
 	}
 
 	public static final class ClassNodeBuilder extends NodeBuilder<IClass, IClassBuilder> implements IClassBuilder {
