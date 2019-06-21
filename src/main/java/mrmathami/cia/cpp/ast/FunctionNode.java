@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = -8884890609260876606L;
+	private static final long serialVersionUID = -7949255692580123161L;
 
 	@Nonnull
 	private final List<INode> parameters;
@@ -36,22 +36,11 @@ public final class FunctionNode extends Node implements IFunction {
 	}
 
 	@Override
-	public final boolean addParameters(@Nonnull List<INode> parameters) {
-		if (parameters.isEmpty()) return true;
-		if (!super.addChildren(parameters)) return false;
-
-		return this.parameters.addAll(parameters);
-	}
-
-	@Override
-	public final List<INode> removeParameters() {
-		final List<INode> oldParameters = List.copyOf(parameters);
-		for (final INode parameter : oldParameters) {
-			parameter.removeFromParent();
-			// removeNodeDependencyTo(parameter); // TODO: why should this be here?
+	public final void removeParameters() {
+		for (final INode parameter : parameters) {
+			removeChild(parameter);
 		}
 		parameters.clear();
-		return oldParameters;
 	}
 
 	@Override
@@ -67,8 +56,6 @@ public final class FunctionNode extends Node implements IFunction {
 
 	@Override
 	public final boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter) {
-		if (!super.replaceChild(oldParameter, newParameter)) return false;
-
 		final int index = parameters.indexOf(oldParameter);
 		if (index < 0) return false;
 		parameters.set(index, newParameter);

@@ -40,7 +40,7 @@ public final class VersionDiffer {
 				final INode nodeB = nodeMapB.get(nodeA);
 				if (nodeB != null) {
 					if (!nodeA.equalsAllDependencyTo(nodeB)
-							|| (nodeA instanceof IClass && !((IClass) nodeA).equalsBase(nodeB))) {
+							|| (nodeA instanceof IClass && !((IClass) nodeA).getBases().equals(((IClass) nodeB).getBases()))) {
 						changedNodes.add(ImmutablePair.of(nodeA, nodeB));
 					} else {
 						unchangedNodes.add(ImmutablePair.of(nodeA, nodeB));

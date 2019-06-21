@@ -22,9 +22,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Base of AST Tree.
  */
 public abstract class Node implements INode {
-	private static final long serialVersionUID = -7829002077653496113L;
+	private static final long serialVersionUID = 1371090987003778464L;
+
+	@Nonnull
 	private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
+	@Nonnull
 	private static final AtomicInteger ID_COUNTER = new AtomicInteger();
 
 	private final int id;
@@ -37,12 +40,17 @@ public abstract class Node implements INode {
 
 	@Nonnull
 	private final String signature;
+
 	@Nonnull
 	private final Map<INode, int[]> dependencyFrom = new HashMap<>();
+
 	@Nonnull
 	private final Map<INode, int[]> dependencyTo = new HashMap<>();
-	private float directWeight;
-	private float indirectWeight;
+
+	private float weight;
+
+	private transient float distance = Float.MAX_VALUE;
+
 	@Nullable
 	private INode parent;
 
@@ -56,13 +64,14 @@ public abstract class Node implements INode {
 		this.signature = signature;
 	}
 
-	private static Node getNode(INode iNode) {
+	@Nonnull
+	private static Node getNode(@Nonnull INode iNode) {
 		if (iNode instanceof Node) return (Node) iNode;
 		throw new IllegalStateException("Unexpected foreign node in tree.");
 	}
 
 	@Nonnull
-	private static String countsToString(int[] counts) {
+	private static String countsToString(@Nonnull int[] counts) {
 		final StringBuilder builder = new StringBuilder().append('{');
 		for (int type = 0; type < counts.length; type++) {
 			int typeCount = counts[type];
@@ -75,48 +84,9 @@ public abstract class Node implements INode {
 		return builder.append('}').toString();
 	}
 
-	//<editor-fold desc="Dependency Helper">
-	private static void addDependency(@Nonnull Map<INode, int[]> dependency, @Nonnull INode node, @Nonnull DependencyType type) {
-		final int[] counts = dependency.get(node);
-		if (counts != null) {
-			counts[type.ordinal()] += 1;
-		} else {
-			final int[] newCounts = new int[DependencyType.values.length];
-			newCounts[type.ordinal()] += 1;
-			dependency.put(node, newCounts);
-		}
-	}
-
-	private static void removeDependency(@Nonnull Map<INode, int[]> dependency, @Nonnull INode node, @Nonnull DependencyType type) {
-		final int[] counts = dependency.get(node);
-		if (counts != null) {
-			counts[type.ordinal()] = 0;
-			if (Arrays.equals(counts, DEPENDENCY_ZERO)) {
-				dependency.remove(node);
-			}
-		}
-	}
-
-	private static void replaceDependency(@Nonnull Map<INode, int[]> oldDependency, @Nonnull INode oldNode,
-			@Nonnull Map<INode, int[]> newDependency, @Nonnull INode newNode) {
-		final int[] oldCounts = oldDependency.get(oldNode);
-		if (oldCounts == null) return;
-		final int[] newCounts = newDependency.get(newNode);
-		if (newCounts != null) {
-			for (int type = 0; type < oldCounts.length; type++) {
-				newCounts[type] += oldCounts[type];
-			}
-		} else {
-			newDependency.put(newNode, oldCounts);
-		}
-		oldDependency.remove(oldNode);
-	}
-	//</editor-fold>
-
 	//<editor-fold desc="Node">
 	@Nonnull
 	protected final <E extends INode> List<E> getChildrenList(final Class<E> aClass) {
-		final List<INode> children = getChildren();
 		final List<E> list = new ArrayList<>(children.size());
 		for (final INode child : children) {
 			if (aClass.isInstance(child)) {
@@ -150,23 +120,23 @@ public abstract class Node implements INode {
 	}
 
 	@Override
-	public final float getDirectWeight() {
-		return directWeight;
+	public final float getWeight() {
+		return weight;
 	}
 
 	@Override
-	public final void setDirectWeight(float directWeight) {
-		this.directWeight = directWeight;
+	public final void setWeight(float weight) {
+		this.weight = weight;
 	}
 
 	@Override
-	public final float getIndirectWeight() {
-		return indirectWeight;
+	public final float getDistance() {
+		return distance;
 	}
 
 	@Override
-	public final void setIndirectWeight(float indirectWeight) {
-		this.indirectWeight = indirectWeight;
+	public final void setDistance(float distance) {
+		this.distance = distance;
 	}
 	//</editor-fold>
 
@@ -419,6 +389,23 @@ public abstract class Node implements INode {
 
 	//<editor-fold desc="TreeNode">
 
+	@Override
+	public boolean transfer(@Nonnull INode node) {
+		// check if child node is root node
+		if (!node.isRoot()) return false;
+		// check if current node doesn't have children
+		if (!children.isEmpty()) {
+			for (final Iterator<INode> iterator = children.iterator(); iterator.hasNext(); ) {
+				final INode child = iterator.next();
+				iterator.remove();
+				getNode(node).children.add(child);
+				getNode(child).internalSetParent(node);
+			}
+		}
+		transferAllDependency(node);
+		return true;
+	}
+
 	/**
 	 * Return the root node.
 	 *
@@ -473,6 +460,21 @@ public abstract class Node implements INode {
 	}
 
 	/**
+	 * Remove children nodes from current node.
+	 * Return children nodes.
+	 */
+	@Override
+	public final void removeChildren() {
+		if (!children.isEmpty()) {
+			// remove children
+			for (final INode child : this) {
+				child.removeAllDependency();
+			}
+			children.clear();
+		}
+	}
+
+	/**
 	 * Add child node to current node.
 	 * Return false if child node already have parent node.
 	 * Return true otherwise.
@@ -502,82 +504,15 @@ public abstract class Node implements INode {
 	public final boolean removeChild(@Nonnull INode child) {
 		// check if current node is not parent node
 		if (child.getParent() != this) return false;
-
-		children.remove(child);
+		// remove all grand-children and lower dependency
+		for (final INode node : child) {
+			node.removeAllDependency();
+		}
+		// remove the child
 		getNode(child).internalSetParent(null);
+		child.removeAllDependency();
+		children.remove(child);
 		return true;
-	}
-
-	/**
-	 * Replace a child node by another node from current node.
-	 * Return false if the old child node doesn't belong to this node, or new child node already have parent.
-	 * Return true otherwise.
-	 *
-	 * @param oldChild a child node to remove
-	 * @param newChild a child node to add
-	 * @return whether the operation is success or not
-	 */
-	@Override
-	public final boolean replaceChild(@Nonnull INode oldChild, @Nonnull INode newChild) {
-		// check if current node is not parent node
-		if (oldChild.getParent() != this) return false;
-		// check if child node is root node
-		if (!newChild.isRoot()) return false;
-
-		final int index = children.indexOf(oldChild);
-		children.set(index, newChild);
-		getNode(oldChild).internalSetParent(null);
-		getNode(newChild).internalSetParent(this);
-		return true;
-	}
-
-	/**
-	 * Add children nodes to current node.
-	 * Return false if one of children nodes already have parent node.
-	 * Return true otherwise.
-	 *
-	 * @param newChildren children nodes to add
-	 * @return whether the operation is success or not
-	 */
-	@Override
-	public final <E extends INode> boolean addChildren(@Nonnull List<E> newChildren) {
-		if (newChildren.isEmpty()) return true;
-
-		for (final INode child : newChildren) {
-			if (!child.isRoot()) return false;
-		}
-		children.addAll(newChildren);
-		for (final INode child : newChildren) {
-			getNode(child).internalSetParent(this);
-		}
-		return true;
-	}
-
-	/**
-	 * Remove children nodes from current node.
-	 * Return children nodes.
-	 *
-	 * @return children nodes
-	 */
-	@Override
-	public final List<INode> removeChildren() {
-		if (children.isEmpty()) return List.of();
-
-		final List<INode> oldChildren = List.copyOf(children);
-		for (final INode child : oldChildren) child.removeFromParent();
-		return oldChildren;
-	}
-
-	/**
-	 * Add this node to the parent node.
-	 * Return false if this node already have parent node.
-	 * Return true otherwise.
-	 *
-	 * @return whether the operation is success or not
-	 */
-	@Override
-	public final boolean addToParent(@Nonnull INode parent) {
-		return parent.addChild(this);
 	}
 
 	/**
@@ -607,8 +542,8 @@ public abstract class Node implements INode {
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", directWeight: " + directWeight
-				+ ", indirectWeight: " + indirectWeight
+				+ "\", directWeight: " + weight
+				+ ", indirectWeight: " + distance
 				+ partialToString()
 				+ " }";
 	}
@@ -625,10 +560,10 @@ public abstract class Node implements INode {
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", directWeight: " + directWeight
-				+ ", indirectWeight: " + indirectWeight
+				+ "\", directWeight: " + weight
+				+ ", indirectWeight: " + distance
 				+ ", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
-				+ ", dependencyTo: " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
+				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, Node::countsToString)
 				+ partialTreeElementString()
 				+ " }";
 	}
@@ -777,4 +712,3 @@ public abstract class Node implements INode {
 		}
 	}
 }
-

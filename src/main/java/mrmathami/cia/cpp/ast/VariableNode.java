@@ -1,13 +1,11 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.util.Utilities;
-
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IVariable {
-	private static final long serialVersionUID = -1582485064176543324L;
+	private static final long serialVersionUID = -1845025334382880067L;
 
 	@Nullable
 	private INode type;

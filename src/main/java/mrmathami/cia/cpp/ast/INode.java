@@ -21,13 +21,13 @@ public interface INode extends Iterable<INode>, Serializable {
 	@Nonnull
 	String getSignature();
 
-	float getDirectWeight();
+	float getWeight();
 
-	void setDirectWeight(float directWeight);
+	void setWeight(float weight);
 
-	float getIndirectWeight();
+	float getDistance();
 
-	void setIndirectWeight(float indirectWeight);
+	void setDistance(float distance);
 
 	//<editor-fold desc="Dependency">
 
@@ -218,6 +218,14 @@ public interface INode extends Iterable<INode>, Serializable {
 	//<editor-fold desc="TreeNode">
 
 	/**
+	 * Move information of this node to the new node
+	 *
+	 * @param node new node
+	 * @return false if new node is not root node
+	 */
+	boolean transfer(@Nonnull INode node);
+
+	/**
 	 * Return the root node.
 	 *
 	 * @return root node
@@ -251,6 +259,12 @@ public interface INode extends Iterable<INode>, Serializable {
 	List<INode> getChildren();
 
 	/**
+	 * Remove children nodes from current node.
+	 * Return children nodes.
+	 */
+	void removeChildren();
+
+	/**
 	 * Add child node to current node.
 	 * Return false if child node already have parent node.
 	 * Return true otherwise.
@@ -271,44 +285,6 @@ public interface INode extends Iterable<INode>, Serializable {
 	boolean removeChild(@Nonnull INode child);
 
 	/**
-	 * Replace a child node by another node from current node.
-	 * Return false if the old child node doesn't belong to this node, or new child node already have parent.
-	 * Return true otherwise.
-	 *
-	 * @param oldChild a child node to remove
-	 * @param newChild a child node to add
-	 * @return whether the operation is success or not
-	 */
-	boolean replaceChild(@Nonnull INode oldChild, @Nonnull INode newChild);
-
-	/**
-	 * Add children nodes to current node.
-	 * Return false if one of children nodes already have parent node.
-	 * Return true otherwise.
-	 *
-	 * @param children children nodes to add
-	 * @return whether the operation is success or not
-	 */
-	<E extends INode> boolean addChildren(@Nonnull List<E> children);
-
-	/**
-	 * Remove children nodes from current node.
-	 * Return children nodes.
-	 *
-	 * @return children nodes
-	 */
-	List<INode> removeChildren();
-
-	/**
-	 * Add this node to the parent node.
-	 * Return false if this node already have parent node.
-	 * Return true otherwise.
-	 *
-	 * @return whether the operation is success or not
-	 */
-	boolean addToParent(@Nonnull INode parent);
-
-	/**
 	 * Remove this node itself from its parent node.
 	 * Return false if this node doesn't have parent node.
 	 * Return true otherwise.
@@ -327,7 +303,6 @@ public interface INode extends Iterable<INode>, Serializable {
 	String toTreeString();
 
 	//</editor-fold>
-
 
 	/**
 	 * @param <E> the node

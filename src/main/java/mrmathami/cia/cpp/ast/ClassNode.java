@@ -5,16 +5,17 @@ import mrmathami.util.Utilities;
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = 4481344544313254185L;
+	private static final long serialVersionUID = 6100243083024586655L;
 
 	@Nonnull
-	private final List<INode> bases;
+	private final Set<INode> bases;
 
-	private ClassNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull List<INode> bases) {
+	private ClassNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Set<INode> bases) {
 		super(name, simpleName, uniqueName);
 		this.bases = bases;
 	}
@@ -26,32 +27,13 @@ public final class ClassNode extends Node implements IClass {
 
 	@Nonnull
 	@Override
-	public final List<INode> getBases() {
-		return Collections.unmodifiableList(bases);
+	public final Set<INode> getBases() {
+		return Collections.unmodifiableSet(bases);
 	}
 
 	@Override
-	public final boolean addBases(@Nonnull List<INode> bases) {
-		if (bases.isEmpty()) return true;
-		if (this.bases.isEmpty()) {
-			this.bases.addAll(bases);
-			return true;
-		}
-
-		for (final INode base : bases) {
-			if (this.bases.contains(base)) return false;
-		}
-
-		return this.bases.addAll(bases);
-	}
-
-	@Override
-	public final List<INode> removeBases() {
-		if (bases.isEmpty()) return List.of();
-
-		final List<INode> oldBases = List.copyOf(bases);
+	public final void removeBases() {
 		bases.clear();
-		return oldBases;
 	}
 
 	@Override
@@ -67,24 +49,11 @@ public final class ClassNode extends Node implements IClass {
 
 	@Override
 	public final boolean replaceBase(@Nonnull INode oldBase, @Nonnull INode newBase) {
-		final int index = bases.indexOf(oldBase);
-		if (index < 0) return false;
-		if (bases.contains(newBase)) {
-			bases.remove(index);
-		} else {
-			bases.set(index, newBase);
-		}
-		return true;
-	}
+		if (!bases.contains(oldBase)) return false;
 
-	@Override
-	public final boolean equalsBase(@Nonnull INode node) {
-		if (node instanceof IClass) {
-			final Set<INode> baseA = Set.copyOf(bases);
-			final Set<INode> baseB = Set.copyOf(((IClass) node).getBases());
-			return baseA.equals(baseB);
-		}
-		return false;
+		bases.remove(oldBase);
+		bases.add(newBase);
+		return true;
 	}
 
 	@Nonnull
@@ -119,7 +88,7 @@ public final class ClassNode extends Node implements IClass {
 
 	public static final class ClassNodeBuilder extends NodeBuilder<IClass, IClassBuilder> implements IClassBuilder {
 		@Nonnull
-		private List<INode> bases = new ArrayList<>();
+		private Set<INode> bases = new HashSet<>();
 
 		private ClassNodeBuilder() {
 		}
@@ -133,13 +102,13 @@ public final class ClassNode extends Node implements IClass {
 		}
 
 		@Nonnull
-		public final List<INode> getBases() {
+		public final Set<INode> getBases() {
 			return bases;
 		}
 
 		@Nonnull
-		public final IClassBuilder setBases(@Nonnull List<INode> bases) {
-			this.bases = new ArrayList<>(bases);
+		public final IClassBuilder setBases(@Nonnull Set<INode> bases) {
+			this.bases = new HashSet<>(bases);
 			return this;
 		}
 	}

@@ -1,31 +1,16 @@
 package mrmathami.cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.util.List;
+import java.util.Set;
 
 @IAstComponent
-public interface IRoot extends IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	@Nonnull
-	List<INode> getIntegrals();
+public interface IRoot extends IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, IIntegralContainer {
 
-	boolean addIntegrals(@Nonnull List<INode> integrals);
-
-	List<INode> removeIntegrals();
-
-	boolean addIntegral(@Nonnull INode integral);
-
-	boolean removeIntegral(@Nonnull INode integral);
-
-	boolean replaceIntegral(@Nonnull INode oldIntegral, @Nonnull INode newIntegral);
+	void calculateDistance(@Nonnull Set<INode> changeSet);
 
 	/**
 	 * The root builder
 	 */
 	interface IRootBuilder extends INodeBuilder<IRoot, IRootBuilder> {
-		@Nonnull
-		List<INode> getIntegrals();
-
-		@Nonnull
-		IRootBuilder setIntegrals(@Nonnull List<INode> integrals);
 	}
 }

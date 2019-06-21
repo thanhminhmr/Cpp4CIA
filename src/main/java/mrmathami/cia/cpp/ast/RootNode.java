@@ -1,19 +1,17 @@
 package mrmathami.cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
 
 public final class RootNode extends Node implements IRoot {
-	private static final long serialVersionUID = 229987343657156125L;
+	private static final long serialVersionUID = -6762481249107378559L;
 
-	@Nonnull
-	private final List<INode> integrals;
-
-	private RootNode(@Nonnull List<INode> integrals) {
+	private RootNode() {
 		super("ROOT", "ROOT", "ROOT");
-		this.integrals = integrals;
 	}
 
 	@Nonnull
@@ -21,52 +19,36 @@ public final class RootNode extends Node implements IRoot {
 		return new RootNodeBuilder();
 	}
 
+	@Override
+	public void calculateDistance(@Nonnull Set<INode> changeSet) {
+		setDistance(Float.MAX_VALUE);
+		for (final INode node : this) node.setDistance(Float.MAX_VALUE);
+		for (final INode node : changeSet) node.setDistance(0.0f);
+
+		final Queue<INode> calculatedQueue = new LinkedList<>(changeSet);
+		while (calculatedQueue.peek() != null) {
+			final INode node = calculatedQueue.poll();
+			final List<INode> dependencyFrom = node.getAllDependencyFrom();
+			for (final INode fromNode : dependencyFrom) {
+				float weigth = 0.0f;
+				for (Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(fromNode).entrySet()) {
+					weigth += entry.getKey().getBackwardWeight() * entry.getValue();
+				}
+				if (weigth > 0.0f) {
+					float distance = node.getDistance() + 1.0f / weigth;
+					if (distance < fromNode.getDistance()) {
+						fromNode.setDistance(distance);
+						calculatedQueue.add(fromNode);
+					}
+				}
+			}
+		}
+	}
+
 	@Nonnull
 	@Override
-	public final List<INode> getIntegrals() {
-		return Collections.unmodifiableList(integrals);
-	}
-
-	@Override
-	public final boolean addIntegrals(@Nonnull List<INode> integrals) {
-		if (integrals.isEmpty()) return true;
-		if (!super.addChildren(integrals)) return false;
-
-		return this.integrals.addAll(integrals);
-	}
-
-	@Override
-	public final List<INode> removeIntegrals() {
-		if (integrals.isEmpty()) return List.of();
-
-		final List<INode> oldIntegrals = List.copyOf(integrals);
-		integrals.clear();
-		return oldIntegrals;
-	}
-
-	@Override
-	public final boolean addIntegral(@Nonnull INode integral) {
-		//noinspection ConstantConditions
-		return super.addChild(integral) && integrals.add(integral);
-	}
-
-	@Override
-	public final boolean removeIntegral(@Nonnull INode integral) {
-		return super.removeChild(integral) && integrals.remove(integral);
-	}
-
-	@Override
-	public final boolean replaceIntegral(@Nonnull INode oldIntegral, @Nonnull INode newIntegral) {
-		if (!super.replaceChild(oldIntegral, newIntegral)) return false;
-
-		final int index = integrals.indexOf(oldIntegral);
-		if (index < 0) return false;
-		if (integrals.contains(newIntegral)) {
-			integrals.remove(index);
-		} else {
-			integrals.set(index, newIntegral);
-		}
-		return true;
+	public final List<IIntegral> getIntegrals() {
+		return getChildrenList(IIntegral.class);
 	}
 
 	@Nonnull
@@ -94,9 +76,6 @@ public final class RootNode extends Node implements IRoot {
 	}
 
 	public static final class RootNodeBuilder extends NodeBuilder<IRoot, IRootBuilder> implements IRootBuilder {
-		@Nonnull
-		private List<INode> integrals = new ArrayList<>();
-
 		private RootNodeBuilder() {
 			setName("ROOT");
 			setUniqueName("ROOT");
@@ -107,18 +86,7 @@ public final class RootNode extends Node implements IRoot {
 		@Override
 		public final IRoot build() {
 			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
-			return new RootNode(integrals);
-		}
-
-		@Nonnull
-		public final List<INode> getIntegrals() {
-			return integrals;
-		}
-
-		@Nonnull
-		public final IRootBuilder setIntegrals(@Nonnull List<INode> integrals) {
-			this.integrals = new ArrayList<>(integrals);
-			return this;
+			return new RootNode();
 		}
 	}
 }
