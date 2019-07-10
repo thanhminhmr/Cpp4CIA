@@ -25,9 +25,9 @@ public interface INode extends Iterable<INode>, Serializable {
 
 	void setWeight(float weight);
 
-	float getDistance();
+	float getImpact();
 
-	void setDistance(float distance);
+	void setImpact(float impact);
 
 	//<editor-fold desc="Dependency">
 
@@ -214,6 +214,16 @@ public interface INode extends Iterable<INode>, Serializable {
 	//</editor-fold>
 
 	//</editor-fold>
+
+	//<editor-fold desc="Object Helper">
+	@Override
+	boolean equals(Object object);
+
+	@Override
+	int hashCode();
+	//</editor-fold>
+
+	boolean matches(Object node);
 
 	//<editor-fold desc="TreeNode">
 

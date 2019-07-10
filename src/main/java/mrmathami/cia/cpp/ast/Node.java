@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Base of AST Tree.
  */
 public abstract class Node implements INode {
-	private static final long serialVersionUID = 1371090987003778464L;
+	private static final long serialVersionUID = 5882036380636640285L;
 
 	@Nonnull
 	private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
@@ -49,7 +49,7 @@ public abstract class Node implements INode {
 
 	private float weight;
 
-	private transient float distance = Float.MAX_VALUE;
+	private transient float impact = Float.POSITIVE_INFINITY;
 
 	@Nullable
 	private INode parent;
@@ -130,13 +130,13 @@ public abstract class Node implements INode {
 	}
 
 	@Override
-	public final float getDistance() {
-		return distance;
+	public final float getImpact() {
+		return impact;
 	}
 
 	@Override
-	public final void setDistance(float distance) {
-		this.distance = distance;
+	public final void setImpact(float impact) {
+		this.impact = impact;
 	}
 	//</editor-fold>
 
@@ -370,8 +370,8 @@ public abstract class Node implements INode {
 		if (this == object) return true;
 		if (object == null || getClass() != object.getClass()) return false;
 		final Node node = (Node) object;
-		return name.equals(node.name) && uniqueName.equals(node.uniqueName)
-				&& signature.equals(node.signature) && Objects.equals(parent, node.parent);
+		return Objects.equals(name, node.name) && Objects.equals(uniqueName, node.uniqueName)
+				&& Objects.equals(signature, node.signature) && Objects.equals(parent, node.parent);
 	}
 
 	@Override
@@ -384,6 +384,11 @@ public abstract class Node implements INode {
 		//noinspection ConstantConditions
 		result = 31 * result + (signature != null ? signature.hashCode() : 0);
 		return result;
+	}
+
+	@Override
+	public boolean matches(Object node) {
+		return equals(node) && equalsAllDependencyTo((INode) node);
 	}
 	//</editor-fold>
 
@@ -531,21 +536,13 @@ public abstract class Node implements INode {
 	}
 
 	@Nonnull
-	protected String partialToString() {
-		return "";
-	}
-
-	@Nonnull
 	@Override
 	public final String toString() {
 		return "(" + Utilities.objectToString(this)
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", directWeight: " + weight
-				+ ", indirectWeight: " + distance
-				+ partialToString()
-				+ " }";
+				+ "\" }";
 	}
 
 	@Nonnull
@@ -561,7 +558,7 @@ public abstract class Node implements INode {
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
 				+ "\", directWeight: " + weight
-				+ ", indirectWeight: " + distance
+				+ ", indirectWeight: " + impact
 				+ ", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
 				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, Node::countsToString)
 				+ partialTreeElementString()

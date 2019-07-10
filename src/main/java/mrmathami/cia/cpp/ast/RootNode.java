@@ -8,7 +8,7 @@ import java.util.Queue;
 import java.util.Set;
 
 public final class RootNode extends Node implements IRoot {
-	private static final long serialVersionUID = -6762481249107378559L;
+	private static final long serialVersionUID = 1509940265258487954L;
 
 	private RootNode() {
 		super("ROOT", "ROOT", "ROOT");
@@ -20,24 +20,24 @@ public final class RootNode extends Node implements IRoot {
 	}
 
 	@Override
-	public void calculateDistance(@Nonnull Set<INode> changeSet) {
-		setDistance(Float.MAX_VALUE);
-		for (final INode node : this) node.setDistance(Float.MAX_VALUE);
-		for (final INode node : changeSet) node.setDistance(0.0f);
+	public void calculateImpact(@Nonnull Set<INode> changeSet) {
+		setImpact(Float.POSITIVE_INFINITY);
+		for (final INode node : this) node.setImpact(Float.POSITIVE_INFINITY);
+		for (final INode node : changeSet) node.setImpact(0.0f);
 
 		final Queue<INode> calculatedQueue = new LinkedList<>(changeSet);
 		while (calculatedQueue.peek() != null) {
 			final INode node = calculatedQueue.poll();
 			final List<INode> dependencyFrom = node.getAllDependencyFrom();
 			for (final INode fromNode : dependencyFrom) {
-				float weigth = 0.0f;
+				float weight = 0.0f;
 				for (Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(fromNode).entrySet()) {
-					weigth += entry.getKey().getBackwardWeight() * entry.getValue();
+					weight += entry.getKey().getBackwardWeight() * entry.getValue();
 				}
-				if (weigth > 0.0f) {
-					float distance = node.getDistance() + 1.0f / weigth;
-					if (distance < fromNode.getDistance()) {
-						fromNode.setDistance(distance);
+				if (weight > 0.0f) {
+					float distance = node.getImpact() + 1.0f / weight;
+					if (distance < fromNode.getImpact()) {
+						fromNode.setImpact(distance);
 						calculatedQueue.add(fromNode);
 					}
 				}

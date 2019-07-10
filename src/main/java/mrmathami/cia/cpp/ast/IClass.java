@@ -1,7 +1,6 @@
 package mrmathami.cia.cpp.ast;
 
 import javax.annotation.Nonnull;
-import java.util.List;
 import java.util.Set;
 
 @IAstComponent

@@ -10,13 +10,16 @@ import java.util.List;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = -7949255692580123161L;
+	private static final long serialVersionUID = -1625561533522078792L;
 
 	@Nonnull
 	private final List<INode> parameters;
 
 	@Nullable
 	private INode type;
+
+	@Nullable
+	private String body;
 
 	private FunctionNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull List<INode> parameters, @Nullable INode type) {
 		super(name, simpleName, uniqueName);
@@ -73,6 +76,17 @@ public final class FunctionNode extends Node implements IFunction {
 		this.type = type;
 	}
 
+	@Nullable
+	@Override
+	public final String getBody() {
+		return body;
+	}
+
+	@Override
+	public final void setBody(@Nullable String body) {
+		this.body = body;
+	}
+
 	@Nonnull
 	@Override
 	public final List<IClass> getClasses() {
@@ -106,17 +120,17 @@ public final class FunctionNode extends Node implements IFunction {
 		return result;
 	}
 
-	@Nonnull
 	@Override
-	protected String partialToString() {
-		return ", type: " + type;
+	public final boolean matches(Object node) {
+		return super.matches(node) && Objects.equals(((IFunction) node).getBody(), body);
 	}
 
 	@Nonnull
 	@Override
 	protected String partialTreeElementString() {
 		return ", type: " + type
-				+ ", parameters: " + Utilities.collectionToString(parameters);
+				+ ", parameters: " + Utilities.collectionToString(parameters)
+				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\"\"") + "\"" : null);
 	}
 
 	public static final class FunctionNodeBuilder extends NodeBuilder<IFunction, IFunctionBuilder> implements IFunctionBuilder {

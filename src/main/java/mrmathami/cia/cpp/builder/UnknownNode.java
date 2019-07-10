@@ -8,7 +8,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 final class UnknownNode extends Node implements IUnknown {
-	private static final long serialVersionUID = -7116903985998129873L;
+	private static final long serialVersionUID = -8229158069051821992L;
 
 	private UnknownNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String content) {
 		super(name, uniqueName, content);

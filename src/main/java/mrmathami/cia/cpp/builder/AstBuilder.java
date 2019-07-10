@@ -307,7 +307,7 @@ public final class AstBuilder {
 					final INode parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
 
 					((IFunction) functionNode).addParameter(parameterNode);
-					functionNode.addDependencyFrom(parameterNode, DependencyType.MEMBER);
+//					functionNode.addDependencyFrom(parameterNode, DependencyType.MEMBER);
 					functionNode.addDependencyTo(parameterType, DependencyType.USE);
 				}
 			}
@@ -521,6 +521,7 @@ public final class AstBuilder {
 				simpleNodeList.add(simpleNode);
 				parentNode.addChild(simpleNode);
 				parentNode.addDependencyFrom(simpleNode, DependencyType.MEMBER);
+				if (simpleNodeType != null) simpleNode.addDependencyTo(simpleNodeType, DependencyType.USE);
 			}
 			// endregion
 			return simpleNodeList.size() > 0 ? simpleNodeList : simpleNodeType != null ? List.of(simpleNodeType) : List.of();
@@ -550,7 +551,12 @@ public final class AstBuilder {
 			}
 
 			final IASTStatement functionBody = functionDefinition.getBody();
-			if (functionBody != null) createChildrenFromAstNode(functionNode, functionBody);
+			if (functionBody != null) {
+				if (functionNode instanceof IFunction) {
+					((IFunction) functionNode).setBody(functionBody.getRawSignature());
+				}
+				createChildrenFromAstNode(functionNode, functionBody);
+			}
 
 			parentNode.addChild(functionNode);
 			parentNode.addDependencyFrom(functionNode, DependencyType.MEMBER);
@@ -563,17 +569,15 @@ public final class AstBuilder {
 			final IASTDeclaration innerDeclaration = templateDeclaration.getDeclaration();
 			final List<INode> innerNodeList = createChildrenFromDeclaration(parentNode, innerDeclaration);
 
-			for (final INode innerNode : innerNodeList) {
-				parentNode.addChild(innerNode);
-				parentNode.addDependencyFrom(innerNode, DependencyType.MEMBER);
-			}
-
-			final INode innerNode = innerNodeList.get(0);
+//			for (final INode innerNode : innerNodeList) {
+//				parentNode.addChild(innerNode);
+//				parentNode.addDependencyFrom(innerNode, DependencyType.MEMBER);
+//			}
 
 			for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
-				final INode templateNode = createFromTemplateParameter(innerNode, templateParameter);
-				innerNode.addChild(templateNode);
-				innerNode.addDependencyFrom(templateNode, DependencyType.MEMBER);
+				final INode templateNode = createFromTemplateParameter(parentNode, templateParameter);
+				parentNode.addChild(templateNode);
+//				innerNode.addDependencyFrom(templateNode, DependencyType.MEMBER);
 			}
 			return innerNodeList;
 

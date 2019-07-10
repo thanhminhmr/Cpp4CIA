@@ -2,7 +2,6 @@ package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.ProjectVersion;
 import mrmathami.cia.cpp.VersionDifference;
-import mrmathami.cia.cpp.ast.IClass;
 import mrmathami.cia.cpp.ast.IIntegral;
 import mrmathami.cia.cpp.ast.INode;
 import mrmathami.cia.cpp.ast.IRoot;
@@ -23,12 +22,8 @@ public final class VersionDiffer {
 
 		final Map<INode, INode> nodeMapA = new HashMap<>();
 		final Map<INode, INode> nodeMapB = new HashMap<>();
-		for (final INode nodeA : rootA) {
-			nodeMapA.put(nodeA, nodeA);
-		}
-		for (final INode nodeB : rootB) {
-			nodeMapB.put(nodeB, nodeB);
-		}
+		for (final INode nodeA : rootA) nodeMapA.put(nodeA, nodeA);
+		for (final INode nodeB : rootB) nodeMapB.put(nodeB, nodeB);
 
 		final Set<INode> addedNodes = new HashSet<>();
 		final Set<Map.Entry<INode, INode>> changedNodes = new HashSet<>();
@@ -36,11 +31,10 @@ public final class VersionDiffer {
 		final Set<INode> removedNodes = new HashSet<>();
 
 		for (final INode nodeA : nodeMapA.keySet()) {
-			if (!(nodeA instanceof IIntegral)/* && !(nodeA instanceof IVariable && nodeA.getParent() instanceof IFunction)*/) {
+			if (!(nodeA instanceof IIntegral)) {
 				final INode nodeB = nodeMapB.get(nodeA);
 				if (nodeB != null) {
-					if (!nodeA.equalsAllDependencyTo(nodeB)
-							|| (nodeA instanceof IClass && !((IClass) nodeA).getBases().equals(((IClass) nodeB).getBases()))) {
+					if (!nodeA.matches(nodeB)) {
 						changedNodes.add(ImmutablePair.of(nodeA, nodeB));
 					} else {
 						unchangedNodes.add(ImmutablePair.of(nodeA, nodeB));
@@ -51,7 +45,7 @@ public final class VersionDiffer {
 			}
 		}
 		for (final INode nodeB : nodeMapB.keySet()) {
-			if (!(nodeB instanceof IIntegral)/* && !(nodeB instanceof IVariable && nodeB.getParent() instanceof IFunction)*/) {
+			if (!(nodeB instanceof IIntegral)) {
 				final INode nodeA = nodeMapA.get(nodeB);
 				if (nodeA == null) {
 					addedNodes.add(nodeB);

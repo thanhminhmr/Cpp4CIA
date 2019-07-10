@@ -5,7 +5,7 @@ import javax.annotation.Nullable;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IVariable {
-	private static final long serialVersionUID = -1845025334382880067L;
+	private static final long serialVersionUID = -120071089921734807L;
 
 	@Nullable
 	private INode type;
@@ -45,12 +45,6 @@ public final class VariableNode extends Node implements IVariable {
 		int result = super.hashCode();
 		result = 31 * result + (type != null ? type.hashCode() : 0);
 		return result;
-	}
-
-	@Nonnull
-	@Override
-	protected String partialToString() {
-		return ", type: " + type;
 	}
 
 	@Nonnull

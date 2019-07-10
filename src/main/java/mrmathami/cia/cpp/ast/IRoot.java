@@ -6,7 +6,7 @@ import java.util.Set;
 @IAstComponent
 public interface IRoot extends IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, IIntegralContainer {
 
-	void calculateDistance(@Nonnull Set<INode> changeSet);
+	void calculateImpact(@Nonnull Set<INode> changeSet);
 
 	/**
 	 * The root builder

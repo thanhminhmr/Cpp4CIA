@@ -3,14 +3,13 @@ package mrmathami.cia.cpp.ast;
 import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = 6100243083024586655L;
+	private static final long serialVersionUID = -1141866194079166813L;
 
 	@Nonnull
 	private final Set<INode> bases;
@@ -78,6 +77,11 @@ public final class ClassNode extends Node implements IClass {
 	@Override
 	public final List<IVariable> getVariables() {
 		return getChildrenList(IVariable.class);
+	}
+
+	@Override
+	public final boolean matches(Object node) {
+		return super.matches(node) && ((IClass) node).getBases().equals(bases);
 	}
 
 	@Nonnull
