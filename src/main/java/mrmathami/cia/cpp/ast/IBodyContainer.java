@@ -3,13 +3,10 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-/**
- * Hold a type
- */
-public interface ITypeContainer<E extends Node> {
+public interface IBodyContainer<E extends Node> {
 	@Nullable
-	Node getType();
+	String getBody();
 
 	@Nonnull
-	E setType(@Nullable Node type);
+	E setBody(@Nullable String body);
 }

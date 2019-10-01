@@ -8,10 +8,11 @@ public final class Utilities {
 	private Utilities() {
 	}
 
-	public static String objectToString(Object object) {
-		return object != null ? String.format("%s,0x%08X",
+	public static String objectIdentifyString(Object object) {
+		return object != null ? String.format("%s,0x%08X,0x%08X",
 				object.getClass().getSimpleName(),
-				object.hashCode()) : "null";
+				object.hashCode(),
+				System.identityHashCode(object)) : "null";
 	}
 
 	public static <K, V> String mapToString(Map<K, V> map) {

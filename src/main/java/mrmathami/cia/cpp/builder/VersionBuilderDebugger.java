@@ -1,6 +1,6 @@
 package mrmathami.cia.cpp.builder;
 
-import mrmathami.cia.cpp.ast.IRoot;
+import mrmathami.cia.cpp.ast.RootNode;
 import org.eclipse.cdt.core.dom.ast.IASTImageLocation;
 import org.eclipse.cdt.core.dom.ast.IASTName;
 import org.eclipse.cdt.core.dom.ast.IASTNode;
@@ -16,14 +16,15 @@ import java.nio.file.Path;
 import java.util.Arrays;
 
 public final class VersionBuilderDebugger {
-	private String versionName;
 	private boolean readable;
 	private boolean saveFileContent;
-	private char[] fileContent;
 	private boolean saveTranslationUnit;
-	private IASTTranslationUnit translationUnit;
 	private boolean saveRoot;
-	private IRoot root;
+
+	private String versionName;
+	private char[] fileContent;
+	private IASTTranslationUnit translationUnit;
+	private RootNode root;
 
 	private static void _debugPrinter(PrintStream printStream, int level, IASTNode node, IASTTranslationUnit translationUnit) {
 		final String raw = node.getRawSignature();
@@ -67,14 +68,6 @@ public final class VersionBuilderDebugger {
 		}
 	}
 
-	public String getVersionName() {
-		return versionName;
-	}
-
-	public void setVersionName(String versionName) {
-		this.versionName = versionName;
-	}
-
 	public final boolean isReadable() {
 		return readable;
 	}
@@ -91,28 +84,12 @@ public final class VersionBuilderDebugger {
 		this.saveFileContent = saveFileContent;
 	}
 
-	public final char[] getFileContent() {
-		return fileContent;
-	}
-
-	public final void setFileContent(char[] fileContent) {
-		this.fileContent = fileContent;
-	}
-
 	public final boolean isSaveTranslationUnit() {
 		return saveTranslationUnit;
 	}
 
 	public final void setSaveTranslationUnit(boolean saveTranslationUnit) {
 		this.saveTranslationUnit = saveTranslationUnit;
-	}
-
-	public final IASTTranslationUnit getTranslationUnit() {
-		return translationUnit;
-	}
-
-	public final void setTranslationUnit(IASTTranslationUnit translationUnit) {
-		this.translationUnit = translationUnit;
 	}
 
 	public final boolean isSaveRoot() {
@@ -123,11 +100,35 @@ public final class VersionBuilderDebugger {
 		this.saveRoot = saveRoot;
 	}
 
-	public final IRoot getRoot() {
+	public String getVersionName() {
+		return versionName;
+	}
+
+	void setVersionName(String versionName) {
+		this.versionName = versionName;
+	}
+
+	public final char[] getFileContent() {
+		return fileContent;
+	}
+
+	final void setFileContent(char[] fileContent) {
+		this.fileContent = fileContent;
+	}
+
+	public final IASTTranslationUnit getTranslationUnit() {
+		return translationUnit;
+	}
+
+	final void setTranslationUnit(IASTTranslationUnit translationUnit) {
+		this.translationUnit = translationUnit;
+	}
+
+	public final RootNode getRoot() {
 		return root;
 	}
 
-	public final void setRoot(IRoot root) {
+	final void setRoot(RootNode root) {
 		this.root = root;
 	}
 

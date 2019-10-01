@@ -3,8 +3,7 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@IAstFragment
-public interface IVariableContainer extends INode {
+public interface IVariableContainer {
 	@Nonnull
-	List<IVariable> getVariables();
+	List<VariableNode> getVariables();
 }

@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.ProjectVersion;
-import mrmathami.cia.cpp.ast.IRoot;
+import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.preprocessor.PreprocessorBuilder;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
@@ -48,7 +48,7 @@ public final class VersionBuilder {
 		return newList;
 	}
 
-	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, VersionBuilderDebugger debugger) {
+	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, boolean newWeightMode, VersionBuilderDebugger debugger) {
 		try {
 			final List<Path> projectFileList = createPathList(projectFiles);
 			final List<Path> externalIncludePaths = createPathList(includePaths);
@@ -67,7 +67,7 @@ public final class VersionBuilder {
 
 			if (debugger != null && debugger.isSaveTranslationUnit()) debugger.setTranslationUnit(translationUnit);
 
-			final IRoot root = AstBuilder.build(translationUnit);
+			final RootNode root = AstBuilder.build(translationUnit, newWeightMode);
 
 			if (debugger != null && debugger.isSaveRoot()) debugger.setRoot(root);
 

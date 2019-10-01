@@ -4,76 +4,54 @@ import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements IFunction {
-	private static final long serialVersionUID = -1625561533522078792L;
+public final class FunctionNode extends Node implements
+		IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>,
+		IClassContainer, IEnumContainer, IVariableContainer {
+	private static final long serialVersionUID = 4794995746418921391L;
 
 	@Nonnull
-	private final List<INode> parameters;
-
-	@Nullable
-	private INode type;
+	private List<Node> parameters = new LinkedList<>();
 
 	@Nullable
 	private String body;
 
-	private FunctionNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull List<INode> parameters, @Nullable INode type) {
-		super(name, simpleName, uniqueName);
-		this.parameters = parameters;
-		this.type = type;
+	@Nullable
+	private Node type;
+
+	public FunctionNode() {
 	}
 
 	@Nonnull
-	public static IFunctionBuilder builder() {
-		return new FunctionNodeBuilder();
-	}
-
-	@Nonnull
-	@Override
-	public final List<INode> getParameters() {
+	public final List<Node> getParameters() {
 		return Collections.unmodifiableList(parameters);
 	}
 
-	@Override
-	public final void removeParameters() {
-		for (final INode parameter : parameters) {
-			removeChild(parameter);
+	public final boolean addParameters(@Nonnull List<Node> parameters) {
+		for (final Node parameter : parameters) {
+			if (parameter.getParent() != this) return false;
 		}
+		return this.parameters.addAll(parameters);
+	}
+
+	public final void removeParameters() {
 		parameters.clear();
 	}
 
-	@Override
-	public final boolean addParameter(@Nonnull INode parameter) {
-		//noinspection ConstantConditions
-		return super.addChild(parameter) && parameters.add(parameter);
-	}
-
-	@Override
-	public final boolean removeParameter(@Nonnull INode parameter) {
-		return super.removeChild(parameter) && parameters.remove(parameter);
-	}
-
-	@Override
-	public final boolean replaceParameter(@Nonnull INode oldParameter, @Nonnull INode newParameter) {
-		final int index = parameters.indexOf(oldParameter);
-		if (index < 0) return false;
-		parameters.set(index, newParameter);
+	public final boolean addParameter(@Nonnull Node parameter) {
+		if (parameter.getParent() != this) return false;
+		parameters.add(parameter);
 		return true;
 	}
 
-	@Nullable
-	@Override
-	public final INode getType() {
-		return type;
-	}
-
-	@Override
-	public final void setType(@Nullable INode type) {
-		this.type = type;
+	public final boolean removeParameter(@Nonnull Node parameter) {
+		return parameters.remove(parameter);
 	}
 
 	@Nullable
@@ -82,99 +60,156 @@ public final class FunctionNode extends Node implements IFunction {
 		return body;
 	}
 
+	@Nonnull
 	@Override
-	public final void setBody(@Nullable String body) {
+	public final FunctionNode setBody(@Nullable String body) {
 		this.body = body;
+		return this;
+	}
+
+	@Nullable
+	@Override
+	public final Node getType() {
+		return type;
 	}
 
 	@Nonnull
 	@Override
-	public final List<IClass> getClasses() {
-		return getChildrenList(IClass.class);
+	public final FunctionNode setType(@Nullable Node type) {
+		this.type = type;
+		return this;
 	}
 
 	@Nonnull
 	@Override
-	public final List<IEnum> getEnums() {
-		return getChildrenList(IEnum.class);
+	public final List<ClassNode> getClasses() {
+		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IVariable> getVariables() {
-		return getChildrenList(IVariable.class);
+	public final List<EnumNode> getEnums() {
+		return getChildrenList(EnumNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<VariableNode> getVariables() {
+		return getChildrenList(VariableNode.class);
+	}
+
+	//<editor-fold desc="Node Comparator">
+	@Override
+	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isPrototypeSimilar(node, matcher)) return false;
+		final FunctionNode function = (FunctionNode) node;
+		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
+		final Iterator<Node> iteratorA = parameters.iterator();
+		final Iterator<Node> iteratorB = function.parameters.iterator();
+		while (iteratorA.hasNext() == iteratorB.hasNext()) {
+			if (!iteratorA.hasNext()) return true;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
+		}
+		return false;
 	}
 
 	@Override
-	public final boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
-		final FunctionNode node = (FunctionNode) object;
-		return Objects.equals(type, node.type);
-	}
-
-	@Override
-	public final int hashCode() {
-		int result = super.hashCode();
-		result = 31 * result + (type != null ? type.hashCode() : 0);
+	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
+		int result = super.prototypeSimilarHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		result = 31 * result + parameters.size(); // prototype similar
 		return result;
 	}
 
 	@Override
-	public final boolean matches(Object node) {
-		return super.matches(node) && Objects.equals(((IFunction) node).getBody(), body);
+	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isPrototypeIdentical(node, matcher)) return false;
+		final FunctionNode function = (FunctionNode) node;
+		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
+		final Iterator<Node> iteratorA = parameters.iterator();
+		final Iterator<Node> iteratorB = function.parameters.iterator();
+		while (iteratorA.hasNext() == iteratorB.hasNext()) {
+			if (!iteratorA.hasNext()) return true;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
+		}
+		return false;
+	}
+
+	@Override
+	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
+		int result = super.prototypeIdenticalHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		result = 31 * result + parameters.size(); // prototype similar
+		return result;
+	}
+
+	@Override
+	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isSimilar(node, matcher)) return false;
+		final FunctionNode function = (FunctionNode) node;
+		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
+		final Iterator<Node> iteratorA = parameters.iterator();
+		final Iterator<Node> iteratorB = function.parameters.iterator();
+		while (iteratorA.hasNext() == iteratorB.hasNext()) {
+			if (!iteratorA.hasNext()) return true;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.SIMILAR)) break;
+		}
+		return false;
+	}
+
+	@Override
+	protected final int similarHashcode(@Nonnull Matcher matcher) {
+		int result = super.similarHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		result = 31 * result + parameters.size(); // similar
+		return result;
+	}
+
+	@Override
+	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isIdentical(node, matcher)) return false;
+		final FunctionNode function = (FunctionNode) node;
+		if (!Objects.equals(body, function.body) || !matcher.isNodeMatch(type, function.type, MatchLevel.IDENTICAL))
+			return false;
+		final Iterator<Node> iteratorA = parameters.iterator();
+		final Iterator<Node> iteratorB = function.parameters.iterator();
+		while (iteratorA.hasNext() == iteratorB.hasNext()) {
+			if (!iteratorA.hasNext()) return true;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.IDENTICAL)) break;
+		}
+		return false;
+	}
+
+	@Override
+	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+		int result = super.identicalHashcode(matcher);
+		result = 31 * result + (body != null ? body.hashCode() : 0);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.IDENTICAL);
+		result = 31 * result + parameters.size(); // identical
+		return result;
+	}
+	//</editor-fold>
+
+	@Override
+	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		if (type == fromNode) this.type = toNode;
+		final ListIterator<Node> iterator = parameters.listIterator();
+		while (iterator.hasNext()) {
+			if (iterator.next() == fromNode) {
+				if (toNode != null) {
+					iterator.set(toNode);
+				} else {
+					iterator.remove();
+				}
+				break;
+			}
+		}
 	}
 
 	@Nonnull
-	@Override
-	protected String partialTreeElementString() {
+	protected final String partialTreeElementString() {
 		return ", type: " + type
 				+ ", parameters: " + Utilities.collectionToString(parameters)
 				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\"\"") + "\"" : null);
-	}
-
-	public static final class FunctionNodeBuilder extends NodeBuilder<IFunction, IFunctionBuilder> implements IFunctionBuilder {
-		@Nonnull
-		private List<INode> parameters = new ArrayList<>();
-
-		@Nullable
-		private INode type;
-
-		private FunctionNodeBuilder() {
-		}
-
-		@Nonnull
-		@Override
-		public final IFunction build() {
-			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
-			//noinspection ConstantConditions
-			return new FunctionNode(name, uniqueName, signature, parameters, type);
-		}
-
-		@Nonnull
-		@Override
-		public List<INode> getParameters() {
-			return parameters;
-		}
-
-		@Nonnull
-		@Override
-		public IFunctionBuilder setParameters(@Nonnull List<INode> parameters) {
-			this.parameters = new ArrayList<>(parameters);
-			return this;
-		}
-
-		@Override
-		@Nullable
-		public final INode getType() {
-			return type;
-		}
-
-		@Override
-		@Nonnull
-		public final IFunctionBuilder setType(@Nullable INode type) {
-			this.type = type;
-			return this;
-		}
 	}
 }

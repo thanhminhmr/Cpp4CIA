@@ -3,8 +3,7 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@IAstFragment
-public interface IEnumContainer extends INode {
+public interface IEnumContainer {
 	@Nonnull
-	List<IEnum> getEnums();
+	List<EnumNode> getEnums();
 }

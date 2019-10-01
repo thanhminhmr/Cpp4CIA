@@ -1,20 +1,20 @@
 package mrmathami.cia.cpp.differ;
 
-import mrmathami.cia.cpp.ast.INode;
+import mrmathami.cia.cpp.ast.Node;
+import mrmathami.util.Pair;
 import mrmathami.util.Utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Set;
 
-public class VersionDifferDebugger {
+public final class VersionDifferDebugger {
 	private String versionDifferenceName;
-	private Set<INode> addedNodes;
-	private Set<INode> removedNodes;
-	private Set<Map.Entry<INode, INode>> changedNodes;
-	private Set<Map.Entry<INode, INode>> unchangedNodes;
+	private Set<Node> addedNodes;
+	private Set<Node> removedNodes;
+	private Set<Pair<Node, Node>> changedNodes;
+	private Set<Pair<Node, Node>> unchangedNodes;
 
 	public String getVersionDifferenceName() {
 		return versionDifferenceName;
@@ -24,35 +24,35 @@ public class VersionDifferDebugger {
 		this.versionDifferenceName = versionDifferenceName;
 	}
 
-	public Set<INode> getAddedNodes() {
+	public Set<Node> getAddedNodes() {
 		return addedNodes;
 	}
 
-	public void setAddedNodes(Set<INode> addedNodes) {
+	public void setAddedNodes(Set<Node> addedNodes) {
 		this.addedNodes = addedNodes;
 	}
 
-	public Set<INode> getRemovedNodes() {
+	public Set<Node> getRemovedNodes() {
 		return removedNodes;
 	}
 
-	public void setRemovedNodes(Set<INode> removedNodes) {
+	public void setRemovedNodes(Set<Node> removedNodes) {
 		this.removedNodes = removedNodes;
 	}
 
-	public Set<Map.Entry<INode, INode>> getChangedNodes() {
+	public Set<Pair<Node, Node>> getChangedNodes() {
 		return changedNodes;
 	}
 
-	public void setChangedNodes(Set<Map.Entry<INode, INode>> changedNodes) {
+	public void setChangedNodes(Set<Pair<Node, Node>> changedNodes) {
 		this.changedNodes = changedNodes;
 	}
 
-	public Set<Map.Entry<INode, INode>> getUnchangedNodes() {
+	public Set<Pair<Node, Node>> getUnchangedNodes() {
 		return unchangedNodes;
 	}
 
-	public void setUnchangedNodes(Set<Map.Entry<INode, INode>> unchangedNodes) {
+	public void setUnchangedNodes(Set<Pair<Node, Node>> unchangedNodes) {
 		this.unchangedNodes = unchangedNodes;
 	}
 
@@ -70,5 +70,4 @@ public class VersionDifferDebugger {
 			e.printStackTrace();
 		}
 	}
-
 }

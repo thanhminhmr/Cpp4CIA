@@ -1,6 +1,6 @@
 package mrmathami.cia.cpp;
 
-import mrmathami.cia.cpp.ast.IRoot;
+import mrmathami.cia.cpp.ast.RootNode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,16 +16,16 @@ public final class ProjectVersion implements Serializable {
 	private final String versionName;
 	private final List<String> projectFiles;
 	private final List<String> includePaths;
-	private final IRoot rootNode;
+	private final RootNode rootNode;
 
-	private ProjectVersion(String versionName, List<String> projectFiles, List<String> includePaths, IRoot rootNode) {
+	private ProjectVersion(String versionName, List<String> projectFiles, List<String> includePaths, RootNode rootNode) {
 		this.versionName = versionName;
 		this.projectFiles = List.copyOf(projectFiles);
 		this.includePaths = List.copyOf(includePaths);
 		this.rootNode = rootNode;
 	}
 
-	public static ProjectVersion of(String projectName, List<String> projectFiles, List<String> includePaths, IRoot rootNode) {
+	public static ProjectVersion of(String projectName, List<String> projectFiles, List<String> includePaths, RootNode rootNode) {
 		return new ProjectVersion(projectName, projectFiles, includePaths, rootNode);
 	}
 
@@ -56,7 +56,7 @@ public final class ProjectVersion implements Serializable {
 		return includePaths;
 	}
 
-	public final IRoot getRootNode() {
+	public final RootNode getRootNode() {
 		return rootNode;
 	}
 }

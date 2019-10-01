@@ -4,81 +4,106 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Objects;
 
-public final class VariableNode extends Node implements IVariable {
-	private static final long serialVersionUID = -120071089921734807L;
+public final class VariableNode extends Node implements IBodyContainer<VariableNode>, ITypeContainer<VariableNode> {
+	private static final long serialVersionUID = -4695243239191843968L;
 
 	@Nullable
-	private INode type;
+	private String body;
 
-	private VariableNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nullable INode type) {
-		super(name, simpleName, uniqueName);
-		this.type = type;
-	}
+	@Nullable
+	private Node type;
 
-	@Nonnull
-	public static IVariableBuilder builder() {
-		return new VariableNodeBuilder();
+	public VariableNode() {
 	}
 
 	@Nullable
 	@Override
-	public final INode getType() {
+	public String getBody() {
+		return body;
+	}
+
+	@Nonnull
+	@Override
+	public VariableNode setBody(@Nullable String body) {
+		this.body = body;
+		return this;
+	}
+
+	@Nullable
+	@Override
+	public final Node getType() {
 		return type;
 	}
 
+	@Nonnull
 	@Override
-	public final void setType(@Nullable INode type) {
+	public final VariableNode setType(@Nullable Node type) {
 		this.type = type;
+		return this;
+	}
+
+	//<editor-fold desc="Node Comparator">
+	@Override
+	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
-	public boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass() || !super.equals(object)) return false;
-		final VariableNode that = (VariableNode) object;
-		return Objects.equals(type, that.type);
-
-	}
-
-	@Override
-	public int hashCode() {
-		int result = super.hashCode();
-		result = 31 * result + (type != null ? type.hashCode() : 0);
+	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
+		int result = super.prototypeSimilarHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
+	}
+
+	@Override
+	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
+	}
+
+	@Override
+	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
+		int result = super.prototypeIdenticalHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		return result;
+	}
+
+	@Override
+	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
+	}
+
+	@Override
+	protected final int similarHashcode(@Nonnull Matcher matcher) {
+		int result = super.similarHashcode(matcher);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		return result;
+	}
+
+	@Override
+	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return super.isIdentical(node, matcher)
+				&& Objects.equals(body, ((VariableNode) node).body)
+				&& matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.IDENTICAL);
+	}
+
+	@Override
+	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+		int result = super.identicalHashcode(matcher);
+		result = 31 * result + (body != null ? body.hashCode() : 0);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		return result;
+	}
+	//</editor-fold>
+
+	@Override
+	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		if (type == fromNode) this.type = toNode;
 	}
 
 	@Nonnull
 	@Override
-	protected String partialTreeElementString() {
-		return ", type: " + type;
-	}
-
-	public static final class VariableNodeBuilder extends NodeBuilder<IVariable, IVariableBuilder> implements IVariableBuilder {
-		@Nullable
-		private INode type;
-
-		private VariableNodeBuilder() {
-		}
-
-		@Nonnull
-		@Override
-		public final IVariable build() {
-			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
-			//noinspection ConstantConditions
-			return new VariableNode(name, uniqueName, signature, type);
-		}
-
-		@Override
-		@Nullable
-		public final INode getType() {
-			return type;
-		}
-
-		@Override
-		@Nonnull
-		public final IVariableBuilder setType(@Nullable INode type) {
-			this.type = type;
-			return this;
-		}
+	protected final String partialTreeElementString() {
+		return ", type: " + type
+				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\"\"") + "\"" : null);
 	}
 }

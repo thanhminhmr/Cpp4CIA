@@ -3,8 +3,7 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-@IAstFragment
-public interface IClassContainer extends INode {
+public interface IClassContainer {
 	@Nonnull
-	List<IClass> getClasses();
+	List<ClassNode> getClasses();
 }

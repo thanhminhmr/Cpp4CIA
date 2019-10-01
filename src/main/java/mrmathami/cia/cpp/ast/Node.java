@@ -1,73 +1,54 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.util.Pair;
 import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Stack;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base of AST Tree.
  */
-public abstract class Node implements INode {
-	private static final long serialVersionUID = 5882036380636640285L;
+public abstract class Node implements Serializable, Iterable<Node> {
+	private static final long serialVersionUID = 5538494159157921442L;
 
 	@Nonnull
 	private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
 	@Nonnull
-	private static final AtomicInteger ID_COUNTER = new AtomicInteger();
-
-	private final int id;
-
+	private String name = "";
 	@Nonnull
-	private final String name;
-
+	private String uniqueName = "";
 	@Nonnull
-	private final String uniqueName;
-
-	@Nonnull
-	private final String signature;
-
-	@Nonnull
-	private final Map<INode, int[]> dependencyFrom = new HashMap<>();
-
-	@Nonnull
-	private final Map<INode, int[]> dependencyTo = new HashMap<>();
+	private String signature = "";
 
 	private float weight;
 
-	private transient float impact = Float.POSITIVE_INFINITY;
+	@Nonnull
+	private Map<Node, int[]> dependencyFrom = new IdentityHashMap<>();
+	@Nonnull
+	private Map<Node, int[]> dependencyTo = new IdentityHashMap<>();
 
 	@Nullable
-	private INode parent;
-
+	private Node parent;
 	@Nonnull
-	private List<INode> children = new ArrayList<>();
+	private List<Node> children = new LinkedList<>();
 
-	protected Node(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
-		this.id = ID_COUNTER.incrementAndGet();
-		this.name = name;
-		this.uniqueName = uniqueName;
-		this.signature = signature;
-	}
-
-	@Nonnull
-	private static Node getNode(@Nonnull INode iNode) {
-		if (iNode instanceof Node) return (Node) iNode;
-		throw new IllegalStateException("Unexpected foreign node in tree.");
+	protected Node() {
 	}
 
 	@Nonnull
@@ -86,9 +67,9 @@ public abstract class Node implements INode {
 
 	//<editor-fold desc="Node">
 	@Nonnull
-	protected final <E extends INode> List<E> getChildrenList(final Class<E> aClass) {
+	final <E extends Node> List<E> getChildrenList(@Nonnull Class<E> aClass) {
 		final List<E> list = new ArrayList<>(children.size());
-		for (final INode child : children) {
+		for (final Node child : children) {
 			if (aClass.isInstance(child)) {
 				list.add(aClass.cast(child));
 			}
@@ -96,47 +77,51 @@ public abstract class Node implements INode {
 		return list;
 	}
 
-	@Override
 	public final int getId() {
-		return id;
+		return System.identityHashCode(this);
 	}
 
-	@Override
 	@Nonnull
 	public final String getName() {
 		return name;
 	}
 
-	@Override
+	@Nonnull
+	public final Node setName(@Nonnull String name) {
+		this.name = name;
+		return this;
+	}
+
 	@Nonnull
 	public final String getUniqueName() {
 		return uniqueName;
 	}
 
-	@Override
+	@Nonnull
+	public final Node setUniqueName(@Nonnull String uniqueName) {
+		this.uniqueName = uniqueName;
+		return this;
+	}
+
 	@Nonnull
 	public final String getSignature() {
 		return signature;
 	}
 
-	@Override
+	@Nonnull
+	public final Node setSignature(@Nonnull String signature) {
+		this.signature = signature;
+		return this;
+	}
+
 	public final float getWeight() {
 		return weight;
 	}
 
-	@Override
-	public final void setWeight(float weight) {
+	@Nonnull
+	public final Node setWeight(float weight) {
 		this.weight = weight;
-	}
-
-	@Override
-	public final float getImpact() {
-		return impact;
-	}
-
-	@Override
-	public final void setImpact(float impact) {
-		this.impact = impact;
+		return this;
 	}
 	//</editor-fold>
 
@@ -144,126 +129,155 @@ public abstract class Node implements INode {
 
 	//<editor-fold desc="All Dependency">
 
-	@Override
-	public final void transferAllDependency(@Nonnull final INode node) {
+	public final void transferAllDependency(@Nonnull Node node) {
 		transferAllDependencyFrom(node);
 		transferAllDependencyTo(node);
 	}
 
-	@Override
 	public final void removeAllDependency() {
 		removeAllDependencyFrom();
 		removeAllDependencyTo();
 	}
 
-	@Override
-	public final boolean equalsAllDependency(@Nonnull final INode node) {
-		return equalsAllDependencyFrom(node) && equalsAllDependencyTo(node);
+	public final boolean equalsAllDependency(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return equalsAllDependencyFrom(node, matcher) && equalsAllDependencyTo(node, matcher);
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency From">
 
 	@Nonnull
-	@Override
-	public List<INode> getAllDependencyFrom() {
+	public final List<Node> getAllDependencyFrom() {
 		return List.copyOf(dependencyFrom.keySet());
 	}
 
-	public final void transferAllDependencyFrom(@Nonnull INode node) {
-		for (final INode toNode : dependencyFrom.keySet()) {
-			final Map<INode, int[]> dependencyTo = getNode(toNode).dependencyTo;
-			final int[] oldCounts = dependencyTo.remove(this);
+	public final void transferAllDependencyFrom(@Nonnull Node node) {
+		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyFrom.entrySet().iterator(); iterator.hasNext(); ) {
+			final Map.Entry<Node, int[]> entry = iterator.next();
+			final Node fromNode = entry.getKey();
+			final Map<Node, int[]> fromNodeDependencyTo = fromNode.dependencyTo;
+			final int[] oldCounts = fromNodeDependencyTo.remove(this);
 			assert oldCounts != null : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-			final int[] newCounts = dependencyTo.get(node);
-			if (newCounts != null) {
-				for (int i = 0; i < newCounts.length; i++) {
-					newCounts[i] += oldCounts[i];
+			assert oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+			if (fromNode != node) {
+				final int[] newCounts = fromNodeDependencyTo.get(node);
+				if (newCounts != null) {
+					for (int i = 0; i < newCounts.length; i++) {
+						newCounts[i] += oldCounts[i];
+					}
+					iterator.remove();
+				} else {
+					fromNodeDependencyTo.put(node, oldCounts);
 				}
 			} else {
-				dependencyTo.put(node, oldCounts);
+				iterator.remove();
 			}
 		}
-		getNode(node).dependencyFrom.putAll(dependencyFrom);
+		node.dependencyFrom.putAll(dependencyFrom);
 		dependencyFrom.clear();
 	}
 
 	public final void removeAllDependencyFrom() {
-		for (final INode node : dependencyFrom.keySet()) {
-			getNode(node).dependencyTo.remove(this);
+		for (final Node node : dependencyFrom.keySet()) {
+			node.dependencyTo.remove(this);
 		}
 		dependencyFrom.clear();
 	}
 
-	public final boolean equalsAllDependencyFrom(@Nonnull INode node) {
-		return dependencyFrom.equals(getNode(node).dependencyFrom);
+	public final boolean equalsAllDependencyFrom(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (dependencyFrom.size() != node.dependencyFrom.size()) return false;
+		final HashMap<Wrapper, int[]> nodeDependencyFrom = new HashMap<>();
+		for (final Map.Entry<Node, int[]> entry : node.dependencyFrom.entrySet()) {
+			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			nodeDependencyFrom.put(wrapper, entry.getValue());
+		}
+		for (final Map.Entry<Node, int[]> entry : dependencyFrom.entrySet()) {
+			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			final int[] counts = nodeDependencyFrom.get(wrapper);
+			if (counts == null || !Arrays.equals(counts, entry.getValue())) return false;
+			nodeDependencyFrom.remove(wrapper);
+		}
+		return nodeDependencyFrom.isEmpty();
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency To">
 
 	@Nonnull
-	@Override
-	public List<INode> getAllDependencyTo() {
+	public final List<Node> getAllDependencyTo() {
 		return List.copyOf(dependencyTo.keySet());
 	}
 
-	@Override
-	public final void transferAllDependencyTo(@Nonnull INode node) {
-		for (final INode toNode : dependencyTo.keySet()) {
-			final Map<INode, int[]> dependencyFrom = getNode(toNode).dependencyFrom;
-			final int[] oldCounts = dependencyFrom.remove(this);
+	public final void transferAllDependencyTo(@Nonnull Node node) {
+		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyTo.entrySet().iterator(); iterator.hasNext(); ) {
+			final Map.Entry<Node, int[]> entry = iterator.next();
+			final Node toNode = entry.getKey();
+			final Map<Node, int[]> toNodeDependencyFrom = toNode.dependencyFrom;
+			final int[] oldCounts = toNodeDependencyFrom.remove(this);
 			assert oldCounts != null : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-			final int[] newCounts = dependencyFrom.get(node);
-			if (newCounts != null) {
-				for (int i = 0; i < newCounts.length; i++) {
-					newCounts[i] += oldCounts[i];
+			assert oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+			if (toNode != node) {
+				final int[] newCounts = toNodeDependencyFrom.get(node);
+				if (newCounts != null) {
+					for (int i = 0; i < newCounts.length; i++) {
+						newCounts[i] += oldCounts[i];
+					}
+					iterator.remove();
+				} else {
+					toNodeDependencyFrom.put(node, oldCounts);
 				}
 			} else {
-				dependencyFrom.put(node, oldCounts);
+				iterator.remove();
 			}
 		}
-		getNode(node).dependencyTo.putAll(dependencyTo);
+		node.dependencyTo.putAll(dependencyTo);
 		dependencyTo.clear();
 	}
 
-	@Override
 	public final void removeAllDependencyTo() {
-		for (final INode node : dependencyTo.keySet()) {
-			getNode(node).dependencyFrom.remove(this);
+		for (final Node node : dependencyTo.keySet()) {
+			node.dependencyFrom.remove(this);
 		}
 		dependencyTo.clear();
 	}
 
-	@Override
-	public final boolean equalsAllDependencyTo(@Nonnull INode node) {
-		return dependencyTo.equals(getNode(node).dependencyTo);
+	public final boolean equalsAllDependencyTo(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (dependencyTo.size() != node.dependencyTo.size()) return false;
+		final HashMap<Wrapper, int[]> nodeDependencyTo = new HashMap<>();
+		for (final Map.Entry<Node, int[]> entry : node.dependencyTo.entrySet()) {
+			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			nodeDependencyTo.put(wrapper, entry.getValue());
+		}
+		for (final Map.Entry<Node, int[]> entry : dependencyTo.entrySet()) {
+			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			final int[] counts = nodeDependencyTo.get(wrapper);
+			if (counts == null || !Arrays.equals(counts, entry.getValue())) return false;
+			nodeDependencyTo.remove(wrapper);
+		}
+		return nodeDependencyTo.isEmpty();
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Node Dependency From">
 	@Nonnull
-	@Override
-	public final Map<DependencyType, Integer> getNodeDependencyFrom(@Nonnull final INode node) {
-		return getNode(node).getNodeDependencyTo(this);
+	public final Map<DependencyType, Integer> getNodeDependencyFrom(@Nonnull Node node) {
+		return node.getNodeDependencyTo(this);
 	}
 
-	@Override
-	public final void addNodeDependencyFrom(@Nonnull final INode node, @Nonnull final Map<DependencyType, Integer> dependencyMap) {
-		getNode(node).addNodeDependencyTo(this, dependencyMap);
+	public final void addNodeDependencyFrom(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+		node.addNodeDependencyTo(this, dependencyMap);
 	}
 
-	@Override
-	public final void removeNodeDependencyFrom(@Nonnull final INode node) {
-		getNode(node).removeNodeDependencyTo(this);
+	public final void removeNodeDependencyFrom(@Nonnull Node node) {
+		node.removeNodeDependencyTo(this);
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Node Dependency To">
 	@Nonnull
-	@Override
-	public final Map<DependencyType, Integer> getNodeDependencyTo(@Nonnull final INode node) {
+	public final Map<DependencyType, Integer> getNodeDependencyTo(@Nonnull Node node) {
 		final int[] counts = dependencyTo.get(node);
+		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts == null) return Map.of();
 
 		final Map<DependencyType, Integer> map = new EnumMap<>(DependencyType.class);
@@ -273,10 +287,10 @@ public abstract class Node implements INode {
 		return map;
 	}
 
-	@Override
-	public final void addNodeDependencyTo(@Nonnull final INode node, @Nonnull final Map<DependencyType, Integer> dependencyMap) {
+	public final void addNodeDependencyTo(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+		if (node == this) return;
 		final int[] counts = dependencyTo.get(node);
-		assert counts == getNode(node).dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
 			// add it to old one
 			for (final Map.Entry<DependencyType, Integer> entry : dependencyMap.entrySet()) {
@@ -291,64 +305,60 @@ public abstract class Node implements INode {
 			if (!Arrays.equals(newCounts, DEPENDENCY_ZERO)) {
 				// if not empty, put it in
 				dependencyTo.put(node, newCounts);
-				getNode(node).dependencyFrom.put(this, newCounts);
+				node.dependencyFrom.put(this, newCounts);
 			}
 		}
 	}
 
-	@Override
-	public final void removeNodeDependencyTo(@Nonnull final INode node) {
+	public final void removeNodeDependencyTo(@Nonnull Node node) {
 		dependencyTo.remove(node);
-		getNode(node).dependencyFrom.remove(this);
+		node.dependencyFrom.remove(this);
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency From">
-	@Override
-	public final int getDependencyFrom(@Nonnull final INode node, @Nonnull final DependencyType type) {
-		return getNode(node).getDependencyTo(this, type);
+	public final int getDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		return node.getDependencyTo(this, type);
 	}
 
-	@Override
-	public final void addDependencyFrom(@Nonnull final INode node, @Nonnull final DependencyType type) {
-		getNode(node).addDependencyTo(this, type);
+	public final void addDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		node.addDependencyTo(this, type);
 	}
 
-	@Override
-	public final void removeDependencyFrom(@Nonnull final INode node, @Nonnull final DependencyType type) {
-		getNode(node).removeDependencyTo(this, type);
+	public final void removeDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		node.removeDependencyTo(this, type);
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency To">
-	@Override
-	public final int getDependencyTo(@Nonnull final INode node, @Nonnull final DependencyType type) {
+	public final int getDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
 		final int[] counts = dependencyTo.get(node);
+		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		return counts != null ? counts[type.ordinal()] : 0;
 	}
 
-	@Override
-	public final void addDependencyTo(@Nonnull final INode node, @Nonnull final DependencyType type) {
+	public final void addDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
+		if (node == this) return;
 		final int[] counts = dependencyTo.get(node);
-		assert counts == getNode(node).dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
 			counts[type.ordinal()] += 1;
 		} else {
 			final int[] newCounts = new int[DependencyType.values.length];
 			newCounts[type.ordinal()] += 1;
 			dependencyTo.put(node, newCounts);
-			getNode(node).dependencyFrom.put(this, newCounts);
+			node.dependencyFrom.put(this, newCounts);
 		}
 	}
 
-	@Override
-	public final void removeDependencyTo(@Nonnull final INode node, @Nonnull final DependencyType type) {
+	public final void removeDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
 		final int[] counts = dependencyTo.get(node);
-		assert counts == getNode(node).dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
 			counts[type.ordinal()] = 0;
 			if (Arrays.equals(counts, DEPENDENCY_ZERO)) {
-				removeNodeDependencyTo(node);
+				dependencyTo.remove(node);
+				node.dependencyFrom.remove(this);
 			}
 		}
 	}
@@ -358,58 +368,219 @@ public abstract class Node implements INode {
 
 	//<editor-fold desc="Object Helper">
 	// Prevent serialize empty object
-	private void writeObject(ObjectOutputStream out) throws IOException {
-		if (this.getParent() == null && !(this instanceof IRoot)) {
+	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+		if (parent == null && !(this instanceof RootNode)) {
 			throw new IOException("Null parent!");
 		}
-		out.defaultWriteObject();
+		outputStream.defaultWriteObject();
+	}
+	//</editor-fold>
+
+	//<editor-fold desc="Node Comparator">
+
+	/**
+	 * If two nodes have the similar prototype, aka same type.
+	 *
+	 * @param node    node to compare
+	 * @param matcher node matcher
+	 * @return result
+	 */
+	protected boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return this == node || getClass() == node.getClass();
 	}
 
-	@Override
-	public boolean equals(Object object) {
-		if (this == object) return true;
-		if (object == null || getClass() != object.getClass()) return false;
-		final Node node = (Node) object;
-		return Objects.equals(name, node.name) && Objects.equals(uniqueName, node.uniqueName)
-				&& Objects.equals(signature, node.signature) && Objects.equals(parent, node.parent);
+	protected int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
+		return getClass().hashCode();
 	}
 
-	@Override
-	public int hashCode() {
+	/**
+	 * If two nodes have the same prototype, aka same name and same type.
+	 *
+	 * @param node    node to compare
+	 * @param matcher node matcher
+	 * @return result
+	 */
+	protected boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return this == node || getClass() == node.getClass()
+				&& name.equals(node.name)
+//				&& uniqueName.equals(node.uniqueName)
+				&& signature.equals(node.signature);
+	}
+
+	protected int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
 		int result = getClass().hashCode();
-		//noinspection ConstantConditions
-		result = 31 * result + (name != null ? name.hashCode() : 0);
-		//noinspection ConstantConditions
-		result = 31 * result + (uniqueName != null ? uniqueName.hashCode() : 0);
-		//noinspection ConstantConditions
-		result = 31 * result + (signature != null ? signature.hashCode() : 0);
+		result = 31 * result + name.hashCode();
+//		result = 31 * result + uniqueName.hashCode();
+		result = 31 * result + signature.hashCode();
 		return result;
 	}
 
-	@Override
-	public boolean matches(Object node) {
-		return equals(node) && equalsAllDependencyTo((INode) node);
+	/**
+	 * If two nodes are similar, aka same name, same prototype, same parent.
+	 * Only happen when two nodes are in different trees with
+	 * the same structure, or they are the same object.
+	 *
+	 * @param node    node to compare
+	 * @param matcher node matcher
+	 * @return result
+	 */
+	protected boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return this == node || getClass() == node.getClass()
+				&& name.equals(node.name)
+				&& uniqueName.equals(node.uniqueName)
+				&& signature.equals(node.signature)
+				&& matcher.isNodeMatch(parent, node.parent, MatchLevel.SIMILAR);
+	}
+
+	protected int similarHashcode(@Nonnull Matcher matcher) {
+		int result = getClass().hashCode();
+		result = 31 * result + name.hashCode();
+		result = 31 * result + uniqueName.hashCode();
+		result = 31 * result + signature.hashCode();
+		result = 31 * result + matcher.nodeHashcode(parent, MatchLevel.SIMILAR);
+		return result;
+	}
+
+	/**
+	 * If two nodes are exactly the same, aka same name, same prototype, same parent, same content.
+	 * Only happen when two nodes are in different trees with
+	 * the same structure, or they are the same object.
+	 *
+	 * @param node    node to compare
+	 * @param matcher node matcher
+	 * @return result
+	 */
+	protected boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		return this == node || getClass() == node.getClass()
+				&& name.equals(node.name)
+				&& uniqueName.equals(node.uniqueName)
+				&& signature.equals(node.signature)
+				&& matcher.isNodeMatch(parent, node.parent, MatchLevel.SIMILAR)
+				&& equalsAllDependencyTo(node, matcher);
+	}
+
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
+		int result = getClass().hashCode();
+		result = 31 * result + name.hashCode();
+		result = 31 * result + uniqueName.hashCode();
+		result = 31 * result + signature.hashCode();
+		result = 31 * result + matcher.nodeHashcode(parent, MatchLevel.SIMILAR);
+		result = 31 * result + dependencyTo.size();
+		return result;
+	}
+
+	public enum MatchLevel {
+		PROTOTYPE_SIMILAR(Node::isPrototypeSimilar, Node::prototypeSimilarHashcode),
+		PROTOTYPE_IDENTICAL(Node::isPrototypeIdentical, Node::prototypeIdenticalHashcode),
+		SIMILAR(Node::isSimilar, Node::similarHashcode),
+		IDENTICAL(Node::isIdentical, Node::identicalHashcode);
+
+		static final MatchLevel[] values = values();
+
+		final InternalMatcher matcher;
+		final InternalHasher hasher;
+
+		MatchLevel(InternalMatcher matcher, InternalHasher hasher) {
+			this.matcher = matcher;
+			this.hasher = hasher;
+		}
+	}
+
+	public static final class Matcher {
+		private final Map<Pair<Node, Node>, MatchLevel> map = new HashMap<>();
+		private final Map<Node, int[]> hashcodeMap = new IdentityHashMap<>();
+
+		public Matcher() {
+		}
+
+		public final boolean isNodeMatch(@Nullable Node nodeA, @Nullable Node nodeB, @Nonnull MatchLevel level) {
+			if (nodeA == nodeB) return true;
+			if (nodeA == null || nodeB == null) return false;
+			final Pair<Node, Node> pair = Pair.immutableOf(nodeA, nodeB);
+			final MatchLevel oldLevel = map.get(pair);
+			if (oldLevel == null || oldLevel.compareTo(level) < 0) {
+				map.put(pair, level);
+				return level.matcher.isNodeMatch(nodeA, nodeB, this);
+			}
+			return true;
+		}
+
+		public final int nodeHashcode(@Nullable Node node, @Nonnull MatchLevel level) {
+			if (node == null) return 0;
+			final int[] hashcodes = hashcodeMap.get(node);
+			if (hashcodes == null) {
+				final int[] newHashcodes = new int[MatchLevel.values.length];
+				final int newHashcode = level.hasher.nodeHashcode(node, this);
+				newHashcodes[level.ordinal()] = newHashcode;
+				hashcodeMap.put(node, newHashcodes);
+				return newHashcode;
+			} else if (hashcodes[level.ordinal()] == 0) {
+				final int newHashcode = level.hasher.nodeHashcode(node, this);
+				hashcodes[level.ordinal()] = newHashcode;
+				return newHashcode;
+			} else {
+				return hashcodes[level.ordinal()];
+			}
+		}
+	}
+
+	private interface InternalMatcher {
+		boolean isNodeMatch(@Nonnull Node nodeA, @Nonnull Node nodeB, @Nonnull Matcher matcher);
+	}
+
+	private interface InternalHasher {
+		int nodeHashcode(@Nonnull Node node, @Nonnull Matcher matcher);
+	}
+
+	public static final class Wrapper {
+		@Nonnull
+		private final Node node;
+
+		@Nonnull
+		private final MatchLevel level;
+
+		@Nonnull
+		private final Matcher matcher;
+
+		private final int hashcode;
+
+		public Wrapper(@Nonnull Node node, @Nonnull MatchLevel level, @Nonnull Matcher matcher) {
+			this.node = node;
+			this.level = level;
+			this.matcher = matcher;
+			this.hashcode = matcher.nodeHashcode(node, level);
+		}
+
+		@Nonnull
+		public final Node getNode() {
+			return node;
+		}
+
+		@Nonnull
+		public final MatchLevel getLevel() {
+			return level;
+		}
+
+		@Nonnull
+		public final Matcher getMatcher() {
+			return matcher;
+		}
+
+		@Override
+		public final int hashCode() {
+			return hashcode;
+		}
+
+		@Override
+		public final boolean equals(Object object) {
+			return this == object || object instanceof Wrapper
+					&& hashcode == ((Wrapper) object).hashcode
+					&& matcher.isNodeMatch(node, ((Wrapper) object).node, level);
+		}
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="TreeNode">
-
-	@Override
-	public boolean transfer(@Nonnull INode node) {
-		// check if child node is root node
-		if (!node.isRoot()) return false;
-		// check if current node doesn't have children
-		if (!children.isEmpty()) {
-			for (final Iterator<INode> iterator = children.iterator(); iterator.hasNext(); ) {
-				final INode child = iterator.next();
-				iterator.remove();
-				getNode(node).children.add(child);
-				getNode(child).internalSetParent(node);
-			}
-		}
-		transferAllDependency(node);
-		return true;
-	}
 
 	/**
 	 * Return the root node.
@@ -417,10 +588,9 @@ public abstract class Node implements INode {
 	 * @return root node
 	 */
 	@Nonnull
-	@Override
-	public final INode getRoot() {
-		INode node = this;
-		while (node.getParent() != null) node = node.getParent();
+	public final Node getRoot() {
+		Node parentNode, node = this;
+		while ((parentNode = node.getParent()) != null) node = parentNode;
 		return node;
 	}
 
@@ -430,7 +600,6 @@ public abstract class Node implements INode {
 	 *
 	 * @return true if this node is root node
 	 */
-	@Override
 	public final boolean isRoot() {
 		return parent == null;
 	}
@@ -442,14 +611,17 @@ public abstract class Node implements INode {
 	 * @return parent node
 	 */
 	@Nullable
-	@Override
-	public final INode getParent() {
+	public final Node getParent() {
 		return parent;
 	}
 
-	// Set parent node, or null if there is none.
-	// Note: a node without parent is a root node.
-	private void internalSetParent(@Nullable INode parent) {
+	/**
+	 * Set parent node, or null if there is none.
+	 * Note: a node without parent is a root node.
+	 *
+	 * @param parent parent
+	 */
+	private void internalSetParent(@Nullable Node parent) {
 		this.parent = parent;
 	}
 
@@ -459,24 +631,21 @@ public abstract class Node implements INode {
 	 * @return read-only list of children nodes
 	 */
 	@Nonnull
-	@Override
-	public final List<INode> getChildren() {
+	public final List<Node> getChildren() {
 		return Collections.unmodifiableList(children);
 	}
 
 	/**
-	 * Remove children nodes from current node.
-	 * Return children nodes.
+	 * Remove children nodes from current node
+	 * {@link #remove}
 	 */
-	@Override
 	public final void removeChildren() {
-		if (!children.isEmpty()) {
-			// remove children
-			for (final INode child : this) {
-				child.removeAllDependency();
-			}
-			children.clear();
+		if (children.isEmpty()) return;
+		// remove children
+		for (final Node child : children) {
+			child.internalRemove();
 		}
+		children.clear();
 	}
 
 	/**
@@ -487,14 +656,17 @@ public abstract class Node implements INode {
 	 * @param child a child node to add
 	 * @return whether the operation is success or not
 	 */
-	@Override
-	public final boolean addChild(@Nonnull INode child) {
+	public final boolean addChild(@Nonnull Node child) {
 		// check if child node is root node
-		if (!child.isRoot()) return false;
-
-		children.add(child);
-		getNode(child).internalSetParent(this);
+		if (child.parent != null) return false;
+		internalAddChild(child);
 		return true;
+	}
+
+	private void internalAddChild(@Nonnull Node child) {
+		assert child.parent == null;
+		children.add(child);
+		child.internalSetParent(this);
 	}
 
 	/**
@@ -505,40 +677,76 @@ public abstract class Node implements INode {
 	 * @param child a child node to removeFromParent
 	 * @return whether the operation is success or not
 	 */
-	@Override
-	public final boolean removeChild(@Nonnull INode child) {
-		// check if current node is not parent node
-		if (child.getParent() != this) return false;
-		// remove all grand-children and lower dependency
-		for (final INode node : child) {
-			node.removeAllDependency();
-		}
-		// remove the child
-		getNode(child).internalSetParent(null);
-		child.removeAllDependency();
-		children.remove(child);
+	public final boolean removeChild(@Nonnull Node child) {
+		// check if current node is not parent node of child node
+		if (child.parent != this) return false;
+		assert children.contains(child) : "WRONG TREE CONSTRUCTION!";
+		getRoot().internalTransferRecursive(child, null);
+		internalRemoveChild(child);
 		return true;
 	}
 
-	/**
-	 * Remove this node itself from its parent node.
-	 * Return false if this node doesn't have parent node.
-	 * Return true otherwise.
-	 *
-	 * @return whether the operation is success or not
-	 */
-	@Override
-	public final boolean removeFromParent() {
-		// if current node is root node
-		if (this.parent == null) return false;
-
-		return parent.removeChild(this);
+	// Exactly the same as remove child, without checking input
+	private void internalRemoveChild(@Nonnull Node child) {
+		assert child.parent == this && children.contains(child);
+		child.internalRemove();
+		this.children.remove(child);
 	}
 
+	/**
+	 * Remove this node itself from its parent node
+	 */
+	public final void remove() {
+		// check if current node is root node
+		if (parent == null) return;
+		parent.getRoot().internalTransferRecursive(this, null);
+		parent.internalRemoveChild(this);
+	}
+
+	// Without remove children from parent node!!
+	private void internalRemove() {
+		assert parent != null;
+		this.removeChildren();
+		this.removeAllDependency();
+		this.internalSetParent(null);
+	}
+
+	/**
+	 * Transfer node to another node
+	 *
+	 * @param node destination node
+	 * @return false if current node is root or destination par
+	 */
+	public boolean transfer(@Nonnull Node node) {
+		// check if current node is root node or child node is not root node
+		if (getRoot() == node.getRoot()) return false;
+		getRoot().internalTransferRecursive(this, node);
+		transferAllDependency(node);
+		if (!children.isEmpty()) {
+			node.children.addAll(children);
+			for (final Node child : children) {
+				child.internalSetParent(node);
+			}
+			children.clear();
+		}
+		return true;
+	}
+
+	private void internalTransferRecursive(@Nonnull Node fromNode, @Nullable Node toNode) {
+		// todo: link
+		this.internalOnTransfer(fromNode, toNode);
+		for (final Node child : children) {
+			child.internalTransferRecursive(fromNode, toNode);
+		}
+	}
+
+	protected void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	}
+
+	//<editor-fold desc="toString">
 	@Nonnull
-	@Override
 	public final String toString() {
-		return "(" + Utilities.objectToString(this)
+		return "(" + Utilities.objectIdentifyString(this)
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
@@ -551,14 +759,12 @@ public abstract class Node implements INode {
 	}
 
 	@Nonnull
-	@Override
 	public final String toTreeElementString() {
-		return "(" + Utilities.objectToString(this)
+		return "(" + Utilities.objectIdentifyString(this)
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", directWeight: " + weight
-				+ ", indirectWeight: " + impact
+				+ "\", weight: " + weight
 				+ ", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
 				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, Node::countsToString)
 				+ partialTreeElementString()
@@ -566,7 +772,6 @@ public abstract class Node implements INode {
 	}
 
 	@Nonnull
-	@Override
 	public final String toTreeString() {
 		final StringBuilder builder = new StringBuilder();
 		internalToString(builder, 0);
@@ -583,15 +788,16 @@ public abstract class Node implements INode {
 			builder.append(alignString).append("{ value: ")
 					.append(this.toTreeElementString().replace("\n", "\n" + alignString)).append(", children: [\n");
 
-			getNode(children.get(0)).internalToString(builder, level + 1);
+			children.get(0).internalToString(builder, level + 1);
 			for (int i = 1; i < children.size(); i++) {
 				builder.append(",\n");
-				getNode(children.get(i)).internalToString(builder, level + 1);
+				children.get(i).internalToString(builder, level + 1);
 			}
 
 			builder.append('\n').append(alignString).append("]}");
 		}
 	}
+	//</editor-fold>
 
 	/**
 	 * Return this tree iterator
@@ -599,27 +805,25 @@ public abstract class Node implements INode {
 	 * @return the iterator
 	 */
 	@Nonnull
-	@Override
-	public final Iterator<INode> iterator() {
+	public final Iterator<Node> iterator() {
 		return new NodeIterator(this);
 	}
 
 	/**
 	 * The tree iterator
 	 */
-	private static final class NodeIterator implements Iterator<INode> {
-		private INode current;
+	private static final class NodeIterator implements Iterator<Node> {
+		private Node current;
 
-		private Stack<Iterator<INode>> iterators = new Stack<>();
+		private Stack<Iterator<Node>> iterators = new Stack<>();
 
-		private NodeIterator(INode node) {
-			this.iterators.push(getNode(node).children.iterator());
+		private NodeIterator(Node node) {
+			this.iterators.push(node.children.iterator());
 		}
 
-		@Override
 		public final boolean hasNext() {
 			if (current != null) {
-				this.iterators.push(getNode(current).children.iterator());
+				this.iterators.push(current.children.iterator());
 				this.current = null;
 			}
 			do {
@@ -629,13 +833,11 @@ public abstract class Node implements INode {
 			return false;
 		}
 
-		@Override
-		public final INode next() {
+		public final Node next() {
 			this.current = iterators.peek().next();
 			return current;
 		}
 
-		@Override
 		public final void remove() {
 			if (current == null) throw new IllegalStateException();
 			iterators.peek().remove();
@@ -643,69 +845,4 @@ public abstract class Node implements INode {
 		}
 	}
 	//</editor-fold>
-
-	protected static abstract class NodeBuilder<E extends INode, B extends INodeBuilder> implements INodeBuilder<E, B> {
-		@Nullable
-		protected String name;
-
-		@Nullable
-		protected String uniqueName;
-
-		@Nullable
-		protected String signature;
-
-		protected NodeBuilder() {
-		}
-
-		@Override
-		public boolean isValid() {
-			return name != null && uniqueName != null && signature != null;
-		}
-
-		@Override
-		@Nonnull
-		public abstract E build();
-
-		@Override
-		@Nullable
-		public final String getName() {
-			return name;
-		}
-
-		@Override
-		@Nonnull
-		public final B setName(@Nonnull String name) {
-			this.name = name;
-			//noinspection unchecked
-			return (B) this;
-		}
-
-		@Override
-		@Nullable
-		public final String getUniqueName() {
-			return uniqueName;
-		}
-
-		@Override
-		@Nonnull
-		public final B setUniqueName(@Nonnull String uniqueName) {
-			this.uniqueName = uniqueName;
-			//noinspection unchecked
-			return (B) this;
-		}
-
-		@Override
-		@Nullable
-		public final String getSignature() {
-			return signature;
-		}
-
-		@Override
-		@Nonnull
-		public final B setSignature(@Nonnull String content) {
-			this.signature = content;
-			//noinspection unchecked
-			return (B) this;
-		}
-	}
 }

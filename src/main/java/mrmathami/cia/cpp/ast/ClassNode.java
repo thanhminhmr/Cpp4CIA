@@ -3,117 +3,117 @@ package mrmathami.cia.cpp.ast;
 import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public final class ClassNode extends Node implements IClass {
-	private static final long serialVersionUID = -1141866194079166813L;
+public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
+	private static final long serialVersionUID = -1051919167344144719L;
 
 	@Nonnull
-	private final Set<INode> bases;
+	private Set<Node> bases = new HashSet<>();
 
-	private ClassNode(@Nonnull String name, @Nonnull String simpleName, @Nonnull String uniqueName, @Nonnull Set<INode> bases) {
-		super(name, simpleName, uniqueName);
-		this.bases = bases;
+	public ClassNode() {
 	}
 
 	@Nonnull
-	public static IClassBuilder builder() {
-		return new ClassNodeBuilder();
-	}
-
-	@Nonnull
-	@Override
-	public final Set<INode> getBases() {
+	public final Set<Node> getBases() {
 		return Collections.unmodifiableSet(bases);
 	}
 
-	@Override
+	public final boolean addBases(@Nonnull Set<Node> bases) {
+		final Node rootNode = getRoot();
+		for (final Node base : bases) {
+			if (rootNode != base) return false;
+		}
+		return this.bases.addAll(bases);
+	}
+
 	public final void removeBases() {
 		bases.clear();
 	}
 
-	@Override
-	public final boolean addBase(@Nonnull INode base) {
-		if (bases.contains(base)) return false;
-		return bases.add(base);
+	public final boolean addBase(@Nonnull Node base) {
+		return getRoot() == base.getRoot() && bases.add(base);
 	}
 
-	@Override
-	public final boolean removeBase(@Nonnull INode base) {
+	public final boolean removeBase(@Nonnull Node base) {
 		return bases.remove(base);
 	}
 
+	@Nonnull
 	@Override
-	public final boolean replaceBase(@Nonnull INode oldBase, @Nonnull INode newBase) {
-		if (!bases.contains(oldBase)) return false;
-
-		bases.remove(oldBase);
-		bases.add(newBase);
-		return true;
+	public final List<ClassNode> getClasses() {
+		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IClass> getClasses() {
-		return getChildrenList(IClass.class);
+	public final List<EnumNode> getEnums() {
+		return getChildrenList(EnumNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IEnum> getEnums() {
-		return getChildrenList(IEnum.class);
+	public final List<FunctionNode> getFunctions() {
+		return getChildrenList(FunctionNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<IFunction> getFunctions() {
-		return getChildrenList(IFunction.class);
+	public final List<VariableNode> getVariables() {
+		return getChildrenList(VariableNode.class);
+	}
+
+	//<editor-fold desc="Node Comparator">
+	@Override
+	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isSimilar(node, matcher)) return false;
+		final Set<Wrapper> set = new HashSet<>();
+		for (final Node base : bases) set.add(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher));
+		for (final Node base : ((ClassNode) node).bases) {
+			if (!set.remove(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher))) return false;
+		}
+		return set.isEmpty();
+	}
+
+	@Override
+	protected final int similarHashcode(@Nonnull Matcher matcher) {
+		int result = super.similarHashcode(matcher);
+		result = 31 * result + bases.size();
+		return result;
+	}
+
+	@Override
+	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+		if (!super.isIdentical(node, matcher)) return false;
+		final Set<Wrapper> set = new HashSet<>();
+		for (final Node base : bases) set.add(new Wrapper(base, MatchLevel.IDENTICAL, matcher));
+		for (final Node base : ((ClassNode) node).bases) {
+			if (!set.remove(new Wrapper(base, MatchLevel.IDENTICAL, matcher))) return false;
+		}
+		return set.isEmpty();
+	}
+
+	@Override
+	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+		int result = super.identicalHashcode(matcher);
+		result = 31 * result + bases.size();
+		return result;
+	}
+	//</editor-fold>
+
+	@Override
+	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		if (!bases.contains(fromNode)) return;
+		bases.remove(fromNode);
+		if (toNode != null) bases.add(toNode);
 	}
 
 	@Nonnull
-	@Override
-	public final List<IVariable> getVariables() {
-		return getChildrenList(IVariable.class);
-	}
-
-	@Override
-	public final boolean matches(Object node) {
-		return super.matches(node) && ((IClass) node).getBases().equals(bases);
-	}
-
-	@Nonnull
-	@Override
-	protected String partialTreeElementString() {
+	protected final String partialTreeElementString() {
 		return ", bases: " + Utilities.collectionToString(bases);
-	}
-
-	public static final class ClassNodeBuilder extends NodeBuilder<IClass, IClassBuilder> implements IClassBuilder {
-		@Nonnull
-		private Set<INode> bases = new HashSet<>();
-
-		private ClassNodeBuilder() {
-		}
-
-		@Nonnull
-		@Override
-		public final IClass build() {
-			if (!isValid()) throw new NullPointerException("Builder element(s) is null.");
-			//noinspection ConstantConditions
-			return new ClassNode(name, uniqueName, signature, bases);
-		}
-
-		@Nonnull
-		public final Set<INode> getBases() {
-			return bases;
-		}
-
-		@Nonnull
-		public final IClassBuilder setBases(@Nonnull Set<INode> bases) {
-			this.bases = new HashSet<>(bases);
-			return this;
-		}
 	}
 }

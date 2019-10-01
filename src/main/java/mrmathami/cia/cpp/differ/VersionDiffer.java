@@ -2,10 +2,10 @@ package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.ProjectVersion;
 import mrmathami.cia.cpp.VersionDifference;
-import mrmathami.cia.cpp.ast.IIntegral;
-import mrmathami.cia.cpp.ast.INode;
-import mrmathami.cia.cpp.ast.IRoot;
-import mrmathami.util.ImmutablePair;
+import mrmathami.cia.cpp.ast.IntegralNode;
+import mrmathami.cia.cpp.ast.Node;
+import mrmathami.cia.cpp.ast.RootNode;
+import mrmathami.util.Pair;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -17,39 +17,49 @@ public final class VersionDiffer {
 	}
 
 	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB, VersionDifferDebugger debugger) {
-		final IRoot rootA = versionA.getRootNode();
-		final IRoot rootB = versionB.getRootNode();
+		final RootNode rootA = versionA.getRootNode();
+		final RootNode rootB = versionB.getRootNode();
 
-		final Map<INode, INode> nodeMapA = new HashMap<>();
-		final Map<INode, INode> nodeMapB = new HashMap<>();
-		for (final INode nodeA : rootA) nodeMapA.put(nodeA, nodeA);
-		for (final INode nodeB : rootB) nodeMapB.put(nodeB, nodeB);
+		final Node.Matcher matcher = new Node.Matcher();
 
-		final Set<INode> addedNodes = new HashSet<>();
-		final Set<Map.Entry<INode, INode>> changedNodes = new HashSet<>();
-		final Set<Map.Entry<INode, INode>> unchangedNodes = new HashSet<>();
-		final Set<INode> removedNodes = new HashSet<>();
-
-		for (final INode nodeA : nodeMapA.keySet()) {
-			if (!(nodeA instanceof IIntegral)) {
-				final INode nodeB = nodeMapB.get(nodeA);
-				if (nodeB != null) {
-					if (!nodeA.matches(nodeB)) {
-						changedNodes.add(ImmutablePair.of(nodeA, nodeB));
-					} else {
-						unchangedNodes.add(ImmutablePair.of(nodeA, nodeB));
-					}
-				} else {
-					removedNodes.add(nodeA);
-				}
+		final Map<Node.Wrapper, Node> nodeMapA = new HashMap<>();
+		final Map<Node.Wrapper, Node> nodeMapB = new HashMap<>();
+		for (final Node nodeA : rootA) {
+			if (!(nodeA instanceof IntegralNode)) {
+				nodeMapA.put(new Node.Wrapper(nodeA, Node.MatchLevel.SIMILAR, matcher), nodeA);
 			}
 		}
-		for (final INode nodeB : nodeMapB.keySet()) {
-			if (!(nodeB instanceof IIntegral)) {
-				final INode nodeA = nodeMapA.get(nodeB);
-				if (nodeA == null) {
-					addedNodes.add(nodeB);
+		for (final Node nodeB : rootB) {
+			if (!(nodeB instanceof IntegralNode)) {
+				nodeMapB.put(new Node.Wrapper(nodeB, Node.MatchLevel.SIMILAR, matcher), nodeB);
+			}
+		}
+		nodeMapA.put(new Node.Wrapper(rootA, Node.MatchLevel.SIMILAR, matcher), rootA);
+		nodeMapB.put(new Node.Wrapper(rootB, Node.MatchLevel.SIMILAR, matcher), rootB);
+
+		final Set<Node> addedNodes = new HashSet<>();
+		final Set<Pair<Node, Node>> changedNodes = new HashSet<>();
+		final Set<Pair<Node, Node>> unchangedNodes = new HashSet<>();
+		final Set<Node> removedNodes = new HashSet<>();
+
+		for (final Node.Wrapper wrapperA : nodeMapA.keySet()) {
+			final Node nodeA = wrapperA.getNode();
+			final Node nodeB = nodeMapB.get(wrapperA);
+			if (nodeB != null) {
+				if (!matcher.isNodeMatch(nodeA, nodeB, Node.MatchLevel.IDENTICAL)) {
+					changedNodes.add(Pair.immutableOf(nodeA, nodeB));
+				} else {
+					unchangedNodes.add(Pair.immutableOf(nodeA, nodeB));
 				}
+			} else {
+				removedNodes.add(nodeA);
+			}
+		}
+		for (final Node.Wrapper wrapperB : nodeMapB.keySet()) {
+			final Node nodeA = nodeMapA.get(wrapperB);
+			final Node nodeB = wrapperB.getNode();
+			if (nodeA == null) {
+				addedNodes.add(nodeB);
 			}
 		}
 

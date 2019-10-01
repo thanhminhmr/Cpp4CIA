@@ -1,6 +1,7 @@
 package mrmathami.cia.cpp;
 
-import mrmathami.cia.cpp.ast.INode;
+import mrmathami.cia.cpp.ast.Node;
+import mrmathami.util.Pair;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,7 +9,6 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
-import java.util.Map;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
@@ -16,12 +16,12 @@ public final class VersionDifference implements Serializable {
 
 	private final ProjectVersion versionA;
 	private final ProjectVersion versionB;
-	private final Set<INode> addedNodes;
-	private final Set<Map.Entry<INode, INode>> changedNodes;
-	private final Set<Map.Entry<INode, INode>> unchangedNodes;
-	private final Set<INode> removedNodes;
+	private final Set<Node> addedNodes;
+	private final Set<Pair<Node, Node>> changedNodes;
+	private final Set<Pair<Node, Node>> unchangedNodes;
+	private final Set<Node> removedNodes;
 
-	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	private VersionDifference(ProjectVersion versionA, ProjectVersion versionB, Set<Node> addedNodes, Set<Pair<Node, Node>> changedNodes, Set<Pair<Node, Node>> unchangedNodes, Set<Node> removedNodes) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = Set.copyOf(addedNodes);
@@ -30,7 +30,7 @@ public final class VersionDifference implements Serializable {
 		this.removedNodes = Set.copyOf(removedNodes);
 	}
 
-	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<INode> addedNodes, Set<Map.Entry<INode, INode>> changedNodes, Set<Map.Entry<INode, INode>> unchangedNodes, Set<INode> removedNodes) {
+	public static VersionDifference of(ProjectVersion versionA, ProjectVersion versionB, Set<Node> addedNodes, Set<Pair<Node, Node>> changedNodes, Set<Pair<Node, Node>> unchangedNodes, Set<Node> removedNodes) {
 		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
 	}
 
@@ -57,19 +57,19 @@ public final class VersionDifference implements Serializable {
 		return versionB;
 	}
 
-	public final Set<INode> getAddedNodes() {
+	public final Set<Node> getAddedNodes() {
 		return addedNodes;
 	}
 
-	public final Set<Map.Entry<INode, INode>> getChangedNodes() {
+	public final Set<Pair<Node, Node>> getChangedNodes() {
 		return changedNodes;
 	}
 
-	public final Set<Map.Entry<INode, INode>> getUnchangedNodes() {
+	public final Set<Pair<Node, Node>> getUnchangedNodes() {
 		return unchangedNodes;
 	}
 
-	public final Set<INode> getRemovedNodes() {
+	public final Set<Node> getRemovedNodes() {
 		return removedNodes;
 	}
 }
