@@ -40,7 +40,8 @@ public final class Utilities {
 		final StringBuilder builder = new StringBuilder().append("[");
 		for (final E element : collection) {
 			if (builder.length() > 1) builder.append(',');
-			builder.append("\n\t").append(toString != null ? toString.apply(element) : element);
+			final String append = toString != null ? toString.apply(element) : element.toString();
+			builder.append("\n\t").append(append.replace("\n", "\n\t"));
 		}
 		if (builder.length() > 1) builder.append('\n');
 		return builder.append(']').toString();

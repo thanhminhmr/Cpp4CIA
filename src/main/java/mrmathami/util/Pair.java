@@ -63,7 +63,7 @@ final class MutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public boolean equals(Object object) {
+	public final boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Pair)) return false;
 		final Pair<?, ?> pair = (Pair<?, ?>) object;
@@ -71,8 +71,13 @@ final class MutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return Objects.hash(a, b);
+	}
+
+	@Override
+	public final String toString() {
+		return String.format("{\n\t%s,\n\t%s\n}", a, b);
 	}
 }
 
@@ -107,7 +112,7 @@ final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public boolean equals(Object object) {
+	public final boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Pair)) return false;
 		final Pair<?, ?> pair = (Pair<?, ?>) object;
@@ -115,7 +120,12 @@ final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return Objects.hash(a, b);
+	}
+
+	@Override
+	public final String toString() {
+		return String.format("{\n\t%s,\n\t%s\n}", a, b);
 	}
 }

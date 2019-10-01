@@ -403,14 +403,12 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	protected boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
 		return this == node || getClass() == node.getClass()
 				&& name.equals(node.name)
-//				&& uniqueName.equals(node.uniqueName)
 				&& signature.equals(node.signature);
 	}
 
 	protected int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
 		int result = getClass().hashCode();
 		result = 31 * result + name.hashCode();
-//		result = 31 * result + uniqueName.hashCode();
 		result = 31 * result + signature.hashCode();
 		return result;
 	}
