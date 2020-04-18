@@ -94,7 +94,7 @@ public final class VersionDifference implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<Node, Double> getImpactMap() {
+	public final Map<Node, Double> getImpactWeightMap() {
 		final Map<Node, Double> map = new IdentityHashMap<>();
 		final RootNode rootNode = versionB.getRootNode();
 		map.put(rootNode, impactWeights[0]); // root id == 0
