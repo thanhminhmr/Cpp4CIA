@@ -34,9 +34,9 @@ public final class BuilderTest {
 		//System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\sr2\\a");
 		final List<Path> projectFiles =
-				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
+				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\sr2\\a\\sr2.cpp"));
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
@@ -65,14 +65,13 @@ public final class BuilderTest {
 		debugger.setSaveTranslationUnit(true);
 		debugger.setSaveRoot(true);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, true, debugger);
-		if (projectVersion == null) return;
+		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, debugger);
 
 		debugger.debugOutput(projectRoot);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		try (final FileOutputStream fos = new FileOutputStream("R:\\CmderLauncher.proj")) {
+		try (final FileOutputStream fos = new FileOutputStream("CmderLauncher.proj")) {
 			projectVersion.toOutputStream(fos);
 		}
 

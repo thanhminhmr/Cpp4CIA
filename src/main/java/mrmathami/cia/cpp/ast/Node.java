@@ -6,6 +6,7 @@ import mrmathami.util.Utilities;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -18,37 +19,39 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 
 /**
  * Base of AST Tree.
  */
 public abstract class Node implements Serializable, Iterable<Node> {
-	private static final long serialVersionUID = 5538494159157921442L;
+	private static final long serialVersionUID = -3422385854192173363L;
 
-	@Nonnull
-	private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
+	@Nonnull private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
-	@Nonnull
-	private String name = "";
-	@Nonnull
-	private String uniqueName = "";
-	@Nonnull
-	private String signature = "";
+	protected transient boolean readOnly;
+	private int id;
 
-	private float weight;
+	@Nonnull private String name = "";
+	@Nonnull private String uniqueName = "";
+	@Nonnull private String signature = "";
 
-	@Nonnull
-	private Map<Node, int[]> dependencyFrom = new IdentityHashMap<>();
-	@Nonnull
-	private Map<Node, int[]> dependencyTo = new IdentityHashMap<>();
+	@Nullable private Node parent;
+	@Nonnull private transient List<Node> children;
 
-	@Nullable
-	private Node parent;
-	@Nonnull
-	private List<Node> children = new LinkedList<>();
+	@Nonnull private transient Map<Node, int[]> dependencyFrom;
+	@Nonnull private transient Map<Node, int[]> dependencyTo;
 
 	protected Node() {
+		this.readOnly = false;
+		this.children = new LinkedList<>();
+		this.dependencyFrom = new IdentityHashMap<>();
+		this.dependencyTo = new IdentityHashMap<>();
+	}
+
+	protected static void throwReadOnly() {
+		throw new UnsupportedOperationException("Read-only Node!");
 	}
 
 	@Nonnull
@@ -65,20 +68,23 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		return builder.append('}').toString();
 	}
 
-	//<editor-fold desc="Node">
-	@Nonnull
-	final <E extends Node> List<E> getChildrenList(@Nonnull Class<E> aClass) {
-		final List<E> list = new ArrayList<>(children.size());
-		for (final Node child : children) {
-			if (aClass.isInstance(child)) {
-				list.add(aClass.cast(child));
-			}
-		}
-		return list;
+	protected void internalLock() {
+		this.readOnly = true;
+		this.children = List.copyOf(children);
+		this.dependencyFrom = Map.copyOf(dependencyFrom);
+		this.dependencyTo = Map.copyOf(dependencyTo);
 	}
 
+	//<editor-fold desc="Node">
 	public final int getId() {
-		return System.identityHashCode(this);
+		return id;
+	}
+
+	@Nonnull
+	public final Node setId(int id) {
+		if (readOnly) throwReadOnly();
+		this.id = id;
+		return this;
 	}
 
 	@Nonnull
@@ -88,6 +94,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setName(@Nonnull String name) {
+		if (readOnly) throwReadOnly();
 		this.name = name;
 		return this;
 	}
@@ -99,6 +106,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setUniqueName(@Nonnull String uniqueName) {
+		if (readOnly) throwReadOnly();
 		this.uniqueName = uniqueName;
 		return this;
 	}
@@ -110,31 +118,22 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setSignature(@Nonnull String signature) {
+		if (readOnly) throwReadOnly();
 		this.signature = signature;
-		return this;
-	}
-
-	public final float getWeight() {
-		return weight;
-	}
-
-	@Nonnull
-	public final Node setWeight(float weight) {
-		this.weight = weight;
 		return this;
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency">
-
 	//<editor-fold desc="All Dependency">
-
 	public final void transferAllDependency(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		transferAllDependencyFrom(node);
 		transferAllDependencyTo(node);
 	}
 
 	public final void removeAllDependency() {
+		if (readOnly) throwReadOnly();
 		removeAllDependencyFrom();
 		removeAllDependencyTo();
 	}
@@ -145,13 +144,13 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency From">
-
 	@Nonnull
-	public final List<Node> getAllDependencyFrom() {
-		return List.copyOf(dependencyFrom.keySet());
+	public final Set<Node> getAllDependencyFrom() {
+		return readOnly ? dependencyFrom.keySet() : Collections.unmodifiableSet(dependencyFrom.keySet());
 	}
 
 	public final void transferAllDependencyFrom(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyFrom.entrySet().iterator(); iterator.hasNext(); ) {
 			final Map.Entry<Node, int[]> entry = iterator.next();
 			final Node fromNode = entry.getKey();
@@ -178,6 +177,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void removeAllDependencyFrom() {
+		if (readOnly) throwReadOnly();
 		for (final Node node : dependencyFrom.keySet()) {
 			node.dependencyTo.remove(this);
 		}
@@ -202,13 +202,13 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency To">
-
 	@Nonnull
-	public final List<Node> getAllDependencyTo() {
-		return List.copyOf(dependencyTo.keySet());
+	public final Set<Node> getAllDependencyTo() {
+		return readOnly ? dependencyTo.keySet() : Collections.unmodifiableSet(dependencyTo.keySet());
 	}
 
 	public final void transferAllDependencyTo(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyTo.entrySet().iterator(); iterator.hasNext(); ) {
 			final Map.Entry<Node, int[]> entry = iterator.next();
 			final Node toNode = entry.getKey();
@@ -235,6 +235,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void removeAllDependencyTo() {
+		if (readOnly) throwReadOnly();
 		for (final Node node : dependencyTo.keySet()) {
 			node.dependencyFrom.remove(this);
 		}
@@ -265,10 +266,12 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void addNodeDependencyFrom(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+		if (readOnly) throwReadOnly();
 		node.addNodeDependencyTo(this, dependencyMap);
 	}
 
 	public final void removeNodeDependencyFrom(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		node.removeNodeDependencyTo(this);
 	}
 	//</editor-fold>
@@ -311,6 +314,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void removeNodeDependencyTo(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		dependencyTo.remove(node);
 		node.dependencyFrom.remove(this);
 	}
@@ -322,10 +326,12 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void addDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		if (readOnly) throwReadOnly();
 		node.addDependencyTo(this, type);
 	}
 
 	public final void removeDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		if (readOnly) throwReadOnly();
 		node.removeDependencyTo(this, type);
 	}
 	//</editor-fold>
@@ -338,6 +344,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void addDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
+		if (readOnly) throwReadOnly();
 		if (node == this) return;
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
@@ -352,6 +359,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public final void removeDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
+		if (readOnly) throwReadOnly();
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
@@ -363,16 +371,29 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 	}
 	//</editor-fold>
-
 	//</editor-fold>
 
 	//<editor-fold desc="Object Helper">
-	// Prevent serialize empty object
-	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (parent == null && !(this instanceof RootNode)) {
-			throw new IOException("Null parent!");
-		}
+	private void writeObject(@Nonnull ObjectOutputStream outputStream) throws IOException {
 		outputStream.defaultWriteObject();
+		if (readOnly) {
+			outputStream.writeObject(List.copyOf(children));
+			outputStream.writeObject(Map.copyOf(dependencyFrom));
+			outputStream.writeObject(Map.copyOf(dependencyTo));
+		} else {
+			outputStream.writeObject(children);
+			outputStream.writeObject(dependencyFrom);
+			outputStream.writeObject(dependencyTo);
+		}
+	}
+
+	@SuppressWarnings("unchecked")
+	private void readObject(@Nonnull ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
+		inputStream.defaultReadObject();
+		this.children = (List<Node>) inputStream.readObject();
+		this.dependencyFrom = (Map<Node, int[]>) inputStream.readObject();
+		this.dependencyTo = (Map<Node, int[]>) inputStream.readObject();
+		this.readOnly = true;
 	}
 	//</editor-fold>
 
@@ -475,18 +496,18 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 		static final MatchLevel[] values = values();
 
-		final InternalMatcher matcher;
-		final InternalHasher hasher;
+		@Nonnull private final InternalMatcher matcher;
+		@Nonnull private final InternalHasher hasher;
 
-		MatchLevel(InternalMatcher matcher, InternalHasher hasher) {
+		MatchLevel(@Nonnull InternalMatcher matcher, @Nonnull InternalHasher hasher) {
 			this.matcher = matcher;
 			this.hasher = hasher;
 		}
 	}
 
 	public static final class Matcher {
-		private final Map<Pair<Node, Node>, MatchLevel> map = new HashMap<>();
-		private final Map<Node, int[]> hashcodeMap = new IdentityHashMap<>();
+		@Nonnull private final Map<Pair<Node, Node>, MatchLevel> map = new HashMap<>();
+		@Nonnull private final Map<Node, int[]> hashcodeMap = new IdentityHashMap<>();
 
 		public Matcher() {
 		}
@@ -531,15 +552,9 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	public static final class Wrapper {
-		@Nonnull
-		private final Node node;
-
-		@Nonnull
-		private final MatchLevel level;
-
-		@Nonnull
-		private final Matcher matcher;
-
+		@Nonnull private final Node node;
+		@Nonnull private final MatchLevel level;
+		@Nonnull private final Matcher matcher;
 		private final int hashcode;
 
 		public Wrapper(@Nonnull Node node, @Nonnull MatchLevel level, @Nonnull Matcher matcher) {
@@ -623,6 +638,17 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		this.parent = parent;
 	}
 
+	@Nonnull
+	final <E extends Node> List<E> getChildrenList(@Nonnull Class<E> aClass) {
+		final List<E> list = new ArrayList<>(children.size());
+		for (final Node child : children) {
+			if (aClass.isInstance(child)) {
+				list.add(aClass.cast(child));
+			}
+		}
+		return list;
+	}
+
 	/**
 	 * Get list of children nodes, or empty list if there is none
 	 *
@@ -630,7 +656,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 */
 	@Nonnull
 	public final List<Node> getChildren() {
-		return Collections.unmodifiableList(children);
+		return readOnly ? children : Collections.unmodifiableList(children);
 	}
 
 	/**
@@ -638,6 +664,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * {@link #remove}
 	 */
 	public final void removeChildren() {
+		if (readOnly) throwReadOnly();
 		if (children.isEmpty()) return;
 		// remove children
 		for (final Node child : children) {
@@ -655,6 +682,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @return whether the operation is success or not
 	 */
 	public final boolean addChild(@Nonnull Node child) {
+		if (readOnly) throwReadOnly();
 		// check if child node is root node
 		if (child.parent != null) return false;
 		internalAddChild(child);
@@ -676,6 +704,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @return whether the operation is success or not
 	 */
 	public final boolean removeChild(@Nonnull Node child) {
+		if (readOnly) throwReadOnly();
 		// check if current node is not parent node of child node
 		if (child.parent != this) return false;
 		assert children.contains(child) : "WRONG TREE CONSTRUCTION!";
@@ -695,6 +724,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * Remove this node itself from its parent node
 	 */
 	public final void remove() {
+		if (readOnly) throwReadOnly();
 		// check if current node is root node
 		if (parent == null) return;
 		parent.getRoot().internalTransferRecursive(this, null);
@@ -716,6 +746,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @return false if current node is root or destination par
 	 */
 	public boolean transfer(@Nonnull Node node) {
+		if (readOnly) throwReadOnly();
 		// check if current node is root node or child node is not root node
 		if (getRoot() == node.getRoot()) return false;
 		getRoot().internalTransferRecursive(this, node);
@@ -762,8 +793,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 				+ ") { name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", weight: " + weight
-				+ ", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
+				+ "\", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
 				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, Node::countsToString)
 				+ partialTreeElementString()
 				+ " }";
@@ -804,43 +834,29 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 */
 	@Nonnull
 	public final Iterator<Node> iterator() {
-		return new NodeIterator(this);
-	}
+		final Stack<Iterator<Node>> stack = new Stack<>();
+		stack.push(children.iterator());
+		return new Iterator<>() {
+			@Nullable private Node current;
 
-	/**
-	 * The tree iterator
-	 */
-	private static final class NodeIterator implements Iterator<Node> {
-		private Node current;
-
-		private Stack<Iterator<Node>> iterators = new Stack<>();
-
-		private NodeIterator(Node node) {
-			this.iterators.push(node.children.iterator());
-		}
-
-		public final boolean hasNext() {
-			if (current != null) {
-				this.iterators.push(current.children.iterator());
-				this.current = null;
+			public final boolean hasNext() {
+				if (current != null) {
+					stack.push(current.children.iterator());
+					this.current = null;
+				}
+				do {
+					if (stack.peek().hasNext()) return true;
+					stack.pop();
+				} while (!stack.isEmpty());
+				return false;
 			}
-			do {
-				if (iterators.peek().hasNext()) return true;
-				this.iterators.pop();
-			} while (!iterators.isEmpty());
-			return false;
-		}
 
-		public final Node next() {
-			this.current = iterators.peek().next();
-			return current;
-		}
-
-		public final void remove() {
-			if (current == null) throw new IllegalStateException();
-			iterators.peek().remove();
-			this.current = null;
-		}
+			@Nonnull
+			public final Node next() {
+				this.current = stack.peek().next();
+				return current;
+			}
+		};
 	}
 	//</editor-fold>
 }

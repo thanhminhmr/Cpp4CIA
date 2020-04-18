@@ -1,5 +1,6 @@
 package mrmathami.cia.cpp.differ;
 
+import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ProjectVersion;
 import mrmathami.cia.cpp.VersionDifference;
 import mrmathami.cia.cpp.ast.IntegralNode;
@@ -7,8 +8,11 @@ import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.util.Pair;
 
+import javax.annotation.Nonnull;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,7 +20,9 @@ public final class VersionDiffer {
 	private VersionDiffer() {
 	}
 
-	public static VersionDifference compare(ProjectVersion versionA, ProjectVersion versionB, VersionDifferDebugger debugger) {
+	@Nonnull
+	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB)
+			throws CppException {
 		final RootNode rootA = versionA.getRootNode();
 		final RootNode rootB = versionB.getRootNode();
 
@@ -24,6 +30,8 @@ public final class VersionDiffer {
 
 		final Map<Node.Wrapper, Node> nodeMapA = new HashMap<>();
 		final Map<Node.Wrapper, Node> nodeMapB = new HashMap<>();
+		nodeMapA.put(new Node.Wrapper(rootA, Node.MatchLevel.SIMILAR, matcher), rootA);
+		nodeMapB.put(new Node.Wrapper(rootB, Node.MatchLevel.SIMILAR, matcher), rootB);
 		for (final Node nodeA : rootA) {
 			if (!(nodeA instanceof IntegralNode)) {
 				nodeMapA.put(new Node.Wrapper(nodeA, Node.MatchLevel.SIMILAR, matcher), nodeA);
@@ -34,22 +42,23 @@ public final class VersionDiffer {
 				nodeMapB.put(new Node.Wrapper(nodeB, Node.MatchLevel.SIMILAR, matcher), nodeB);
 			}
 		}
-		nodeMapA.put(new Node.Wrapper(rootA, Node.MatchLevel.SIMILAR, matcher), rootA);
-		nodeMapB.put(new Node.Wrapper(rootB, Node.MatchLevel.SIMILAR, matcher), rootB);
 
 		final Set<Node> addedNodes = new HashSet<>();
 		final Set<Pair<Node, Node>> changedNodes = new HashSet<>();
 		final Set<Pair<Node, Node>> unchangedNodes = new HashSet<>();
 		final Set<Node> removedNodes = new HashSet<>();
 
+		final List<Node> changedListB = new LinkedList<>();
+
 		for (final Node.Wrapper wrapperA : nodeMapA.keySet()) {
 			final Node nodeA = wrapperA.getNode();
 			final Node nodeB = nodeMapB.get(wrapperA);
 			if (nodeB != null) {
-				if (!matcher.isNodeMatch(nodeA, nodeB, Node.MatchLevel.IDENTICAL)) {
-					changedNodes.add(Pair.immutableOf(nodeA, nodeB));
-				} else {
+				if (matcher.isNodeMatch(nodeA, nodeB, Node.MatchLevel.IDENTICAL)) {
 					unchangedNodes.add(Pair.immutableOf(nodeA, nodeB));
+				} else {
+					changedNodes.add(Pair.immutableOf(nodeA, nodeB));
+					changedListB.add(nodeB);
 				}
 			} else {
 				removedNodes.add(nodeA);
@@ -60,17 +69,78 @@ public final class VersionDiffer {
 			final Node nodeB = wrapperB.getNode();
 			if (nodeA == null) {
 				addedNodes.add(nodeB);
+				changedListB.add(nodeB);
 			}
 		}
 
-		if (debugger != null) {
-			debugger.setVersionDifferenceName(versionA.getVersionName() + "-" + versionB.getVersionName());
-			debugger.setAddedNodes(addedNodes);
-			debugger.setRemovedNodes(removedNodes);
-			debugger.setChangedNodes(changedNodes);
-			debugger.setUnchangedNodes(unchangedNodes);
+		final float[] weights = ImpactWeightBuilder.calculateWeights(rootB, changedListB);
+
+		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, weights);
+	}
+
+	//*
+	@Nonnull
+	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
+			@Nonnull VersionDifferDebugger debugger) throws CppException {
+		final RootNode rootA = versionA.getRootNode();
+		final RootNode rootB = versionB.getRootNode();
+
+		final Node.Matcher matcher = new Node.Matcher();
+
+		final Map<Node.Wrapper, Node> nodeMapA = new HashMap<>();
+		final Map<Node.Wrapper, Node> nodeMapB = new HashMap<>();
+		nodeMapA.put(new Node.Wrapper(rootA, Node.MatchLevel.SIMILAR, matcher), rootA);
+		nodeMapB.put(new Node.Wrapper(rootB, Node.MatchLevel.SIMILAR, matcher), rootB);
+		for (final Node nodeA : rootA) {
+			if (!(nodeA instanceof IntegralNode)) {
+				nodeMapA.put(new Node.Wrapper(nodeA, Node.MatchLevel.SIMILAR, matcher), nodeA);
+			}
+		}
+		for (final Node nodeB : rootB) {
+			if (!(nodeB instanceof IntegralNode)) {
+				nodeMapB.put(new Node.Wrapper(nodeB, Node.MatchLevel.SIMILAR, matcher), nodeB);
+			}
 		}
 
-		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes);
+		final Set<Node> addedNodes = new HashSet<>();
+		final Set<Pair<Node, Node>> changedNodes = new HashSet<>();
+		final Set<Pair<Node, Node>> unchangedNodes = new HashSet<>();
+		final Set<Node> removedNodes = new HashSet<>();
+
+		final List<Node> changedListB = new LinkedList<>();
+
+		for (final Node.Wrapper wrapperA : nodeMapA.keySet()) {
+			final Node nodeA = wrapperA.getNode();
+			final Node nodeB = nodeMapB.get(wrapperA);
+			if (nodeB != null) {
+				if (matcher.isNodeMatch(nodeA, nodeB, Node.MatchLevel.IDENTICAL)) {
+					unchangedNodes.add(Pair.immutableOf(nodeA, nodeB));
+				} else {
+					changedNodes.add(Pair.immutableOf(nodeA, nodeB));
+					changedListB.add(nodeB);
+				}
+			} else {
+				removedNodes.add(nodeA);
+			}
+		}
+		for (final Node.Wrapper wrapperB : nodeMapB.keySet()) {
+			final Node nodeA = nodeMapA.get(wrapperB);
+			final Node nodeB = wrapperB.getNode();
+			if (nodeA == null) {
+				addedNodes.add(nodeB);
+				changedListB.add(nodeB);
+			}
+		}
+
+		debugger.setVersionDifferenceName(versionA.getVersionName() + "-" + versionB.getVersionName());
+		debugger.setAddedNodes(addedNodes);
+		debugger.setRemovedNodes(removedNodes);
+		debugger.setChangedNodes(changedNodes);
+		debugger.setUnchangedNodes(unchangedNodes);
+
+		final float[] weights = ImpactWeightBuilder.calculateWeights(rootB, changedListB);
+
+		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, weights);
 	}
+	//*/
 }

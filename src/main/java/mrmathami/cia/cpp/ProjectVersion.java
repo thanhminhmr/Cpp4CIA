@@ -1,35 +1,45 @@
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class ProjectVersion implements Serializable {
-	private static final long serialVersionUID = 3690872070049507458L;
+	private static final long serialVersionUID = 5381252081002383232L;
 
-	private final String versionName;
-	private final List<String> projectFiles;
-	private final List<String> includePaths;
-	private final RootNode rootNode;
+	@Nonnull private final String versionName;
+	@Nonnull private final List<String> projectFiles;
+	@Nonnull private final List<String> includePaths;
+	@Nonnull private final RootNode rootNode;
+	@Nonnull private final float[] weights;
 
-	private ProjectVersion(String versionName, List<String> projectFiles, List<String> includePaths, RootNode rootNode) {
+	private ProjectVersion(@Nonnull String versionName, @Nonnull List<String> projectFiles,
+			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull float[] weights) {
 		this.versionName = versionName;
 		this.projectFiles = List.copyOf(projectFiles);
 		this.includePaths = List.copyOf(includePaths);
 		this.rootNode = rootNode;
+		this.weights = weights.clone();
 	}
 
-	public static ProjectVersion of(String projectName, List<String> projectFiles, List<String> includePaths, RootNode rootNode) {
-		return new ProjectVersion(projectName, projectFiles, includePaths, rootNode);
+	@Nonnull
+	public static ProjectVersion of(@Nonnull String versionName, @Nonnull List<String> projectFiles,
+			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull float[] weights) {
+		return new ProjectVersion(versionName, projectFiles, includePaths, rootNode, weights);
 	}
 
-	public static ProjectVersion fromInputStream(InputStream inputStream) throws IOException {
+	@Nonnull
+	public static ProjectVersion fromInputStream(@Nonnull InputStream inputStream) throws IOException {
 		final ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 		try {
 			return (ProjectVersion) objectInputStream.readObject();
@@ -38,25 +48,39 @@ public final class ProjectVersion implements Serializable {
 		}
 	}
 
-	public final void toOutputStream(OutputStream outputStream) throws IOException {
+	public final void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
 		final ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 		objectOutputStream.writeObject(this);
 		objectOutputStream.flush();
 	}
 
+	@Nonnull
 	public final String getVersionName() {
 		return versionName;
 	}
 
+	@Nonnull
 	public final List<String> getProjectFiles() {
 		return projectFiles;
 	}
 
+	@Nonnull
 	public final List<String> getIncludePaths() {
 		return includePaths;
 	}
 
+	@Nonnull
 	public final RootNode getRootNode() {
 		return rootNode;
+	}
+
+	@Nonnull
+	public final Map<Node, Float> getWeightMap() {
+		final Map<Node, Float> map = new IdentityHashMap<>();
+		map.put(rootNode, weights[0]); // root id == 0
+		for (final Node node : rootNode) {
+			map.put(node, weights[node.getId()]);
+		}
+		return map;
 	}
 }

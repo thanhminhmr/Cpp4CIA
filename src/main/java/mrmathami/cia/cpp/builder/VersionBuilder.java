@@ -1,34 +1,48 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ProjectVersion;
+import mrmathami.cia.cpp.ast.DependencyType;
+import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
-import mrmathami.cia.cpp.preprocessor.PreprocessorBuilder;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
-import java.io.IOException;
+import javax.annotation.Nonnull;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class VersionBuilder {
 	private VersionBuilder() {
 	}
 
-	private static List<Path> createPathList(List<Path> pathList) throws IOException {
-		final List<Path> includePaths = new ArrayList<>();
-		final Set<Path> includePathSet = new HashSet<>();
+	@Nonnull
+	private static List<Path> createPathList(@Nonnull List<Path> pathList) {
+		final List<Path> paths = new ArrayList<>();
+		final Set<Path> pathSet = new HashSet<>();
 		for (final Path path : pathList) {
-			final Path realPath = path.toRealPath();
-			if (includePathSet.add(realPath)) {
-				includePaths.add(realPath);
+			final Path realPath = path.toAbsolutePath();
+			if (pathSet.add(realPath)) {
+				paths.add(realPath);
 			}
 		}
-		return includePaths;
+		return paths;
 	}
 
-	private static List<Path> createInternalIncludePaths(List<Path> projectFiles) {
+	@Nonnull
+	private static List<String> createRelativePathStrings(@Nonnull List<Path> pathList, Path rootPath) {
+		final List<String> pathStrings = new ArrayList<>();
+		for (final Path path : pathList) {
+			pathStrings.add(rootPath.relativize(path).toString());
+		}
+		return pathStrings;
+	}
+
+	@Nonnull
+	private static List<Path> createInternalIncludePaths(@Nonnull List<Path> projectFiles) {
 		final List<Path> includePaths = new ArrayList<>();
 		final Set<Path> includePathSet = new HashSet<>();
 		for (final Path projectFile : projectFiles) {
@@ -40,7 +54,8 @@ public final class VersionBuilder {
 		return includePaths;
 	}
 
-	private static List<Path> combinePathList(List<Path> pathListA, List<Path> pathListB) {
+	@Nonnull
+	private static List<Path> combinePathList(@Nonnull List<Path> pathListA, List<Path> pathListB) {
 		final List<Path> newList = new ArrayList<>();
 		final Set<Path> newSet = new HashSet<>();
 		for (final Path path : pathListA) if (newSet.add(path)) newList.add(path);
@@ -48,43 +63,74 @@ public final class VersionBuilder {
 		return newList;
 	}
 
-	public static ProjectVersion build(String versionName, Path projectRoot, List<Path> projectFiles, List<Path> includePaths, boolean newWeightMode, VersionBuilderDebugger debugger) {
-		try {
-			final List<Path> projectFileList = createPathList(projectFiles);
-			final List<Path> externalIncludePaths = createPathList(includePaths);
-			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
-			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
-
-			if (debugger != null) debugger.setVersionName(versionName);
-
-			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, debugger != null && debugger.isReadable());
-			if (fileContentCharArray == null) return null;
-
-			if (debugger != null && debugger.isSaveFileContent()) debugger.setFileContent(fileContentCharArray);
-
-			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
-			if (translationUnit == null) return null;
-
-			if (debugger != null && debugger.isSaveTranslationUnit()) debugger.setTranslationUnit(translationUnit);
-
-			final RootNode root = AstBuilder.build(translationUnit, newWeightMode);
-
-			if (debugger != null && debugger.isSaveRoot()) debugger.setRoot(root);
-
-			final Path projectRootPath = projectRoot.toRealPath();
-			final List<String> projectFilePaths = new ArrayList<>();
-			for (final Path path : projectFileList) {
-				projectFilePaths.add(projectRootPath.relativize(path).toString());
+	@Nonnull
+	private static float[] calculateWeights(@Nonnull RootNode rootNode) {
+		final float[] weights = new float[rootNode.getNodeCount()];
+		for (final Node node : rootNode) {
+			float directWeight = 0.0f;
+			for (final Node dependencyNode : node.getAllDependencyFrom()) {
+				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
+					directWeight += entry.getKey().getWeight() * entry.getValue();
+				}
 			}
-			final List<String> projectIncludePaths = new ArrayList<>();
-			for (final Path path : externalIncludePaths) {
-				projectIncludePaths.add(projectRootPath.relativize(path).toString());
-			}
-
-			return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root);
-		} catch (IOException e) {
-			e.printStackTrace();
+			weights[node.getId()] = directWeight;
 		}
-		return null;
+		return weights;
 	}
+
+	@Nonnull
+	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
+			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths) throws CppException {
+		final List<Path> projectFileList = createPathList(projectFiles);
+		final List<Path> externalIncludePaths = createPathList(includePaths);
+		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
+		final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
+
+		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, false);
+
+		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
+
+		final RootNode root = AstBuilder.build(translationUnit);
+
+		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
+		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
+
+		final float[] weights = calculateWeights(root);
+		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
+	}
+
+	//*
+	@Nonnull
+	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
+			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,
+			@Nonnull VersionBuilderDebugger debugger) throws CppException {
+		final List<Path> projectFileList = createPathList(projectFiles);
+		final List<Path> externalIncludePaths = createPathList(includePaths);
+		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
+		final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
+
+		debugger.setVersionName(versionName);
+
+		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList,
+				debugger.isReadable());
+
+		if (debugger.isSaveFileContent()) debugger.setFileContent(fileContentCharArray);
+
+		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
+
+		if (debugger.isSaveTranslationUnit()) debugger.setTranslationUnit(translationUnit);
+
+		final RootNode root = AstBuilder.build(translationUnit);
+
+		if (debugger.isSaveRoot()) debugger.setRoot(root);
+
+		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
+		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
+
+		final float[] weights = calculateWeights(root);
+		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
+	}
+	//*/
 }

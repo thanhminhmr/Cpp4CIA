@@ -10,11 +10,13 @@ public final class UnknownNode extends Node {
 	public UnknownNode() {
 	}
 
-	private void writeObject(ObjectOutputStream objectOutputStream) throws IOException {
+	//<editor-fold desc="Object Helper">
+	private void writeObject(ObjectOutputStream outputStream) throws IOException {
 		throw new IOException("UnknownNode is not Serializable");
 	}
 
-	private void readObject(ObjectInputStream objectInputStream) throws IOException, ClassNotFoundException {
+	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
 		throw new IOException("UnknownNode is not Serializable");
 	}
+	//</editor-fold>
 }

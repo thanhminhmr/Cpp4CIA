@@ -4,10 +4,6 @@ import java.io.Serializable;
 import java.util.Objects;
 
 public interface Pair<A, B> {
-	static <A, B> Pair<A, B> mutableOf() {
-		return new MutablePair<>();
-	}
-
 	static <A, B> Pair<A, B> mutableOf(A a, B b) {
 		return new MutablePair<>(a, b);
 	}
@@ -26,12 +22,9 @@ public interface Pair<A, B> {
 }
 
 final class MutablePair<A, B> implements Pair<A, B>, Serializable {
-	private static final long serialVersionUID = -3474747327908521167L;
+	private static final long serialVersionUID = -2779147635421161888L;
 	private A a;
 	private B b;
-
-	MutablePair() {
-	}
 
 	MutablePair(A a, B b) {
 		this.a = a;
@@ -63,7 +56,7 @@ final class MutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public final boolean equals(Object object) {
+	public boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Pair)) return false;
 		final Pair<?, ?> pair = (Pair<?, ?>) object;
@@ -71,13 +64,8 @@ final class MutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public final int hashCode() {
+	public int hashCode() {
 		return Objects.hash(a, b);
-	}
-
-	@Override
-	public final String toString() {
-		return String.format("{\n\t%s,\n\t%s\n}", a, b);
 	}
 }
 
@@ -112,7 +100,7 @@ final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public final boolean equals(Object object) {
+	public boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Pair)) return false;
 		final Pair<?, ?> pair = (Pair<?, ?>) object;
@@ -120,12 +108,7 @@ final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
 	}
 
 	@Override
-	public final int hashCode() {
+	public int hashCode() {
 		return Objects.hash(a, b);
-	}
-
-	@Override
-	public final String toString() {
-		return String.format("{\n\t%s,\n\t%s\n}", a, b);
 	}
 }

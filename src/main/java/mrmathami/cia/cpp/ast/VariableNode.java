@@ -2,16 +2,15 @@ package mrmathami.cia.cpp.ast;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IBodyContainer<VariableNode>, ITypeContainer<VariableNode> {
 	private static final long serialVersionUID = -4695243239191843968L;
 
-	@Nullable
-	private String body;
-
-	@Nullable
-	private Node type;
+	@Nullable private String body;
+	@Nullable private Node type;
 
 	public VariableNode() {
 	}
@@ -25,6 +24,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	@Nonnull
 	@Override
 	public VariableNode setBody(@Nullable String body) {
+		if (readOnly) throwReadOnly();
 		this.body = body;
 		return this;
 	}
@@ -38,6 +38,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	@Nonnull
 	@Override
 	public final VariableNode setType(@Nullable Node type) {
+		if (readOnly) throwReadOnly();
 		this.type = type;
 		return this;
 	}
@@ -104,6 +105,13 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	@Override
 	protected final String partialTreeElementString() {
 		return ", type: " + type
-				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\"\"") + "\"" : null);
+				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);
 	}
+
+	//<editor-fold desc="Object Helper">
+	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+		outputStream.defaultWriteObject();
+	}
+	//</editor-fold>
 }

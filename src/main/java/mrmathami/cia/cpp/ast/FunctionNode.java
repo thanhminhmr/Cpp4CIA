@@ -4,6 +4,9 @@ import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -14,26 +17,29 @@ import java.util.Objects;
 public final class FunctionNode extends Node implements
 		IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>,
 		IClassContainer, IEnumContainer, IVariableContainer {
-	private static final long serialVersionUID = 4794995746418921391L;
+	private static final long serialVersionUID = 8686443038824913051L;
 
-	@Nonnull
-	private List<Node> parameters = new LinkedList<>();
-
-	@Nullable
-	private String body;
-
-	@Nullable
-	private Node type;
+	@Nonnull private transient List<Node> parameters;
+	@Nullable private String body;
+	@Nullable private Node type;
 
 	public FunctionNode() {
+		this.parameters = new LinkedList<>();
+	}
+
+	@Override
+	protected final void internalLock() {
+		super.internalLock();
+		this.parameters = List.copyOf(parameters);
 	}
 
 	@Nonnull
 	public final List<Node> getParameters() {
-		return Collections.unmodifiableList(parameters);
+		return readOnly ? parameters : Collections.unmodifiableList(parameters);
 	}
 
 	public final boolean addParameters(@Nonnull List<Node> parameters) {
+		if (readOnly) throwReadOnly();
 		for (final Node parameter : parameters) {
 			if (parameter.getParent() != this) return false;
 		}
@@ -41,16 +47,19 @@ public final class FunctionNode extends Node implements
 	}
 
 	public final void removeParameters() {
+		if (readOnly) throwReadOnly();
 		parameters.clear();
 	}
 
 	public final boolean addParameter(@Nonnull Node parameter) {
+		if (readOnly) throwReadOnly();
 		if (parameter.getParent() != this) return false;
 		parameters.add(parameter);
 		return true;
 	}
 
 	public final boolean removeParameter(@Nonnull Node parameter) {
+		if (readOnly) throwReadOnly();
 		return parameters.remove(parameter);
 	}
 
@@ -63,6 +72,7 @@ public final class FunctionNode extends Node implements
 	@Nonnull
 	@Override
 	public final FunctionNode setBody(@Nullable String body) {
+		if (readOnly) throwReadOnly();
 		this.body = body;
 		return this;
 	}
@@ -76,6 +86,7 @@ public final class FunctionNode extends Node implements
 	@Nonnull
 	@Override
 	public final FunctionNode setType(@Nullable Node type) {
+		if (readOnly) throwReadOnly();
 		this.type = type;
 		return this;
 	}
@@ -210,6 +221,20 @@ public final class FunctionNode extends Node implements
 	protected final String partialTreeElementString() {
 		return ", type: " + type
 				+ ", parameters: " + Utilities.collectionToString(parameters)
-				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\"\"") + "\"" : null);
+				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);
 	}
+
+	//<editor-fold desc="Object Helper">
+	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+		outputStream.defaultWriteObject();
+		outputStream.writeObject(List.copyOf(parameters));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
+		inputStream.defaultReadObject();
+		this.parameters = (List<Node>) inputStream.readObject();
+	}
+	//</editor-fold>
 }

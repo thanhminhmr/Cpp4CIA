@@ -9,91 +9,27 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.core.runtime:3.17.100" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.osgi:3.15.200" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.equinox.common:3.11.0" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.core.jobs:3.10.700" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.equinox.registry:3.8.700" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.equinox.preferences:3.7.700" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.core.contenttype:3.7.600" level="project" />
+    <orderEntry type="library" name="Maven: org.eclipse.platform:org.eclipse.equinox.app:1.4.400" level="project" />
     <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.cdt:core:unknown">
+      <library name="Maven: org.eclipse.cdt:core:6.11.0">
         <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.cdt.core_6.6.0.201812101042.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.core:contenttype:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.contenttype_3.7.200.v20181107-1343.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.core:jobs:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.jobs_3.10.200.v20180912-1356.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.core:resources:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.resources_3.13.200.v20181121-1020.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.core:runtime:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.core.runtime_3.15.100.v20181107-1343.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.equinox:common:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.common_3.10.200.v20181021-1645.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.equinox:preferences:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.preferences_3.7.200.v20180827-1235.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.equinox:registry:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.equinox.registry_3.8.200.v20181008-1820.jar!/" />
-        </CLASSES>
-        <JAVADOC />
-        <SOURCES />
-      </library>
-    </orderEntry>
-    <orderEntry type="module-library">
-      <library name="Maven: org.eclipse.osgi:main:unknown">
-        <CLASSES>
-          <root url="jar://$MODULE_DIR$/lib/org.eclipse.osgi_3.13.200.v20181130-2106.jar!/" />
+          <root url="jar://$MODULE_DIR$/lib/org.eclipse.cdt.core_6.11.0.202003081657.jar!/" />
         </CLASSES>
         <JAVADOC />
         <SOURCES />
       </library>
     </orderEntry>
     <orderEntry type="library" name="Maven: com.ibm.icu:icu4j:64.1" level="project" />
-    <orderEntry type="library" name="Maven: com.google.code.findbugs:jsr305:2.0.1" level="project" />
-    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.6" level="project" />
+    <orderEntry type="library" name="Maven: com.google.code.findbugs:jsr305:3.0.2" level="project" />
+    <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.7.30" level="project" />
+    <orderEntry type="library" name="Maven: it.unimi.dsi:fastutil:8.3.1" level="project" />
     <orderEntry type="library" name="Maven: org.ini4j:ini4j:0.5.4" level="project" />
-    <orderEntry type="library" name="Maven: org.xerial:sqlite-jdbc:3.25.2" level="project" />
   </component>
 </module>

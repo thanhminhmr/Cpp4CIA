@@ -25,7 +25,7 @@
       </formatting-settings>
     </DBN-SQL>
     <JavaCodeStyleSettings>
-      <option name="GENERATE_FINAL_PARAMETERS" value="true" />
+      <option name="GENERATE_FINAL_LOCALS" value="true" />
       <option name="DO_NOT_WRAP_AFTER_SINGLE_ANNOTATION" value="true" />
       <option name="CLASS_COUNT_TO_USE_IMPORT_ON_DEMAND" value="99999" />
       <option name="NAMES_COUNT_TO_USE_IMPORT_ON_DEMAND" value="99999" />

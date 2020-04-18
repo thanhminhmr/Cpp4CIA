@@ -1,7 +1,12 @@
 package mrmathami.util;
 
+import java.util.ArrayDeque;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Queue;
 import java.util.function.Function;
 
 public final class Utilities {
@@ -9,10 +14,13 @@ public final class Utilities {
 	}
 
 	public static String objectIdentifyString(Object object) {
-		return object != null ? String.format("%s,0x%08X,0x%08X",
-				object.getClass().getSimpleName(),
-				object.hashCode(),
-				System.identityHashCode(object)) : "null";
+		if (object == null) return "null";
+		final String simpleName = object.getClass().getSimpleName();
+		final int objectHashCode = object.hashCode();
+		final int systemHashCode = System.identityHashCode(object);
+		return objectHashCode != systemHashCode
+				? String.format("%s,0x%08X,0x%08X", simpleName, objectHashCode, systemHashCode)
+				: String.format("%s,0x%08X", simpleName, objectHashCode);
 	}
 
 	public static <K, V> String mapToString(Map<K, V> map) {

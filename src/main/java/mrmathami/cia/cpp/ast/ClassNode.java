@@ -4,26 +4,36 @@ import mrmathami.util.Utilities;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -1051919167344144719L;
+	private static final long serialVersionUID = -5405272386634344352L;
 
-	@Nonnull
-	private Set<Node> bases = new HashSet<>();
+	@Nonnull private transient Set<Node> bases;
 
 	public ClassNode() {
+		this.bases = new HashSet<>();
+	}
+
+	@Override
+	protected final void internalLock() {
+		super.internalLock();
+		this.bases = Set.copyOf(bases);
 	}
 
 	@Nonnull
 	public final Set<Node> getBases() {
-		return Collections.unmodifiableSet(bases);
+		return readOnly ? bases : Collections.unmodifiableSet(bases);
 	}
 
 	public final boolean addBases(@Nonnull Set<Node> bases) {
+		if (readOnly) throwReadOnly();
 		final Node rootNode = getRoot();
 		for (final Node base : bases) {
 			if (rootNode != base) return false;
@@ -32,14 +42,17 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	}
 
 	public final void removeBases() {
+		if (readOnly) throwReadOnly();
 		bases.clear();
 	}
 
 	public final boolean addBase(@Nonnull Node base) {
+		if (readOnly) throwReadOnly();
 		return getRoot() == base.getRoot() && bases.add(base);
 	}
 
 	public final boolean removeBase(@Nonnull Node base) {
+		if (readOnly) throwReadOnly();
 		return bases.remove(base);
 	}
 
@@ -116,4 +129,18 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	protected final String partialTreeElementString() {
 		return ", bases: " + Utilities.collectionToString(bases);
 	}
+
+	//<editor-fold desc="Object Helper">
+	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+		outputStream.defaultWriteObject();
+		outputStream.writeObject(Set.copyOf(bases));
+	}
+
+	@SuppressWarnings("unchecked")
+	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
+		inputStream.defaultReadObject();
+		this.bases = (Set<Node>) inputStream.readObject();
+	}
+	//</editor-fold>
 }
