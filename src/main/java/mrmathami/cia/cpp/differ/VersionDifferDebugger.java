@@ -18,7 +18,7 @@ public final class VersionDifferDebugger {
 
 	public static void debugOutput(Path outputPath, ProjectVersion projectVersionA, ProjectVersion projectVersionB,
 			Set<Node> addedNodes, Set<Node> removedNodes, Set<Pair<Node, Node>> changedNodes,
-			Set<Pair<Node, Node>> unchangedNodes, Map<Node, Float> impactWeights) {
+			Set<Pair<Node, Node>> unchangedNodes, Map<Node, Double> impactWeights) {
 
 		try (final FileWriter fileWriter = new FileWriter(outputPath.resolve("VersionDifference-"
 				+ projectVersionA.getVersionName() + "-" + projectVersionB.getVersionName() + ".log").toString())) {
@@ -31,7 +31,7 @@ public final class VersionDifferDebugger {
 			fileWriter.write("\n\nUnchanged nodes:\n");
 			fileWriter.write(Utilities.collectionToString(unchangedNodes));
 			fileWriter.write("\n\nImpact weights:\n");
-			for (final Map.Entry<Node, Float> entry : impactWeights.entrySet()) {
+			for (final Map.Entry<Node, Double> entry : impactWeights.entrySet()) {
 				fileWriter.write(entry.getValue() + ", " + entry.getKey().toString() + "\n");
 			}
 
