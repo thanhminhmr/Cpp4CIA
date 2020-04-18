@@ -106,11 +106,11 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final VersionDifferDebugger debugger = new VersionDifferDebugger();
+		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2);
 
-		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, debugger);
-
-		debugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
+		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), projectVersion, projectVersion2,
+				difference.getAddedNodes(), difference.getRemovedNodes(), difference.getChangedNodes(),
+				difference.getUnchangedNodes(), difference.getImpactMap());
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project1_project2.prjcmp")) {

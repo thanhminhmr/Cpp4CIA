@@ -15,16 +15,16 @@ import java.util.List;
 import java.util.Map;
 
 public final class ProjectVersion implements Serializable {
-	private static final long serialVersionUID = 5381252081002383232L;
+	private static final long serialVersionUID = -8512661157548869855L;
 
 	@Nonnull private final String versionName;
 	@Nonnull private final List<String> projectFiles;
 	@Nonnull private final List<String> includePaths;
 	@Nonnull private final RootNode rootNode;
-	@Nonnull private final float[] weights;
+	@Nonnull private final double[] weights;
 
 	private ProjectVersion(@Nonnull String versionName, @Nonnull List<String> projectFiles,
-			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull float[] weights) {
+			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull double[] weights) {
 		this.versionName = versionName;
 		this.projectFiles = List.copyOf(projectFiles);
 		this.includePaths = List.copyOf(includePaths);
@@ -34,7 +34,7 @@ public final class ProjectVersion implements Serializable {
 
 	@Nonnull
 	public static ProjectVersion of(@Nonnull String versionName, @Nonnull List<String> projectFiles,
-			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull float[] weights) {
+			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode, @Nonnull double[] weights) {
 		return new ProjectVersion(versionName, projectFiles, includePaths, rootNode, weights);
 	}
 
@@ -75,8 +75,8 @@ public final class ProjectVersion implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<Node, Float> getWeightMap() {
-		final Map<Node, Float> map = new IdentityHashMap<>();
+	public final Map<Node, Double> getWeightMap() {
+		final Map<Node, Double> map = new IdentityHashMap<>();
 		map.put(rootNode, weights[0]); // root id == 0
 		for (final Node node : rootNode) {
 			map.put(node, weights[node.getId()]);

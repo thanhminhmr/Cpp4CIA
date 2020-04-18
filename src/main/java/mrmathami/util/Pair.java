@@ -22,7 +22,7 @@ public interface Pair<A, B> {
 }
 
 final class MutablePair<A, B> implements Pair<A, B>, Serializable {
-	private static final long serialVersionUID = -2779147635421161888L;
+	private static final long serialVersionUID = -2676338617412928967L;
 	private A a;
 	private B b;
 
@@ -67,10 +67,15 @@ final class MutablePair<A, B> implements Pair<A, B>, Serializable {
 	public int hashCode() {
 		return Objects.hash(a, b);
 	}
+
+	@Override
+	public final String toString() {
+		return "{ " + a + ", " + b + " }";
+	}
 }
 
 final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
-	private static final long serialVersionUID = 3378137172841751050L;
+	private static final long serialVersionUID = -5754354982430162054L;
 	private final A a;
 	private final B b;
 
@@ -110,5 +115,10 @@ final class ImmutablePair<A, B> implements Pair<A, B>, Serializable {
 	@Override
 	public int hashCode() {
 		return Objects.hash(a, b);
+	}
+
+	@Override
+	public final String toString() {
+		return "{ " + a + ", " + b + " }";
 	}
 }

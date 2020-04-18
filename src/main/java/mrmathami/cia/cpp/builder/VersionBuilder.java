@@ -64,10 +64,10 @@ public final class VersionBuilder {
 	}
 
 	@Nonnull
-	private static float[] calculateWeights(@Nonnull RootNode rootNode) {
-		final float[] weights = new float[rootNode.getNodeCount()];
+	private static double[] calculateWeights(@Nonnull RootNode rootNode) {
+		final double[] weights = new double[rootNode.getNodeCount()];
 		for (final Node node : rootNode) {
-			float directWeight = 0.0f;
+			double directWeight = 0.0f;
 			for (final Node dependencyNode : node.getAllDependencyFrom()) {
 				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
 					directWeight += entry.getKey().getWeight() * entry.getValue();
@@ -96,7 +96,7 @@ public final class VersionBuilder {
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final float[] weights = calculateWeights(root);
+		final double[] weights = calculateWeights(root);
 		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
 	}
 
@@ -129,7 +129,7 @@ public final class VersionBuilder {
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final float[] weights = calculateWeights(root);
+		final double[] weights = calculateWeights(root);
 		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
 	}
 	//*/

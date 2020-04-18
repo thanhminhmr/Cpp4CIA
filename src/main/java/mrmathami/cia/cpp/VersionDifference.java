@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
-	private static final long serialVersionUID = -2821155531224654154L;
+	private static final long serialVersionUID = 3954976070986020324L;
 
 	@Nonnull private final ProjectVersion versionA;
 	@Nonnull private final ProjectVersion versionB;
@@ -24,12 +24,12 @@ public final class VersionDifference implements Serializable {
 	@Nonnull private final Set<Pair<Node, Node>> changedNodes;
 	@Nonnull private final Set<Pair<Node, Node>> unchangedNodes;
 	@Nonnull private final Set<Node> removedNodes;
-	@Nonnull private final float[] impactWeights;
+	@Nonnull private final double[] impactWeights;
 
 	private VersionDifference(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
 			@Nonnull Set<Node> addedNodes, @Nonnull Set<Pair<Node, Node>> changedNodes,
 			@Nonnull Set<Pair<Node, Node>> unchangedNodes, @Nonnull Set<Node> removedNodes,
-			@Nonnull float[] impactWeights) {
+			@Nonnull double[] impactWeights) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = Set.copyOf(addedNodes);
@@ -43,7 +43,7 @@ public final class VersionDifference implements Serializable {
 	public static VersionDifference of(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
 			@Nonnull Set<Node> addedNodes, @Nonnull Set<Pair<Node, Node>> changedNodes,
 			@Nonnull Set<Pair<Node, Node>> unchangedNodes, @Nonnull Set<Node> removedNodes,
-			@Nonnull float[] impactWeights) {
+			@Nonnull double[] impactWeights) {
 		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, impactWeights);
 	}
 
@@ -94,8 +94,8 @@ public final class VersionDifference implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<Node, Float> getImpactMap() {
-		final Map<Node, Float> map = new IdentityHashMap<>();
+	public final Map<Node, Double> getImpactMap() {
+		final Map<Node, Double> map = new IdentityHashMap<>();
 		final RootNode rootNode = versionB.getRootNode();
 		map.put(rootNode, impactWeights[0]); // root id == 0
 		for (final Node node : rootNode) map.put(node, impactWeights[node.getId()]);

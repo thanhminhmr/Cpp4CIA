@@ -26,7 +26,7 @@ public interface Triple<A, B, C> {
 }
 
 final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
-	private static final long serialVersionUID = -7284554263674052927L;
+	private static final long serialVersionUID = -4622230648901699471L;
 	private A a;
 	private B b;
 	private C c;
@@ -85,10 +85,15 @@ final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	public int hashCode() {
 		return Objects.hash(a, b, c);
 	}
+
+	@Override
+	public final String toString() {
+		return "{ " + a + ", " + b + ", " + c + " }";
+	}
 }
 
 final class ImmutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
-	private static final long serialVersionUID = -8961373889182803629L;
+	private static final long serialVersionUID = 1279580388589425867L;
 	private final A a;
 	private final B b;
 	private final C c;
@@ -140,5 +145,10 @@ final class ImmutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	@Override
 	public int hashCode() {
 		return Objects.hash(a, b, c);
+	}
+
+	@Override
+	public final String toString() {
+		return "{ " + a + ", " + b + ", " + c + " }";
 	}
 }

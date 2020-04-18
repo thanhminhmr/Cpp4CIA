@@ -9,7 +9,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
@@ -42,7 +41,7 @@ final class ImpactWeightBuilder {
 	}
 
 	@Nonnull
-	private static Callable<float[]> createSingleCalculateTask(@Nonnull RootNode rootNode, @Nonnull Node changedNode) {
+	private static Callable<double[]> createSingleCalculateTask(@Nonnull RootNode rootNode, @Nonnull Node changedNode) {
 		return () -> {
 			// todo: should we use LinkedHashSet for O(1) tracing? Or just simple linked pointer with O(n) contains check would be enough?
 			final int nodeCount = rootNode.getNodeCount();
@@ -60,37 +59,39 @@ final class ImpactWeightBuilder {
 						if (!path.contains(nextNode)) {
 							/* TODO: use a proper value for linkWeight */
 							nextPaths.add(ImpactPath.next(path, nextNode, 0.2f));
-							queue.add(nextNode);
+							if (!queue.contains(nextNode)) queue.add(nextNode);
 						}
 					}
 				}
 			}
 
-			final float[] weights = new float[nodeCount];
+			final double[] weights = new double[nodeCount];
 			for (final ImpactPaths paths : pathLists) {
-				final Node node = paths.currentNode;
-				final int nodeId = node.getId();
-				float weight = 1.0f;
-				for (final ImpactPath path : paths) weight *= 1.0f - path.pathWeight;
-				weights[nodeId] = 1.0f - weight;
+				if (paths != null) {
+					final Node node = paths.currentNode;
+					final int nodeId = node.getId();
+					double weight = 1.0f;
+					for (final ImpactPath path : paths) weight *= 1.0f - path.pathWeight;
+					weights[nodeId] = 1.0f - weight;
+				}
 			}
 			return weights;
 		};
 	}
 
 	@Nonnull
-	static float[] calculateWeights(@Nonnull RootNode rootNode, @Nonnull List<Node> changedNodes) throws CppException {
-		final ArrayList<Callable<float[]>> tasks = new ArrayList<>(changedNodes.size());
+	static double[] calculate(@Nonnull RootNode rootNode, @Nonnull List<Node> changedNodes) throws CppException {
+		final ArrayList<Callable<double[]>> tasks = new ArrayList<>(changedNodes.size());
 		for (final Node node : changedNodes) tasks.add(createSingleCalculateTask(rootNode, node));
 
 		final int nodeCount = rootNode.getNodeCount();
-		final float[] weights = new float[nodeCount];
+		final double[] weights = new double[nodeCount];
 		Arrays.fill(weights, 1.0f);
 
 		try {
-			final List<Future<float[]>> futures = EXECUTOR_SERVICE.invokeAll(tasks);
-			for (final Future<float[]> future : futures) {
-				final float[] singleWeights = future.get();
+			final List<Future<double[]>> futures = EXECUTOR_SERVICE.invokeAll(tasks);
+			for (final Future<double[]> future : futures) {
+				final double[] singleWeights = future.get();
 				for (int i = 0; i < nodeCount; i++) weights[i] *= 1.0f - singleWeights[i];
 			}
 		} catch (InterruptedException | ExecutionException e) {
@@ -101,18 +102,17 @@ final class ImpactWeightBuilder {
 		return weights;
 	}
 
+	/*
 	private static final class ImpactPath extends LinkedHashSet<Node> {
-		private final float pathWeight;
+		private final double pathWeight;
 
 		private ImpactPath(@Nonnull Node start) {
 			this.pathWeight = 1.0f;
-			add(start);
 		}
 
-		private ImpactPath(@Nonnull ImpactPath path, @Nonnull Node next, float pathWeight) {
+		private ImpactPath(@Nonnull ImpactPath path, @Nonnull Node next, double pathWeight) {
 			super(path);
 			this.pathWeight = pathWeight;
-			add(next);
 		}
 
 		@Nonnull
@@ -120,12 +120,49 @@ final class ImpactWeightBuilder {
 			return new ImpactPath(start);
 		}
 
-		@Nullable
-		private static ImpactPath next(@Nonnull ImpactPath path, @Nonnull Node next, float linkWeight) {
-			return path.contains(next) ? null : new ImpactPath(path, next, path.pathWeight * linkWeight);
+		@Nonnull
+		private static ImpactPath next(@Nonnull ImpactPath path, @Nonnull Node next, double linkWeight) {
+			return new ImpactPath(path, next, path.pathWeight * linkWeight);
 		}
 	}
+	/*/
+	private static final class ImpactPath {
+		@Nullable private final ImpactPath previousPath;
+		@Nonnull private final Node currentNode;
+		private final double pathWeight;
 
+		private ImpactPath(@Nonnull Node start) {
+			this.previousPath = null;
+			this.currentNode = start;
+			this.pathWeight = 1.0f;
+		}
+
+		private ImpactPath(@Nonnull ImpactPath path, @Nonnull Node next, double pathWeight) {
+			this.previousPath = path;
+			this.currentNode = next;
+			this.pathWeight = pathWeight;
+		}
+
+		@Nonnull
+		private static ImpactPath start(@Nonnull Node start) {
+			return new ImpactPath(start);
+		}
+
+		@Nonnull
+		private static ImpactPath next(@Nonnull ImpactPath path, @Nonnull Node next, double linkWeight) {
+			return new ImpactPath(path, next, path.pathWeight * linkWeight);
+		}
+
+		private boolean contains(@Nonnull Node node) {
+			ImpactPath path = this;
+			while (path.currentNode != node) {
+				path = path.previousPath;
+				if (path == null) return false;
+			}
+			return true;
+		}
+	}
+	//*/
 	private static final class ImpactPaths extends LinkedList<ImpactPath> {
 		@Nonnull private final Node currentNode;
 
