@@ -33,6 +33,7 @@ import org.eclipse.cdt.core.dom.ast.IProblemBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTAliasDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorChainInitializer;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDeclarator;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTEnumerationSpecifier;
@@ -297,7 +298,7 @@ final class AstBuilder {
 				}
 			}
 			// endregion
-	 			return functionNode;
+			return functionNode;
 		} else if (declarator instanceof ICPPASTDeclarator) {
 			// region
 			final Node variableNode = createNode(declaratorBinding, declaratorName, signature, new VariableNode().setType(typeNode));
@@ -330,19 +331,31 @@ final class AstBuilder {
 
 			final Node enumNode = createNode(enumerationBinding, enumerationName, signature, new EnumNode());
 
-			final Node nodeType = enumerationSpecifier.isScoped() ? enumNode : null;
+			final ICPPASTDeclSpecifier enumBaseType = enumerationSpecifier.getBaseType();
+			final Node baseType = enumBaseType != null ? createFromDeclSpecifier(enumNode, enumBaseType) : null;
+
+			final Node nodeType = enumerationSpecifier.isScoped() ? enumNode : baseType;
+			final StringBuilder bodyBuilder = enumNode.getName().isBlank() ? new StringBuilder() : null;
 			for (final IASTEnumerationSpecifier.IASTEnumerator enumerator : enumerationSpecifier.getEnumerators()) {
 				final IASTName enumeratorName = enumerator.getName();
 				final IBinding enumeratorBinding = enumeratorName.resolveBinding();
 
 				final Node enumeratorNode = createNode(enumeratorBinding, enumeratorName, null, new VariableNode().setType(nodeType));
+				if (bodyBuilder != null) {
+					bodyBuilder.append(bodyBuilder.length() > 0 ? ',' : "enum{")
+							.append(enumeratorNode.getName());
+				}
 
 				enumNode.addChild(enumeratorNode);
 				enumNode.addDependencyTo(enumeratorNode, DependencyType.MEMBER);
 			}
-			// endregion
+			if (enumNode instanceof EnumNode) {
+				((EnumNode) enumNode).setType(baseType);
+				if (bodyBuilder != null) enumNode.setName(bodyBuilder.append('}').toString());
+			}
 			parentNode.addChild(enumNode);
 			parentNode.addDependencyTo(enumNode, DependencyType.MEMBER);
+			// endregion
 			return enumNode;
 		} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
 			// region
@@ -351,11 +364,21 @@ final class AstBuilder {
 			final IBinding classBinding = className.resolveBinding();
 
 			final Node classNode = createNode(classBinding, className, signature, new ClassNode());
-			if (classNode.getParent() == null) {
-				parentNode.addChild(classNode);
-				parentNode.addDependencyTo(classNode, DependencyType.MEMBER);
+			final StringBuilder bodyBuilder = classNode.getName().isBlank()
+					? new StringBuilder().append(classNode.getSignature()).append('{')
+					: null;
+			for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
+				final List<Node> nodeList = createChildrenFromDeclaration(classNode, classChildDeclaration);
+				if (bodyBuilder != null) {
+					for (final Node node : nodeList) {
+						bodyBuilder.append(node.getName()).append(';');
+					}
+				}
 			}
 			if (classNode instanceof ClassNode) {
+				if (bodyBuilder!= null) {
+					classNode.setName(bodyBuilder.append('}').toString());
+				}
 				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
 					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
 					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
@@ -365,8 +388,9 @@ final class AstBuilder {
 					classNode.addDependencyTo(classBaseNode, DependencyType.INHERITANCE);
 				}
 			}
-			for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
-				createChildrenFromDeclaration(classNode, classChildDeclaration);
+			if (classNode.getParent() == null) {
+				parentNode.addChild(classNode);
+				parentNode.addDependencyTo(classNode, DependencyType.MEMBER);
 			}
 			// endregion
 			return classNode;

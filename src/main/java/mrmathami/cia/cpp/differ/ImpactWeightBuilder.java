@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 final class ImpactWeightBuilder {
 	@Nonnull private static final ExecutorService EXECUTOR_SERVICE =
-			new ThreadPoolExecutor(0, 1, // Runtime.getRuntime().availableProcessors(),
+			new ThreadPoolExecutor(0, Runtime.getRuntime().availableProcessors(),
 					1, TimeUnit.MINUTES, new LinkedBlockingQueue<>(),
 					new ThreadFactoryBuilder().setNamePrefix("ImpactWeightBuilder").setDaemon(true).build()
 			);
