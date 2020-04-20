@@ -67,7 +67,7 @@ public final class VersionBuilder {
 	private static double[] calculateWeights(@Nonnull RootNode rootNode) {
 		final double[] weights = new double[rootNode.getNodeCount()];
 		for (final Node node : rootNode) {
-			double directWeight = 0.0f;
+			double directWeight = 0.0;
 			for (final Node dependencyNode : node.getAllDependencyFrom()) {
 				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
 					directWeight += entry.getKey().getWeight() * entry.getValue();

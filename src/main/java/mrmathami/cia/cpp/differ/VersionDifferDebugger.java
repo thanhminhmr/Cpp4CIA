@@ -9,8 +9,14 @@ import mrmathami.util.Utilities;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 public final class VersionDifferDebugger {
 	private VersionDifferDebugger() {
@@ -31,8 +37,14 @@ public final class VersionDifferDebugger {
 			fileWriter.write("\n\nUnchanged nodes:\n");
 			fileWriter.write(Utilities.collectionToString(unchangedNodes));
 			fileWriter.write("\n\nImpact weights:\n");
+
+			final List<Pair<Node, Double>> list = new ArrayList<>(impactWeights.size());
 			for (final Map.Entry<Node, Double> entry : impactWeights.entrySet()) {
-				fileWriter.write(entry.getValue() + ", " + entry.getKey().toString() + "\n");
+				list.add(Pair.immutableOf(entry.getKey(), entry.getValue()));
+			}
+			list.sort((o1, o2) -> Double.compare(o2.getB(), o1.getB()));
+			for (final Pair<Node, Double> pair : list) {
+				fileWriter.write(String.format("%.8f, %s\n", pair.getB(), pair.getA()));
 			}
 
 		} catch (IOException e) {

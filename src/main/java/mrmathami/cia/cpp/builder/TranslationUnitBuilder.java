@@ -85,7 +85,7 @@ final class TranslationUnitBuilder {
 
 	@Nonnull
 	static IASTTranslationUnit build(@Nonnull char[] fileContentChars) throws CppException {
-		final FileContent fileContent = FileContent.create("ROOT", fileContentChars);
+		final FileContent fileContent = FileContent.create("##ROOT##", fileContentChars);
 		try {
 			return GPP_LANGUAGE.getASTTranslationUnit(fileContent, SCANNER_INFO, EMPTY_PROVIDER, null,
 					ILanguage.OPTION_NO_IMAGE_LOCATIONS

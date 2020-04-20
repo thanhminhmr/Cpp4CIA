@@ -1,21 +1,21 @@
 package mrmathami.cia.cpp.ast;
 
 public enum DependencyType {
-	USE(4.0f),
-	MEMBER(3.0f),
-	INHERITANCE(4.0f),
-	INVOCATION(3.5f),
-	OVERRIDE(3.3f);
+	USE(4.0),
+	MEMBER(3.0),
+	INHERITANCE(4.0),
+	INVOCATION(3.5),
+	OVERRIDE(3.3);
 
 	static final DependencyType[] values = DependencyType.values();
 
-	private final float weight;
+	private final double weight;
 
-	DependencyType(float weight) {
+	DependencyType(double weight) {
 		this.weight = weight;
 	}
 
-	public float getWeight() {
+	public double getWeight() {
 		return weight;
 	}
 }

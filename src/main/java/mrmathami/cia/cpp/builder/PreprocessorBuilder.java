@@ -17,8 +17,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-final class PreprocessorBuilder implements PreprocessorListener {
-	@Nonnull private static final PreprocessorBuilder EMPTY_PREPROCESSOR_LISTENER = new PreprocessorBuilder();
+final class PreprocessorBuilder {
+	@Nonnull private static final PreprocessorListener EMPTY_PREPROCESSOR_LISTENER = new PreprocessorListener() {
+		@Override
+		public void handleWarning(@Nonnull Source source, int line, int column, @Nonnull String msg) {
+//		System.out.println(source.getName() + ":" + line + ":" + column + ": warning: " + msg);
+		}
+
+		@Override
+		public void handleError(@Nonnull Source source, int line, int column, @Nonnull String msg) {
+//		System.out.println(source.getName() + ":" + line + ":" + column + ": error: " + msg);
+		}
+
+		@Override
+		public void handleSourceChange(@Nonnull Source source, @Nonnull SourceChangeEvent event) {
+		}
+	};
 
 	private PreprocessorBuilder() {
 	}
@@ -188,19 +202,5 @@ final class PreprocessorBuilder implements PreprocessorListener {
 			}
 		}
 		fileContent.append('\n');
-	}
-
-	@Override
-	public void handleWarning(@Nonnull Source source, int line, int column, @Nonnull String msg) {
-//		System.out.println(source.getName() + ":" + line + ":" + column + ": warning: " + msg);
-	}
-
-	@Override
-	public void handleError(@Nonnull Source source, int line, int column, @Nonnull String msg) {
-//		System.out.println(source.getName() + ":" + line + ":" + column + ": error: " + msg);
-	}
-
-	@Override
-	public void handleSourceChange(@Nonnull Source source, @Nonnull SourceChangeEvent event) {
 	}
 }

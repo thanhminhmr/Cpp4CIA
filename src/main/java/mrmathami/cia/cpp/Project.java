@@ -1,5 +1,6 @@
 package mrmathami.cia.cpp;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -11,21 +12,23 @@ import java.util.List;
 public final class Project implements Serializable {
 	private static final long serialVersionUID = 4397888814551456285L;
 
-	private final String projectName;
-	private final List<ProjectVersion> versionList;
-	private final List<VersionDifference> differenceList;
+	@Nonnull private final String projectName;
+	@Nonnull private final List<ProjectVersion> versionList;
+	@Nonnull private final List<VersionDifference> differenceList;
 
-	private Project(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
+	private Project(@Nonnull String projectName, @Nonnull List<ProjectVersion> versionList, @Nonnull List<VersionDifference> differenceList) {
 		this.projectName = projectName;
 		this.versionList = List.copyOf(versionList);
 		this.differenceList = List.copyOf(differenceList);
 	}
 
-	public static Project of(String projectName, List<ProjectVersion> versionList, List<VersionDifference> differenceList) {
+	@Nonnull
+	public static Project of(@Nonnull String projectName, @Nonnull List<ProjectVersion> versionList, @Nonnull List<VersionDifference> differenceList) {
 		return new Project(projectName, versionList, differenceList);
 	}
 
-	public static Project fromInputStream(InputStream inputStream) throws IOException {
+	@Nonnull
+	public static Project fromInputStream(@Nonnull InputStream inputStream) throws IOException {
 		final ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
 		try {
 			return (Project) objectInputStream.readObject();
@@ -34,20 +37,23 @@ public final class Project implements Serializable {
 		}
 	}
 
-	public final void toOutputStream(OutputStream outputStream) throws IOException {
+	public final void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
 		final ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 		objectOutputStream.writeObject(this);
 		objectOutputStream.flush();
 	}
 
+	@Nonnull
 	public final String getProjectName() {
 		return projectName;
 	}
 
+	@Nonnull
 	public final List<ProjectVersion> getVersionList() {
 		return versionList;
 	}
 
+	@Nonnull
 	public final List<VersionDifference> getDifferenceList() {
 		return differenceList;
 	}

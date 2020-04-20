@@ -250,7 +250,7 @@ final class AstBuilder {
 				binding != null ? binding.toString() : null
 		);
 		final String uniqueName = firstNonBlank(binding instanceof ICPPBinding
-				? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("^\\{ROOT:\\d+}", "{ROOT}")
+				? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("\\{##ROOT##:\\d+}", "{ROOT}")
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
 
 		final Node newNode = buildingNode instanceof UnknownNode && binding instanceof IProblemBinding
@@ -297,20 +297,20 @@ final class AstBuilder {
 				}
 			}
 			// endregion
-			return functionNode;
+	 			return functionNode;
 		} else if (declarator instanceof ICPPASTDeclarator) {
 			// region
-			final Node node = createNode(declaratorBinding, declaratorName, signature, new VariableNode().setType(typeNode));
+			final Node variableNode = createNode(declaratorBinding, declaratorName, signature, new VariableNode().setType(typeNode));
 			final IASTInitializer initializer = declarator.getInitializer();
 			if (initializer != null) {
-				childrenCreationQueue.add(Pair.mutableOf(node, initializer));
+				childrenCreationQueue.add(Pair.mutableOf(variableNode, initializer));
 				//createChildrenFromAstNode(node, initializer);
-				if (node instanceof VariableNode) {
-					((VariableNode) node).setBody(initializer.getRawSignature());
+				if (variableNode instanceof VariableNode) {
+					((VariableNode) variableNode).setBody(initializer.getRawSignature());
 				}
 			}
 			// endregion
-			return node;
+			return variableNode;
 		} else {
 			// todo: debug?
 			throw new IllegalArgumentException("createFromDeclarator(typeNode = (" + Utilities.objectIdentifyString(typeNode)
@@ -431,9 +431,9 @@ final class AstBuilder {
 			final IBinding simpleBinding = simpleName.resolveBinding();
 
 			//noinspection UnnecessaryLocalVariable
-			final Node simpleNode = createNode(simpleBinding, simpleName, null, new VariableNode());
+			final Node variableNode = createNode(simpleBinding, simpleName, null, new VariableNode());
 
-			return simpleNode;
+			return variableNode;
 		} else if (templateParameter instanceof ICPPASTTemplatedTypeTemplateParameter) {
 			final ICPPASTTemplatedTypeTemplateParameter nestedTemplateParameter = (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
 			final IASTName nestedTemplateName = nestedTemplateParameter.getName();
@@ -587,6 +587,7 @@ final class AstBuilder {
 			}
 
 			final IASTDeclaration innerDeclaration = templateDeclaration.getDeclaration();
+			//noinspection UnnecessaryLocalVariable
 			final List<Node> innerNodeList = createChildrenFromDeclaration(parentNode, innerDeclaration);
 
 //			for (final Node innerNode : innerNodeList) {
