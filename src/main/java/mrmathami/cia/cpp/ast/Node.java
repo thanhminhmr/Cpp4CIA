@@ -16,6 +16,7 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,7 @@ import java.util.Stack;
  * Base of AST Tree.
  */
 public abstract class Node implements Serializable, Iterable<Node> {
-	private static final long serialVersionUID = -3422385854192173363L;
+	private static final long serialVersionUID = -4312085225305723074L;
 
 	@Nonnull private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
@@ -748,7 +749,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	public boolean transfer(@Nonnull Node node) {
 		if (readOnly) throwReadOnly();
 		// check if current node is root node or child node is not root node
-		if (getRoot() == node.getRoot()) return false;
+		assert getRoot() == node.getRoot();
 		getRoot().internalTransferRecursive(this, node);
 		transferAllDependency(node);
 		if (!children.isEmpty()) {
@@ -761,15 +762,17 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		return true;
 	}
 
-	private void internalTransferRecursive(@Nonnull Node fromNode, @Nullable Node toNode) {
+	private boolean internalTransferRecursive(@Nonnull Node fromNode, @Nullable Node toNode) {
 		// todo: link
-		this.internalOnTransfer(fromNode, toNode);
+		boolean value = this.internalOnTransfer(fromNode, toNode);
 		for (final Node child : children) {
-			child.internalTransferRecursive(fromNode, toNode);
+			value |= child.internalTransferRecursive(fromNode, toNode);
 		}
+		return value;
 	}
 
-	protected void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	protected boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		return false;
 	}
 
 	//<editor-fold desc="toString">

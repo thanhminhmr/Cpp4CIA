@@ -18,20 +18,29 @@ public final class DifferTest {
 //		System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714");
+		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
+		debugger.setSaveFileContent(true);
+		debugger.setSaveTranslationUnit(true);
+		debugger.setSaveRoot(true);
+
+		// ==========
+//		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714");
+//		final List<Path> projectFiles =
+//				List.of(
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\zpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\libzpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\libzpaq.h")
+//				);
+
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0");
 		final List<Path> projectFiles =
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\zpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\libzpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714\\libzpaq.h")
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\main.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.h")
 				);
 
 		final List<Path> includePaths = List.of();
-
-		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
-		debugger.setSaveFileContent(true);
-		debugger.setSaveTranslationUnit(false);
-		debugger.setSaveRoot(true);
 
 		final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, debugger);
 
@@ -39,13 +48,21 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
+		// ==========
+//		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715");
+//		final List<Path> projectFiles2 =
+//				List.of(
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\zpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.h")
+//				);
 
-		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715");
+		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.1");
 		final List<Path> projectFiles2 =
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\zpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.h")
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.1\\main.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
+						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.1\\TinyEXIF.h")
 				);
 
 		final List<Path> includePaths2 = List.of();
@@ -55,6 +72,7 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
+		// ==========
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 

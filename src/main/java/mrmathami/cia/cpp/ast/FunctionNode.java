@@ -14,9 +14,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements
-		IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>,
-		IClassContainer, IEnumContainer, IVariableContainer {
+public final class FunctionNode extends Node implements IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>, IClassContainer, IEnumContainer, IVariableContainer {
 	private static final long serialVersionUID = 8686443038824913051L;
 
 	@Nonnull private transient List<Node> parameters;
@@ -40,9 +38,6 @@ public final class FunctionNode extends Node implements
 
 	public final boolean addParameters(@Nonnull List<Node> parameters) {
 		if (readOnly) throwReadOnly();
-		for (final Node parameter : parameters) {
-			if (parameter.getParent() != this) return false;
-		}
 		return this.parameters.addAll(parameters);
 	}
 
@@ -53,7 +48,6 @@ public final class FunctionNode extends Node implements
 
 	public final boolean addParameter(@Nonnull Node parameter) {
 		if (readOnly) throwReadOnly();
-		if (parameter.getParent() != this) return false;
 		parameters.add(parameter);
 		return true;
 	}
@@ -202,19 +196,24 @@ public final class FunctionNode extends Node implements
 	//</editor-fold>
 
 	@Override
-	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
-		if (type == fromNode) this.type = toNode;
+	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		boolean value = false;
+		if (type == fromNode) {
+			this.type = toNode;
+			value = true;
+		}
 		final ListIterator<Node> iterator = parameters.listIterator();
 		while (iterator.hasNext()) {
 			if (iterator.next() == fromNode) {
+				value = true;
 				if (toNode != null) {
 					iterator.set(toNode);
 				} else {
 					iterator.remove();
 				}
-				break;
 			}
 		}
+		return value;
 	}
 
 	@Nonnull

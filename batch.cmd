@@ -8,7 +8,7 @@ ECHO. > config.txt
 ECHO [Project] >> config.txt
 ECHO projectName=%projectName% >> config.txt
 IF DEFINED outputFile ECHO outputFile=Project-%projectName%.Project >> config.txt
-ECHO exportDatabase=Project-%projectName%.sqLite >> config.txt
+ECHO exportFile=Project-%projectName%.project >> config.txt
 
 CD _git >> NUL 2>&1
 git checkout --quiet master

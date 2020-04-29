@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -5405272386634344352L;
+	private static final long serialVersionUID = -3274284100649441324L;
 
 	@Nonnull private transient Set<Node> bases;
 
@@ -34,10 +34,6 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 
 	public final boolean addBases(@Nonnull Set<Node> bases) {
 		if (readOnly) throwReadOnly();
-		final Node rootNode = getRoot();
-		for (final Node base : bases) {
-			if (rootNode != base) return false;
-		}
 		return this.bases.addAll(bases);
 	}
 
@@ -48,7 +44,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 
 	public final boolean addBase(@Nonnull Node base) {
 		if (readOnly) throwReadOnly();
-		return getRoot() == base.getRoot() && bases.add(base);
+		return bases.add(base);
 	}
 
 	public final boolean removeBase(@Nonnull Node base) {
@@ -119,10 +115,11 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	//</editor-fold>
 
 	@Override
-	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
-		if (!bases.contains(fromNode)) return;
+	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		if (!bases.contains(fromNode)) return false;
 		bases.remove(fromNode);
 		if (toNode != null) bases.add(toNode);
+		return true;
 	}
 
 	@Nonnull

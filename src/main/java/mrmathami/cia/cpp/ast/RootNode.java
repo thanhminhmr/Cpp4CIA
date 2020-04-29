@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class RootNode extends Node implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = 1781664631608589491L;
+	private static final long serialVersionUID = -532527998173693031L;
 
 	private int nodeCount;
 
@@ -57,5 +57,11 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 	@Override
 	public final List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	protected final String partialTreeElementString() {
+		return ", nodeCount: " + nodeCount;
 	}
 }

@@ -34,15 +34,14 @@ public final class BuilderTest {
 		//System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715");
-//		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\sr2\\a");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test");
 		final List<Path> projectFiles =
-//				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\sr2\\a\\sr2.cpp"));
-				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\zpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq715\\libzpaq.h")
-				);
+				List.of(Path.of("D:\\Research\\SourceCodeComparator\\test\\tiny_but_decent\\Test\\Source.cpp"));
+//				List.of(
+//						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\zpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.cpp"),
+//						Path.of("D:\\Research\\SourceCodeComparator\\test\\zpaq715\\libzpaq.h")
+//				);
 //              readConfigFile(Path.of("D:\\Research\\SourceCodeComparator\\test\\tesseract-4.0.0\\src\\a.txt"));
 //				List.of(
 //						Path.of("D:\\Research\\SourceCodeComparator\\test\\TinyEXIF-1.0.0\\main.cpp"),
@@ -63,16 +62,17 @@ public final class BuilderTest {
 
 		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
 		debugger.setSaveFileContent(true);
-		debugger.setSaveTranslationUnit(false);
+		debugger.setSaveTranslationUnit(true);
 		debugger.setSaveRoot(true);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("zpaq715", projectRoot, projectFiles, includePaths, debugger);
+		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, debugger);
+		if (projectVersion == null) return;
 
 		debugger.debugOutput(projectRoot);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		try (final FileOutputStream fos = new FileOutputStream("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq\\zpaq715.proj")) {
+		try (final FileOutputStream fos = new FileOutputStream("R:\\CmderLauncher.proj")) {
 			projectVersion.toOutputStream(fos);
 		}
 

@@ -1,19 +1,19 @@
 package mrmathami.util;
 
-import java.util.ArrayDeque;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.Queue;
 import java.util.function.Function;
 
 public final class Utilities {
 	private Utilities() {
 	}
 
-	public static String objectIdentifyString(Object object) {
+	@Nonnull
+	public static String objectIdentifyString(@Nullable Object object) {
 		if (object == null) return "null";
 		final String simpleName = object.getClass().getSimpleName();
 		final int objectHashCode = object.hashCode();
@@ -23,11 +23,22 @@ public final class Utilities {
 				: String.format("%s,0x%08X", simpleName, objectHashCode);
 	}
 
-	public static <K, V> String mapToString(Map<K, V> map) {
+	@Nonnull
+	public static String exceptionToString(@Nullable Exception exception) {
+		if (exception == null) return "null";
+		final StringWriter stringWriter = new StringWriter();
+		final PrintWriter printWriter = new PrintWriter(stringWriter);
+		exception.printStackTrace(printWriter);
+		return stringWriter.toString();
+	}
+
+	@Nonnull
+	public static <K, V> String mapToString(@Nullable Map<K, V> map) {
 		return mapToString(map, null, null);
 	}
 
-	public static <K, V> String mapToString(Map<K, V> map, Function<K, String> keyToString, Function<V, String> valueToString) {
+	@Nonnull
+	public static <K, V> String mapToString(@Nullable Map<K, V> map, @Nullable Function<K, String> keyToString, @Nullable Function<V, String> valueToString) {
 		if (map == null) return "null";
 		final StringBuilder builder = new StringBuilder().append("[");
 		for (final Map.Entry<K, V> entry : map.entrySet()) {
@@ -39,11 +50,13 @@ public final class Utilities {
 		return builder.append(']').toString();
 	}
 
-	public static <E> String collectionToString(Collection<E> collection) {
+	@Nonnull
+	public static <E> String collectionToString(@Nullable Collection<E> collection) {
 		return collectionToString(collection, null);
 	}
 
-	public static <E> String collectionToString(Collection<E> collection, Function<E, String> toString) {
+	@Nonnull
+	public static <E> String collectionToString(@Nullable Collection<E> collection, @Nullable Function<E, String> toString) {
 		if (collection == null) return "null";
 		final StringBuilder builder = new StringBuilder().append("[");
 		for (final E element : collection) {

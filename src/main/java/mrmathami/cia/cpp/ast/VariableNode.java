@@ -97,8 +97,10 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	//</editor-fold>
 
 	@Override
-	protected final void internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
-		if (type == fromNode) this.type = toNode;
+	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		if (type != fromNode) return false;
+		this.type = toNode;
+		return true;
 	}
 
 	@Nonnull

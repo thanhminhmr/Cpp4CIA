@@ -21,8 +21,7 @@ public final class VersionDiffer {
 	}
 
 	@Nonnull
-	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB)
-			throws CppException {
+	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB) throws CppException {
 		final RootNode rootA = versionA.getRootNode();
 		final RootNode rootB = versionB.getRootNode();
 

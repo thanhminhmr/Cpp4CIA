@@ -99,28 +99,15 @@ final class AstBuilder {
 
 	private void cleanUp() {
 		for (final Node node : List.copyOf(bindingNodeMap.values())) {
-			if (node instanceof UnknownNode) {
-				// replace unknown node with integral node
+			if (node instanceof VariableNode) {
+				// remove all children of variable node
 				node.removeChildren();
-				node.removeAllDependency();
-				final Node newNode = createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature()));
-				replaceNode((UnknownNode) node, newNode);
-			} else if (node instanceof VariableNode) {
-				// remove all children
-				node.removeChildren();
-
 			} else if (node instanceof FunctionNode) {
+				// remove all children of function node
 				final FunctionNode function = (FunctionNode) node;
-				final List<Node> parameters = function.getParameters();
-				final List<Node> variables = new LinkedList<>(function.getVariables());
-				variables.removeAll(parameters);
-				for (final Node variable : variables) {
+				for (final Node variable : function.getVariables()) {
 					variable.transferAllDependencyTo(function);
 					function.removeChild(variable);
-				}
-				for (final Node parameter : parameters) {
-					parameter.transferAllDependencyTo(function);
-					parameter.removeAllDependency();
 				}
 			}
 		}
@@ -128,21 +115,22 @@ final class AstBuilder {
 			// replace unknown node with integral node
 			node.removeChildren();
 			node.removeAllDependency();
-			final Node newNode = createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature()));
-			replaceNode(node, newNode);
+			replaceNode(node, createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature())));
 		}
-		for (final Node integralNode : integralNodeMap.values()) {
+		for (final Node integralNode : List.copyOf(integralNodeMap.values())) {
 			integralNode.removeChildren();
 			integralNode.removeAllDependency();
 			if (integralNode.getParent() == null) {
 				rootNode.addChild(integralNode);
 			} else if (integralNode.getParent() != rootNode) {
-				final Node newIntegralNode = new IntegralNode()
-						.setName(integralNode.getName())
-						.setUniqueName(integralNode.getUniqueName())
-						.setSignature(integralNode.getSignature());
+				final String typeName = integralNode.getName();
+				integralNodeMap.remove(typeName, integralNode);
+				final Node newIntegralNode = createIntegralNode(typeName);
 				rootNode.addChild(newIntegralNode);
-				integralNode.transfer(newIntegralNode);
+				if (!integralNode.transfer(newIntegralNode)) {
+					integralNodeMap.remove(typeName, newIntegralNode);
+					newIntegralNode.remove();
+				}
 				integralNode.remove();
 			}
 		}
@@ -196,6 +184,20 @@ final class AstBuilder {
 		rootNode.setNodeCount(++nodeId);
 
 		rootNode.lock();
+
+		for (final Node node : rootNode) {
+			for (final Node toNode : node.getAllDependencyTo()) {
+				if (toNode.getRoot() != rootNode) {
+					System.out.println("DIE DIE DIE");
+				}
+			}
+			for (final Node fromNode : node.getAllDependencyFrom()) {
+				if (fromNode.getRoot() != rootNode) {
+					System.out.println("DIE DIE DIE");
+				}
+			}
+		}
+
 		return rootNode;
 	}
 
@@ -205,10 +207,6 @@ final class AstBuilder {
 		if (oldNode.getParent() != null) {
 			if (newNode.getParent() == null) oldNode.getParent().addChild(newNode);
 			oldNode.transfer(newNode);
-			if (newNode instanceof IntegralNode) {
-				newNode.removeChildren();
-				newNode.removeAllDependencyTo();
-			}
 			for (final Map.Entry<IBinding, Node> entry : bindingNodeMap.entrySet()) {
 				if (entry.getValue() == oldNode) entry.setValue(newNode);
 			}
@@ -227,10 +225,10 @@ final class AstBuilder {
 		final Node existNode = integralNodeMap.get(typeName);
 		if (existNode != null) return existNode;
 
-		final Node newNode = new IntegralNode();
-		newNode.setName(typeName);
-		newNode.setUniqueName(typeName);
-		newNode.setSignature(typeName);
+		final Node newNode = new IntegralNode()
+				.setName(typeName)
+				.setUniqueName(typeName)
+				.setSignature(typeName);
 
 		integralNodeMap.put(typeName, newNode);
 		return newNode;
@@ -255,9 +253,7 @@ final class AstBuilder {
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
 
 		final Node newNode = buildingNode instanceof UnknownNode && binding instanceof IProblemBinding
-				? createIntegralNode(uniqueName)
-				: uniqueName.isBlank() && signature != null && !signature.isBlank()
-				? createIntegralNode(signature)
+				? createIntegralNode(firstNonBlank(name, uniqueName, signature))
 				: buildingNode.setName(name).setUniqueName(uniqueName).setSignature(signature != null ? signature : uniqueName);
 
 		if (existNode != null) replaceNode((UnknownNode) existNode, newNode);
@@ -376,7 +372,7 @@ final class AstBuilder {
 				}
 			}
 			if (classNode instanceof ClassNode) {
-				if (bodyBuilder!= null) {
+				if (bodyBuilder != null) {
 					classNode.setName(bodyBuilder.append('}').toString());
 				}
 				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
@@ -462,8 +458,7 @@ final class AstBuilder {
 			final ICPPASTTemplatedTypeTemplateParameter nestedTemplateParameter = (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
 			final IASTName nestedTemplateName = nestedTemplateParameter.getName();
 			final IBinding nestedTemplateBinding = nestedTemplateName.resolveBinding();
-			final Node nestedTemplateNode = createNode(nestedTemplateBinding, nestedTemplateName,
-					null, new VariableNode());
+			final Node nestedTemplateNode = createNode(nestedTemplateBinding, nestedTemplateName, null, new VariableNode());
 
 			for (final ICPPASTTemplateParameter nestedParameter : nestedTemplateParameter.getTemplateParameters()) {
 				final Node nestedNode = createFromTemplateParameter(nestedTemplateNode, nestedParameter);
