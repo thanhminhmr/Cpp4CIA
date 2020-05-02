@@ -46,14 +46,12 @@ public final class SerializerTest {
 			final List<Path> includePaths = List.of();
 
 			final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
-			debugger.setSaveFileContent(true);
 			debugger.setSaveTranslationUnit(false);
-			debugger.setSaveRoot(true);
+			debugger.setOutputPath(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 //			final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths);
 			final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, debugger);
 
-			debugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 			try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project1.ProjectVersion")) {
 				projectVersion.toOutputStream(fos);
@@ -89,8 +87,6 @@ public final class SerializerTest {
 			final List<Path> includePaths2 = List.of();
 			final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, debugger);
 //			final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2);
-
-			debugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 			try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project2.ProjectVersion")) {
 				projectVersion2.toOutputStream(fos);

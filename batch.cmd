@@ -1,8 +1,11 @@
 @ECHO OFF
-SET projectName=log4cplus
+SET projectName=v8
+SET projectPath=v8
 SET sourcePath=src
 SET includePath=include
-REM SET outputFile=true
+SET branchName=master
+SET depth=1
+SET outputFile=true
 
 ECHO. > config.txt
 ECHO [Project] >> config.txt
@@ -10,10 +13,10 @@ ECHO projectName=%projectName% >> config.txt
 IF DEFINED outputFile ECHO outputFile=Project-%projectName%.Project >> config.txt
 ECHO exportFile=Project-%projectName%.project >> config.txt
 
-CD _git >> NUL 2>&1
-git checkout --quiet master
+CD %projectPath% >> NUL 2>&1
+git checkout --quiet %branchName%
 SET next_rev=
-FOR /F %%i IN ('git rev-list -n 50 master') DO CALL :REVISION %%i,next_rev
+FOR /F %%i IN ('git rev-list -n %depth% %branchName%') DO CALL :REVISION %%i,next_rev
 
 CD .. >> NUL 2>&1
 EXIT /B 0

@@ -15,7 +15,7 @@ import java.util.ListIterator;
 import java.util.Objects;
 
 public final class FunctionNode extends Node implements IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>, IClassContainer, IEnumContainer, IVariableContainer {
-	private static final long serialVersionUID = 8686443038824913051L;
+	private static final long serialVersionUID = 4827973061998245590L;
 
 	@Nonnull private transient List<Node> parameters;
 	@Nullable private String body;
@@ -26,34 +26,35 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	}
 
 	@Override
-	protected final void internalLock() {
+	final void internalLock() {
 		super.internalLock();
+		if (body != null) this.body = body.intern();
 		this.parameters = List.copyOf(parameters);
 	}
 
 	@Nonnull
 	public final List<Node> getParameters() {
-		return readOnly ? parameters : Collections.unmodifiableList(parameters);
+		return isReadOnly() ? parameters : Collections.unmodifiableList(parameters);
 	}
 
 	public final boolean addParameters(@Nonnull List<Node> parameters) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		return this.parameters.addAll(parameters);
 	}
 
 	public final void removeParameters() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		parameters.clear();
 	}
 
 	public final boolean addParameter(@Nonnull Node parameter) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		parameters.add(parameter);
 		return true;
 	}
 
 	public final boolean removeParameter(@Nonnull Node parameter) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		return parameters.remove(parameter);
 	}
 
@@ -66,7 +67,7 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@Nonnull
 	@Override
 	public final FunctionNode setBody(@Nullable String body) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.body = body;
 		return this;
 	}
@@ -80,7 +81,7 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@Nonnull
 	@Override
 	public final FunctionNode setType(@Nullable Node type) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.type = type;
 		return this;
 	}
@@ -196,16 +197,16 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	//</editor-fold>
 
 	@Override
-	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
-		boolean value = false;
+	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+		boolean isChanged = false;
 		if (type == fromNode) {
 			this.type = toNode;
-			value = true;
+			isChanged = true;
 		}
 		final ListIterator<Node> iterator = parameters.listIterator();
 		while (iterator.hasNext()) {
 			if (iterator.next() == fromNode) {
-				value = true;
+				isChanged = true;
 				if (toNode != null) {
 					iterator.set(toNode);
 				} else {
@@ -213,11 +214,11 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 				}
 			}
 		}
-		return value;
+		return isChanged;
 	}
 
 	@Nonnull
-	protected final String partialTreeElementString() {
+	final String partialTreeElementString() {
 		return ", type: " + type
 				+ ", parameters: " + Utilities.collectionToString(parameters)
 				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);

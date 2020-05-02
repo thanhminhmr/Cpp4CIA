@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -3274284100649441324L;
+	private static final long serialVersionUID = -9191507582907308880L;
 
 	@Nonnull private transient Set<Node> bases;
 
@@ -22,33 +22,33 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	}
 
 	@Override
-	protected final void internalLock() {
+	final void internalLock() {
 		super.internalLock();
 		this.bases = Set.copyOf(bases);
 	}
 
 	@Nonnull
 	public final Set<Node> getBases() {
-		return readOnly ? bases : Collections.unmodifiableSet(bases);
+		return isReadOnly() ? bases : Collections.unmodifiableSet(bases);
 	}
 
 	public final boolean addBases(@Nonnull Set<Node> bases) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		return this.bases.addAll(bases);
 	}
 
 	public final void removeBases() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		bases.clear();
 	}
 
 	public final boolean addBase(@Nonnull Node base) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		return bases.add(base);
 	}
 
 	public final boolean removeBase(@Nonnull Node base) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		return bases.remove(base);
 	}
 
@@ -115,7 +115,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	//</editor-fold>
 
 	@Override
-	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
 		if (!bases.contains(fromNode)) return false;
 		bases.remove(fromNode);
 		if (toNode != null) bases.add(toNode);
@@ -123,7 +123,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	}
 
 	@Nonnull
-	protected final String partialTreeElementString() {
+	final String partialTreeElementString() {
 		return ", bases: " + Utilities.collectionToString(bases);
 	}
 

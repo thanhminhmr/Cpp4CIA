@@ -19,9 +19,8 @@ public final class DifferTest {
 		long start_time = System.nanoTime();
 
 		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
-		debugger.setSaveFileContent(true);
 		debugger.setSaveTranslationUnit(true);
-		debugger.setSaveRoot(true);
+		debugger.setOutputPath(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 		// ==========
 //		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\zpaq714");
@@ -44,7 +43,6 @@ public final class DifferTest {
 
 		final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, debugger);
 
-		debugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
@@ -67,8 +65,6 @@ public final class DifferTest {
 
 		final List<Path> includePaths2 = List.of();
 		final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, debugger);
-
-		debugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 

@@ -4,15 +4,22 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.List;
 import java.util.Objects;
 
 public final class VariableNode extends Node implements IBodyContainer<VariableNode>, ITypeContainer<VariableNode> {
-	private static final long serialVersionUID = -4695243239191843968L;
+	private static final long serialVersionUID = 816867116167517811L;
 
 	@Nullable private String body;
 	@Nullable private Node type;
 
 	public VariableNode() {
+	}
+
+	@Override
+	final void internalLock() {
+		super.internalLock();
+		if (body != null) this.body = body.intern();
 	}
 
 	@Nullable
@@ -24,7 +31,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	@Nonnull
 	@Override
 	public VariableNode setBody(@Nullable String body) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.body = body;
 		return this;
 	}
@@ -38,7 +45,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	@Nonnull
 	@Override
 	public final VariableNode setType(@Nullable Node type) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.type = type;
 		return this;
 	}
@@ -97,7 +104,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 	//</editor-fold>
 
 	@Override
-	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;
@@ -105,7 +112,7 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 
 	@Nonnull
 	@Override
-	protected final String partialTreeElementString() {
+	final String partialTreeElementString() {
 		return ", type: " + type
 				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);
 	}

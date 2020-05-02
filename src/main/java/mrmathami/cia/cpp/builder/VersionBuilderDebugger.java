@@ -7,26 +7,24 @@ import org.eclipse.cdt.core.dom.ast.IASTNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 
-import java.io.BufferedOutputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.Arrays;
 
 public final class VersionBuilderDebugger {
-	private boolean readable;
-	private boolean saveFileContent;
+	private boolean readableFileContent;
 	private boolean saveTranslationUnit;
-	private boolean saveRoot;
 
 	private String versionName;
-	private char[] fileContent;
-	private IASTTranslationUnit translationUnit;
-	private RootNode root;
+	private Path outputPath;
 
-	private static void _debugPrinter(PrintStream printStream, int level, IASTNode node, IASTTranslationUnit translationUnit) {
+	private char[] fileContent;
+
+	private static void _printTranslationUnit(Writer writer, IASTTranslationUnit translationUnit, IASTNode node, int level) throws IOException {
 		final String raw = node.getRawSignature();
 		final int cr = raw.indexOf('\r');
 		final int lf = raw.indexOf('\n');
@@ -37,51 +35,44 @@ public final class VersionBuilderDebugger {
 			IBinding iBinding = ((IASTName) node).resolveBinding();
 			IASTName[] names = iBinding != null ? translationUnit.getDeclarationsInAST(iBinding) : null;
 
-			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
+			writer.write(String.format(
+					"%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) + %-60s + %-30s | %-50s | %-50s | %s\n",
 					"",
 					node.getClass().getSimpleName(), node.hashCode(),
 					rawSub,
 					node.getFileLocation(),
 					iBinding != null ? String.format("(0x%08X) %s", iBinding.hashCode(), iBinding.getClass().getSimpleName()) : null,
 					iBinding != null ? iBinding.getName() : null,
-					iBinding != null ? Arrays.toString(Arrays.stream(names).map(iastName -> {
-						if (iastName == null) return "{ null } ";
-						IASTImageLocation location = iastName.getImageLocation();
-						if (location == null) return "{ " + iastName.toString() + " } ";
-						return "{ " + iastName.toString() + ", " + location.getFileName() + "["
+					iBinding != null ? Arrays.toString(Arrays.stream(names).map(name -> {
+						if (name == null) return "{ null } ";
+						IASTImageLocation location = name.getImageLocation();
+						if (location == null) return "{ " + name.toString() + " } ";
+						return "{ " + name.toString() + ", " + location.getFileName() + "["
 								+ location.getNodeOffset() + ", " + (location.getNodeOffset()
 								+ location.getNodeLength()) + "] } ";
 					}).toArray()) : null
-			);
+			));
 		} else {
-			printStream.printf("%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) | %-60s | %s\n",
+			writer.write(String.format(
+					"%" + (level != 0 ? (level * 2) : "") + "s%-" + (100 - level * 2 - 13) + "s (0x%08X) | %-60s | %s\n",
 					"",
 					node.getClass().getSimpleName(), node.hashCode(),
 					rawSub,
 					node.getFileLocation()
-			);
-
+			));
 		}
 
 		for (IASTNode child : node.getChildren()) {
-			_debugPrinter(printStream, level + 1, child, translationUnit);
+			_printTranslationUnit(writer, translationUnit, child, level + 1);
 		}
 	}
 
-	public final boolean isReadable() {
-		return readable;
+	public final boolean isReadableFileContent() {
+		return readableFileContent;
 	}
 
-	public final void setReadable(boolean readable) {
-		this.readable = readable;
-	}
-
-	public final boolean isSaveFileContent() {
-		return saveFileContent;
-	}
-
-	public final void setSaveFileContent(boolean saveFileContent) {
-		this.saveFileContent = saveFileContent;
+	public final void setReadableFileContent(boolean readableFileContent) {
+		this.readableFileContent = readableFileContent;
 	}
 
 	public final boolean isSaveTranslationUnit() {
@@ -92,71 +83,62 @@ public final class VersionBuilderDebugger {
 		this.saveTranslationUnit = saveTranslationUnit;
 	}
 
-	public final boolean isSaveRoot() {
-		return saveRoot;
-	}
-
-	public final void setSaveRoot(boolean saveRoot) {
-		this.saveRoot = saveRoot;
-	}
-
-	public String getVersionName() {
+	public final String getVersionName() {
 		return versionName;
 	}
 
-	void setVersionName(String versionName) {
+	public final void setVersionName(String versionName) {
 		this.versionName = versionName;
 	}
 
-	public final char[] getFileContent() {
-		return fileContent;
+	public final Path getOutputPath() {
+		return outputPath;
 	}
 
-	final void setFileContent(char[] fileContent) {
-		this.fileContent = fileContent;
+	public final void setOutputPath(Path outputPath) {
+		this.outputPath = outputPath;
 	}
 
-	public final IASTTranslationUnit getTranslationUnit() {
-		return translationUnit;
-	}
 
-	final void setTranslationUnit(IASTTranslationUnit translationUnit) {
-		this.translationUnit = translationUnit;
-	}
-
-	public final RootNode getRoot() {
-		return root;
-	}
-
-	final void setRoot(RootNode root) {
-		this.root = root;
-	}
-
-	public final void debugOutput(Path outputPath) {
-		try {
-			if (saveFileContent) {
-				try (final FileWriter writer = new FileWriter(outputPath.resolve("output_" + versionName + ".cpp").toString())) {
-					writer.write(fileContent);
-				}
-			}
-
-			if (saveTranslationUnit) {
-				try (final FileOutputStream fileOutputStream = new FileOutputStream(outputPath.resolve("preprocessed_" + versionName + ".log").toString())) {
-					try (final BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(fileOutputStream, 65536)) {
-						try (final PrintStream printStream = new PrintStream(bufferedOutputStream, false)) {
-							_debugPrinter(printStream, 0, translationUnit, translationUnit);
-						}
-					}
-				}
-			}
-
-			if (saveRoot) {
-				try (final FileWriter fileWriter = new FileWriter(outputPath.resolve("tree_" + versionName + ".log").toString())) {
-					fileWriter.write(root.toTreeString());
-				}
-			}
+	void saveFileContent(char[] fileContent) {
+		try (final Writer writer = Files.newBufferedWriter(outputPath.resolve("output_" + versionName + ".cpp"),
+				StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+			writer.write(fileContent);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	void saveTranslationUnit(IASTTranslationUnit translationUnit) {
+		try (final Writer writer = Files.newBufferedWriter(outputPath.resolve("preprocessed_" + versionName + ".log"),
+				StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+			_printTranslationUnit(writer, translationUnit, translationUnit, 0);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	void saveRoot(RootNode root) {
+		try (final Writer writer = Files.newBufferedWriter(outputPath.resolve("tree_" + versionName + ".log"),
+				StandardCharsets.UTF_8, StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+			writer.write(root.toTreeString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+
+	boolean loadFileContent() {
+		try {
+			this.fileContent = Files.readString(outputPath.resolve("output_" + versionName + ".cpp"), StandardCharsets.UTF_8).toCharArray();
+			return true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return false;
+	}
+
+	public char[] getFileContent() {
+		return fileContent;
 	}
 }

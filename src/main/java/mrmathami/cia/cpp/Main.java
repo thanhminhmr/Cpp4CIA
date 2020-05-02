@@ -30,17 +30,15 @@ public final class Main {
 
 	private Main(int debugLevel) {
 		this.builderDebugger = debugLevel > 0 ? new VersionBuilderDebugger() : null;
-		if (debugLevel > 1) builderDebugger.setSaveRoot(true);
-		if (debugLevel > 2) builderDebugger.setSaveFileContent(true);
-		if (debugLevel > 3) builderDebugger.setSaveTranslationUnit(true);
+		if (debugLevel > 1) builderDebugger.setSaveTranslationUnit(true);
 	}
 
 	public static void main(String[] argv) {
-		if (argv.length < 2 || argv.length > 3) {
+		if (argv.length < 1 || argv.length > 2) {
 			System.out.println("Usage: cpp4cia.jar <input.ini> [debugLevel]");
 			return;
 		}
-		new Main(argv.length == 3 ? Integer.parseInt(argv[1]) : 0).build(Path.of(argv[0]));
+		new Main(argv.length == 2 ? Integer.parseInt(argv[1]) : 0).build(Path.of(argv[0]));
 	}
 
 	private void doLogging(String message) {
@@ -99,10 +97,10 @@ public final class Main {
 			doLogging("Building ProjectVersion " + versionName + "...");
 
 			try {
+				if (builderDebugger != null) builderDebugger.setOutputPath(projectRoot);
 				final ProjectVersion projectVersion = builderDebugger != null
 						? VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, builderDebugger)
 						: VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths);
-				if (builderDebugger != null) builderDebugger.debugOutput(projectRoot);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {

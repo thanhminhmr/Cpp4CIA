@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.util.List;
 
 public final class RootNode extends Node implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -532527998173693031L;
+	private static final long serialVersionUID = -3810880760955772602L;
 
 	private int nodeCount;
 
@@ -15,7 +15,7 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 	}
 
 	public final void lock() {
-		if (readOnly) internalLock();
+		if (!isReadOnly()) internalLock();
 	}
 
 	public final int getNodeCount() {
@@ -24,7 +24,7 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 
 	@Nonnull
 	public final RootNode setNodeCount(int nodeCount) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.nodeCount = nodeCount;
 		return this;
 	}
@@ -61,7 +61,7 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 
 	@Nonnull
 	@Override
-	protected final String partialTreeElementString() {
+	final String partialTreeElementString() {
 		return ", nodeCount: " + nodeCount;
 	}
 }

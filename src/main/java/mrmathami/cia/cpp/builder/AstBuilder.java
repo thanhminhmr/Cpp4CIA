@@ -14,6 +14,7 @@ import mrmathami.cia.cpp.ast.VariableNode;
 import mrmathami.util.Pair;
 import mrmathami.util.Utilities;
 import org.eclipse.cdt.core.dom.ast.ASTTypeUtil;
+import org.eclipse.cdt.core.dom.ast.IASTASMDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
@@ -98,12 +99,27 @@ final class AstBuilder {
 	}
 
 	private void cleanUp() {
+		// clean up nodes
+		for (final Node node : unknownNodeList) {
+			node.removeChildren();
+			node.removeAllDependency();
+		}
+		for (final Node node : integralNodeMap.values()) {
+			node.removeChildren();
+			node.removeAllDependency();
+		}
+
+		// replace unknown node with integral node
+		for (final UnknownNode node : List.copyOf(unknownNodeList)) {
+			final Node integralNode = createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature()));
+			if (!replaceNode(node, integralNode)) integralNode.remove();
+		}
+
+		// remove all children of variable and function node
 		for (final Node node : List.copyOf(bindingNodeMap.values())) {
 			if (node instanceof VariableNode) {
-				// remove all children of variable node
 				node.removeChildren();
 			} else if (node instanceof FunctionNode) {
-				// remove all children of function node
 				final FunctionNode function = (FunctionNode) node;
 				for (final Node variable : function.getVariables()) {
 					variable.transferAllDependencyTo(function);
@@ -111,15 +127,9 @@ final class AstBuilder {
 				}
 			}
 		}
-		for (final UnknownNode node : List.copyOf(unknownNodeList)) {
-			// replace unknown node with integral node
-			node.removeChildren();
-			node.removeAllDependency();
-			replaceNode(node, createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature())));
-		}
+
+		// move integral node to root
 		for (final Node integralNode : List.copyOf(integralNodeMap.values())) {
-			integralNode.removeChildren();
-			integralNode.removeAllDependency();
 			if (integralNode.getParent() == null) {
 				rootNode.addChild(integralNode);
 			} else if (integralNode.getParent() != rootNode) {
@@ -201,12 +211,13 @@ final class AstBuilder {
 		return rootNode;
 	}
 
-	private void replaceNode(@Nonnull UnknownNode oldNode, @Nonnull Node newNode) {
+	private boolean replaceNode(@Nonnull UnknownNode oldNode, @Nonnull Node newNode) {
 		assert !(newNode instanceof UnknownNode);
+		boolean isChanged = false;
 		unknownNodeList.remove(oldNode);
 		if (oldNode.getParent() != null) {
 			if (newNode.getParent() == null) oldNode.getParent().addChild(newNode);
-			oldNode.transfer(newNode);
+			isChanged = oldNode.transfer(newNode);
 			for (final Map.Entry<IBinding, Node> entry : bindingNodeMap.entrySet()) {
 				if (entry.getValue() == oldNode) entry.setValue(newNode);
 			}
@@ -218,6 +229,7 @@ final class AstBuilder {
 			childrenCreationQueue.removeIf(pair -> pair.getA() == oldNode);
 		}
 		oldNode.remove();
+		return isChanged;
 	}
 
 	@Nonnull
@@ -279,16 +291,20 @@ final class AstBuilder {
 			if (functionNode instanceof FunctionNode) {
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
 					final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
-//					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
+					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
 
 					final Node parameterType = createFromDeclSpecifier(typeNode, parameterSpecifier);
-//					final Node parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
+					final Node parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
 
-//					if (parameterNode.getParent() == null) {
-//						functionNode.addChild(parameterNode);
-////						functionNode.addDependencyTo(parameterNode, DependencyType.MEMBER);
-//						((FunctionNode) functionNode).addParameter(parameterNode);
-//					}
+					if (parameterNode.getParent() == null) {
+						functionNode.addChild(parameterNode);
+						functionNode.addDependencyTo(parameterNode, DependencyType.MEMBER);
+					}
+
+					if (parameterType.getParent() == null) {
+						functionNode.addChild(parameterType);
+						functionNode.addDependencyTo(parameterType, DependencyType.MEMBER);
+					}
 					((FunctionNode) functionNode).addParameter(parameterType);
 					functionNode.addDependencyTo(parameterType, DependencyType.USE);
 				}
@@ -482,6 +498,7 @@ final class AstBuilder {
 				|| declaration instanceof IASTProblemDeclaration
 				|| declaration instanceof ICPPASTStaticAssertDeclaration
 				|| declaration instanceof ICPPASTExplicitTemplateInstantiation
+				|| declaration instanceof IASTASMDeclaration
 		) {
 			// skipped
 			return List.of();
@@ -515,8 +532,10 @@ final class AstBuilder {
 				createChildrenFromDeclaration(namespaceNode, namespaceChildDeclaration);
 			}
 			// endregion
-			parentNode.addChild(namespaceNode);
-			parentNode.addDependencyTo(namespaceNode, DependencyType.MEMBER);
+			if (namespaceNode.getParent() == null) {
+				parentNode.addChild(namespaceNode);
+				parentNode.addDependencyTo(namespaceNode, DependencyType.MEMBER);
+			}
 			return List.of(namespaceNode);
 
 		} else if (declaration instanceof IASTSimpleDeclaration) {
@@ -602,7 +621,10 @@ final class AstBuilder {
 
 			for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
 				final Node templateNode = createFromTemplateParameter(parentNode, templateParameter);
-				parentNode.addChild(templateNode);
+				if (templateNode.getParent() == null) {
+					parentNode.addChild(templateNode);
+					parentNode.addDependencyTo(templateNode, DependencyType.MEMBER);
+				}
 			}
 
 			final IASTDeclaration innerDeclaration = templateDeclaration.getDeclaration();

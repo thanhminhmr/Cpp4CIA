@@ -16,24 +16,23 @@ import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base of AST Tree.
  */
 public abstract class Node implements Serializable, Iterable<Node> {
-	private static final long serialVersionUID = -4312085225305723074L;
+	private static final long serialVersionUID = -6771360850957417113L;
 
 	@Nonnull private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
-	protected transient boolean readOnly;
 	private int id;
-
 	@Nonnull private String name = "";
 	@Nonnull private String uniqueName = "";
 	@Nonnull private String signature = "";
@@ -44,15 +43,14 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	@Nonnull private transient Map<Node, int[]> dependencyFrom;
 	@Nonnull private transient Map<Node, int[]> dependencyTo;
 
-	protected Node() {
+	private transient boolean readOnly; // should not be written to anywhere else beside this class
+	@Nullable private transient Node rootNode; // should not access directly
+
+	Node() {
 		this.readOnly = false;
 		this.children = new LinkedList<>();
 		this.dependencyFrom = new IdentityHashMap<>();
 		this.dependencyTo = new IdentityHashMap<>();
-	}
-
-	protected static void throwReadOnly() {
-		throw new UnsupportedOperationException("Read-only Node!");
 	}
 
 	@Nonnull
@@ -69,11 +67,22 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		return builder.append('}').toString();
 	}
 
-	protected void internalLock() {
-		this.readOnly = true;
+	void internalLock() {
+		this.name = name.intern();
+		this.uniqueName = uniqueName.intern();
+		this.signature = signature.intern();
 		this.children = List.copyOf(children);
 		this.dependencyFrom = Map.copyOf(dependencyFrom);
 		this.dependencyTo = Map.copyOf(dependencyTo);
+		this.readOnly = true;
+	}
+
+	final void checkReadOnly() {
+		if (readOnly) throw new UnsupportedOperationException("Read-only Node!");
+	}
+
+	public final boolean isReadOnly() {
+		return readOnly;
 	}
 
 	//<editor-fold desc="Node">
@@ -83,7 +92,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setId(int id) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.id = id;
 		return this;
 	}
@@ -95,7 +104,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setName(@Nonnull String name) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.name = name;
 		return this;
 	}
@@ -107,7 +116,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setUniqueName(@Nonnull String uniqueName) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.uniqueName = uniqueName;
 		return this;
 	}
@@ -119,22 +128,21 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Node setSignature(@Nonnull String signature) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.signature = signature;
 		return this;
 	}
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency">
+
 	//<editor-fold desc="All Dependency">
-	public final void transferAllDependency(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
-		transferAllDependencyFrom(node);
-		transferAllDependencyTo(node);
+
+	public final boolean transferAllDependency(@Nonnull Node node) {
+		return transferAllDependencyFrom(node) && transferAllDependencyTo(node);
 	}
 
 	public final void removeAllDependency() {
-		if (readOnly) throwReadOnly();
 		removeAllDependencyFrom();
 		removeAllDependencyTo();
 	}
@@ -142,24 +150,27 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	public final boolean equalsAllDependency(@Nonnull Node node, @Nonnull Matcher matcher) {
 		return equalsAllDependencyFrom(node, matcher) && equalsAllDependencyTo(node, matcher);
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency From">
+
 	@Nonnull
 	public final Set<Node> getAllDependencyFrom() {
 		return readOnly ? dependencyFrom.keySet() : Collections.unmodifiableSet(dependencyFrom.keySet());
 	}
 
-	public final void transferAllDependencyFrom(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
+	public final boolean transferAllDependencyFrom(@Nonnull Node node) {
+		checkReadOnly();
+		boolean isChanged = false;
 		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyFrom.entrySet().iterator(); iterator.hasNext(); ) {
 			final Map.Entry<Node, int[]> entry = iterator.next();
 			final Node fromNode = entry.getKey();
 			final Map<Node, int[]> fromNodeDependencyTo = fromNode.dependencyTo;
 			final int[] oldCounts = fromNodeDependencyTo.remove(this);
-			assert oldCounts != null : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-			assert oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+			assert oldCounts != null && oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 			if (fromNode != node) {
+				isChanged = true;
 				final int[] newCounts = fromNodeDependencyTo.get(node);
 				if (newCounts != null) {
 					for (int i = 0; i < newCounts.length; i++) {
@@ -175,10 +186,11 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 		node.dependencyFrom.putAll(dependencyFrom);
 		dependencyFrom.clear();
+		return isChanged;
 	}
 
 	public final void removeAllDependencyFrom() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		for (final Node node : dependencyFrom.keySet()) {
 			node.dependencyTo.remove(this);
 		}
@@ -200,24 +212,27 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 		return nodeDependencyFrom.isEmpty();
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="All Dependency To">
+
 	@Nonnull
 	public final Set<Node> getAllDependencyTo() {
 		return readOnly ? dependencyTo.keySet() : Collections.unmodifiableSet(dependencyTo.keySet());
 	}
 
-	public final void transferAllDependencyTo(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
+	public final boolean transferAllDependencyTo(@Nonnull Node node) {
+		checkReadOnly();
+		boolean isChanged = false;
 		for (final Iterator<Map.Entry<Node, int[]>> iterator = dependencyTo.entrySet().iterator(); iterator.hasNext(); ) {
 			final Map.Entry<Node, int[]> entry = iterator.next();
 			final Node toNode = entry.getKey();
 			final Map<Node, int[]> toNodeDependencyFrom = toNode.dependencyFrom;
 			final int[] oldCounts = toNodeDependencyFrom.remove(this);
-			assert oldCounts != null : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-			assert oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
+			assert oldCounts != null && oldCounts == entry.getValue() : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 			if (toNode != node) {
+				isChanged = true;
 				final int[] newCounts = toNodeDependencyFrom.get(node);
 				if (newCounts != null) {
 					for (int i = 0; i < newCounts.length; i++) {
@@ -233,10 +248,11 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 		node.dependencyTo.putAll(dependencyTo);
 		dependencyTo.clear();
+		return isChanged;
 	}
 
 	public final void removeAllDependencyTo() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		for (final Node node : dependencyTo.keySet()) {
 			node.dependencyFrom.remove(this);
 		}
@@ -258,26 +274,28 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 		return nodeDependencyTo.isEmpty();
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="Node Dependency From">
+
 	@Nonnull
 	public final Map<DependencyType, Integer> getNodeDependencyFrom(@Nonnull Node node) {
 		return node.getNodeDependencyTo(this);
 	}
 
-	public final void addNodeDependencyFrom(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
-		if (readOnly) throwReadOnly();
-		node.addNodeDependencyTo(this, dependencyMap);
+	public final boolean addNodeDependencyFrom(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+		return node.addNodeDependencyTo(this, dependencyMap);
 	}
 
 	public final void removeNodeDependencyFrom(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
 		node.removeNodeDependencyTo(this);
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="Node Dependency To">
+
 	@Nonnull
 	public final Map<DependencyType, Integer> getNodeDependencyTo(@Nonnull Node node) {
 		final int[] counts = dependencyTo.get(node);
@@ -291,8 +309,9 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		return map;
 	}
 
-	public final void addNodeDependencyTo(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
-		if (node == this) return;
+	public final boolean addNodeDependencyTo(@Nonnull Node node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+		checkReadOnly();
+		if (node == this || getRoot() != node.getRoot()) return false;
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
@@ -312,41 +331,44 @@ public abstract class Node implements Serializable, Iterable<Node> {
 				node.dependencyFrom.put(this, newCounts);
 			}
 		}
+		return true;
 	}
 
 	public final void removeNodeDependencyTo(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		dependencyTo.remove(node);
 		node.dependencyFrom.remove(this);
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency From">
+
 	public final int getDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
 		return node.getDependencyTo(this, type);
 	}
 
-	public final void addDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
-		if (readOnly) throwReadOnly();
-		node.addDependencyTo(this, type);
+	public final boolean addDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
+		return node.addDependencyTo(this, type);
 	}
 
 	public final void removeDependencyFrom(@Nonnull Node node, @Nonnull DependencyType type) {
-		if (readOnly) throwReadOnly();
 		node.removeDependencyTo(this, type);
 	}
+
 	//</editor-fold>
 
 	//<editor-fold desc="Dependency To">
+
 	public final int getDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		return counts != null ? counts[type.ordinal()] : 0;
 	}
 
-	public final void addDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
-		if (readOnly) throwReadOnly();
-		if (node == this) return;
+	public final boolean addDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
+		checkReadOnly();
+		if (node == this || getRoot() != node.getRoot()) return false;
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
@@ -357,10 +379,11 @@ public abstract class Node implements Serializable, Iterable<Node> {
 			dependencyTo.put(node, newCounts);
 			node.dependencyFrom.put(this, newCounts);
 		}
+		return true;
 	}
 
 	public final void removeDependencyTo(@Nonnull Node node, @Nonnull DependencyType type) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
@@ -371,7 +394,9 @@ public abstract class Node implements Serializable, Iterable<Node> {
 			}
 		}
 	}
+
 	//</editor-fold>
+
 	//</editor-fold>
 
 	//<editor-fold desc="Object Helper">
@@ -603,9 +628,8 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 */
 	@Nonnull
 	public final Node getRoot() {
-		Node parentNode, node = this;
-		while ((parentNode = node.getParent()) != null) node = parentNode;
-		return node;
+		if (rootNode != null) return rootNode;
+		return this.rootNode = parent != null ? parent.getRoot() : this;
 	}
 
 	/**
@@ -630,23 +654,22 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	}
 
 	/**
-	 * Set parent node, or null if there is none.
-	 * Note: a node without parent is a root node.
-	 *
-	 * @param parent parent
+	 * @param node target node
+	 * @return true if this node is a decendant
 	 */
-	private void internalSetParent(@Nullable Node parent) {
-		this.parent = parent;
+	public final boolean isAncestorOf(@Nonnull Node node) {
+		Node parent = node;
+		do {
+			parent = parent.parent;
+			if (parent == this) return true;
+		} while (parent != null);
+		return false;
 	}
 
 	@Nonnull
 	final <E extends Node> List<E> getChildrenList(@Nonnull Class<E> aClass) {
 		final List<E> list = new ArrayList<>(children.size());
-		for (final Node child : children) {
-			if (aClass.isInstance(child)) {
-				list.add(aClass.cast(child));
-			}
-		}
+		for (final Node child : children) if (aClass.isInstance(child)) list.add(aClass.cast(child));
 		return list;
 	}
 
@@ -660,18 +683,34 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		return readOnly ? children : Collections.unmodifiableList(children);
 	}
 
+	private void internalRemoveDependencyRecursive() {
+		removeAllDependency();
+		getRoot().internalTransferRecursive(this, null);
+		for (final Node child : children) child.internalRemoveDependencyRecursive();
+	}
+
 	/**
 	 * Remove children nodes from current node
 	 * {@link #remove}
 	 */
 	public final void removeChildren() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		if (children.isEmpty()) return;
 		// remove children
-		for (final Node child : children) {
-			child.internalRemove();
+		for (final Iterator<Node> iterator = children.iterator(); iterator.hasNext(); ) {
+			final Node child = iterator.next();
+			assert child.parent == this : "WRONG TREE CONSTRUCTION!";
+			// remove child
+			child.internalRemoveDependencyRecursive();
+			child.parent = null;
+			child.rootNode = null;
+			iterator.remove();
 		}
-		children.clear();
+	}
+
+	private void setRootRecursive(@Nonnull Node rootNode) {
+		this.rootNode = rootNode;
+		for (final Node child : children) child.setRootRecursive(rootNode);
 	}
 
 	/**
@@ -683,17 +722,13 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @return whether the operation is success or not
 	 */
 	public final boolean addChild(@Nonnull Node child) {
-		if (readOnly) throwReadOnly();
-		// check if child node is root node
-		if (child.parent != null) return false;
-		internalAddChild(child);
-		return true;
-	}
-
-	private void internalAddChild(@Nonnull Node child) {
-		assert child.parent == null;
+		checkReadOnly();
+		// check if child node is root node or adding to itself
+		if (child.parent != null || getRoot() == child) return false;
 		children.add(child);
-		child.internalSetParent(this);
+		child.parent = this;
+		child.setRootRecursive(getRoot());
+		return true;
 	}
 
 	/**
@@ -705,39 +740,32 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @return whether the operation is success or not
 	 */
 	public final boolean removeChild(@Nonnull Node child) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		// check if current node is not parent node of child node
 		if (child.parent != this) return false;
 		assert children.contains(child) : "WRONG TREE CONSTRUCTION!";
-		getRoot().internalTransferRecursive(child, null);
+		// remove child
 		internalRemoveChild(child);
 		return true;
-	}
-
-	// Exactly the same as remove child, without checking input
-	private void internalRemoveChild(@Nonnull Node child) {
-		assert child.parent == this && children.contains(child);
-		child.internalRemove();
-		this.children.remove(child);
 	}
 
 	/**
 	 * Remove this node itself from its parent node
 	 */
 	public final void remove() {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		// check if current node is root node
 		if (parent == null) return;
-		parent.getRoot().internalTransferRecursive(this, null);
 		parent.internalRemoveChild(this);
 	}
 
-	// Without remove children from parent node!!
-	private void internalRemove() {
-		assert parent != null;
-		this.removeChildren();
-		this.removeAllDependency();
-		this.internalSetParent(null);
+	// Exactly the same as remove child, without checking input
+	private void internalRemoveChild(@Nonnull Node child) {
+		assert child.parent == this && children.contains(child);
+		child.internalRemoveDependencyRecursive();
+		child.parent = null;
+		child.rootNode = null;
+		children.remove(child);
 	}
 
 	/**
@@ -746,32 +774,28 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 * @param node destination node
 	 * @return false if current node is root or destination par
 	 */
-	public boolean transfer(@Nonnull Node node) {
-		if (readOnly) throwReadOnly();
+	public final boolean transfer(@Nonnull Node node) {
+		checkReadOnly();
 		// check if current node is root node or child node is not root node
-		assert getRoot() == node.getRoot();
-		getRoot().internalTransferRecursive(this, node);
-		transferAllDependency(node);
+		if (getRoot() != node.getRoot() || isAncestorOf(node)) return false;
+		boolean isChanged = transferAllDependency(node)
+				|| getRoot().internalTransferRecursive(this, node);
 		if (!children.isEmpty()) {
+			isChanged = true;
 			node.children.addAll(children);
-			for (final Node child : children) {
-				child.internalSetParent(node);
-			}
+			for (final Node child : children) child.parent = node;
 			children.clear();
 		}
-		return true;
+		return isChanged;
 	}
 
 	private boolean internalTransferRecursive(@Nonnull Node fromNode, @Nullable Node toNode) {
-		// todo: link
-		boolean value = this.internalOnTransfer(fromNode, toNode);
-		for (final Node child : children) {
-			value |= child.internalTransferRecursive(fromNode, toNode);
-		}
-		return value;
+		boolean isChanged = internalOnTransfer(fromNode, toNode);
+		for (final Node child : children) isChanged |= child.internalTransferRecursive(fromNode, toNode);
+		return isChanged;
 	}
 
-	protected boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
 		return false;
 	}
 
@@ -779,21 +803,23 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	@Nonnull
 	public final String toString() {
 		return "(" + Utilities.objectIdentifyString(this)
-				+ ") { name: \"" + name
+				+ ") { id: " + id
+				+ ", name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
 				+ "\" }";
 	}
 
 	@Nonnull
-	protected String partialTreeElementString() {
+	String partialTreeElementString() {
 		return "";
 	}
 
 	@Nonnull
 	public final String toTreeElementString() {
 		return "(" + Utilities.objectIdentifyString(this)
-				+ ") { name: \"" + name
+				+ ") { id: " + id
+				+ ", name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
 				+ "\", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
@@ -856,8 +882,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 			@Nonnull
 			public final Node next() {
-				this.current = stack.peek().next();
-				return current;
+				return this.current = stack.peek().next();
 			}
 		};
 	}

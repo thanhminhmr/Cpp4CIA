@@ -5,10 +5,9 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
-import java.util.Objects;
 
 public final class EnumNode extends Node implements ITypeContainer<EnumNode>, IVariableContainer {
-	private static final long serialVersionUID = 7234965704737476746L;
+	private static final long serialVersionUID = -6733730995916355602L;
 
 	@Nullable private Node type;
 
@@ -24,7 +23,7 @@ public final class EnumNode extends Node implements ITypeContainer<EnumNode>, IV
 	@Nonnull
 	@Override
 	public final EnumNode setType(@Nullable Node type) {
-		if (readOnly) throwReadOnly();
+		checkReadOnly();
 		this.type = type;
 		return this;
 	}
@@ -81,7 +80,7 @@ public final class EnumNode extends Node implements ITypeContainer<EnumNode>, IV
 	//</editor-fold>
 
 	@Override
-	protected final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;
@@ -89,7 +88,7 @@ public final class EnumNode extends Node implements ITypeContainer<EnumNode>, IV
 
 	@Nonnull
 	@Override
-	protected final String partialTreeElementString() {
+	final String partialTreeElementString() {
 		return ", type: " + type;
 	}
 

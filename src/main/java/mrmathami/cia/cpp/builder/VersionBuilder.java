@@ -112,18 +112,19 @@ public final class VersionBuilder {
 
 		debugger.setVersionName(versionName);
 
-		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList,
-				debugger.isReadable());
+		final char[] fileContentCharArray = debugger.loadFileContent()
+				? debugger.getFileContent()
+				: PreprocessorBuilder.build(projectFileList, includePathList, debugger.isReadableFileContent());
 
-		if (debugger.isSaveFileContent()) debugger.setFileContent(fileContentCharArray);
+		debugger.saveFileContent(fileContentCharArray);
 
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 
-		if (debugger.isSaveTranslationUnit()) debugger.setTranslationUnit(translationUnit);
+		if (debugger.isSaveTranslationUnit()) debugger.saveTranslationUnit(translationUnit);
 
 		final RootNode root = AstBuilder.build(translationUnit);
 
-		if (debugger.isSaveRoot()) debugger.setRoot(root);
+		debugger.saveRoot(root);
 
 		final Path projectRootPath = projectRoot.toAbsolutePath();
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
