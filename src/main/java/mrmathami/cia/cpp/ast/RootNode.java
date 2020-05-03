@@ -3,8 +3,8 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public final class RootNode extends Node implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -3810880760955772602L;
+public final class RootNode extends Node implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = 4616684807799617419L;
 
 	private int nodeCount;
 
@@ -55,6 +55,12 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 	@Override
 	public final List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
 	}
 
 	@Nonnull

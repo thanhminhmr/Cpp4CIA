@@ -12,8 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = 3537824434846443060L;
+public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = 6935164970557780371L;
 
 	@Nonnull private transient Set<Node> bases;
 
@@ -83,6 +83,12 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	@Override
 	public final List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">

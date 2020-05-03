@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
-public final class NamespaceNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = 4485573387809940424L;
+public final class NamespaceNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = 1802743308915207304L;
 
 	public NamespaceNode() {
 	}
@@ -37,6 +37,12 @@ public final class NamespaceNode extends Node implements IClassContainer, IEnumC
 	@Override
 	public final List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Object Helper">

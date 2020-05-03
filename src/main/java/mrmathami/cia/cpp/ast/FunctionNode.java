@@ -15,8 +15,8 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer {
-	private static final long serialVersionUID = -2922635003614340901L;
+public final class FunctionNode extends Node implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = 340513828605234603L;
 
 	@Nonnull private transient List<Node> parameters;
 	@Nullable private String body;
@@ -111,6 +111,12 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	@Override
 	public final List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">

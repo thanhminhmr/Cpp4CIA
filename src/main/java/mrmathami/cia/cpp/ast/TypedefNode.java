@@ -4,9 +4,10 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
+import java.util.List;
 
-public final class TypedefNode extends Node implements ITypeContainer {
-	private static final long serialVersionUID = 6720389944669874144L;
+public final class TypedefNode extends Node implements ITypeContainer, ITypedefContainer {
+	private static final long serialVersionUID = 4653337164369098190L;
 
 	@Nullable private Node type;
 
@@ -29,6 +30,12 @@ public final class TypedefNode extends Node implements ITypeContainer {
 		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
 		return true;
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">

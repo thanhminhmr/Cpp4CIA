@@ -6,8 +6,8 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
-public final class EnumNode extends Node implements ITypeContainer, IVariableContainer {
-	private static final long serialVersionUID = 5434017321552285583L;
+public final class EnumNode extends Node implements ITypeContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = -4989250344660973025L;
 
 	@Nullable private Node type;
 
@@ -32,7 +32,20 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 		return true;
 	}
 
+	@Nonnull
+	@Override
+	public final List<VariableNode> getVariables() {
+		return getChildrenList(VariableNode.class);
+	}
+
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
+	}
+
 	//<editor-fold desc="Node Comparator">
+
 	@Override
 	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
@@ -81,6 +94,7 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
+
 	//</editor-fold>
 
 	@Override
@@ -94,12 +108,6 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 	@Override
 	final String partialTreeElementString() {
 		return ", type: " + type;
-	}
-
-	@Nonnull
-	@Override
-	public final List<VariableNode> getVariables() {
-		return getChildrenList(VariableNode.class);
 	}
 
 	//<editor-fold desc="Object Helper">
