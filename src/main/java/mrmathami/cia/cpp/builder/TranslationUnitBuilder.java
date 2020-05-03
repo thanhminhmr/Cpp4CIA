@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 final class TranslationUnitBuilder {
+	@Nonnull static final String VIRTUAL_FILENAME = "##ROOT##";
+
 	@Nonnull private static final IncludeFileContentProvider EMPTY_PROVIDER = IncludeFileContentProvider.getEmptyFilesProvider();
 	@Nonnull private static final IParserLogService LOG_SERVICE = new DefaultLogService();
 	@Nonnull private static final GPPLanguage GPP_LANGUAGE = GPPLanguage.getDefault();
@@ -85,7 +87,7 @@ final class TranslationUnitBuilder {
 
 	@Nonnull
 	static IASTTranslationUnit build(@Nonnull char[] fileContentChars) throws CppException {
-		final FileContent fileContent = FileContent.create("##ROOT##", fileContentChars);
+		final FileContent fileContent = FileContent.create(VIRTUAL_FILENAME, fileContentChars);
 		try {
 			return GPP_LANGUAGE.getASTTranslationUnit(fileContent, SCANNER_INFO, EMPTY_PROVIDER, null,
 					ILanguage.OPTION_NO_IMAGE_LOCATIONS

@@ -7,13 +7,17 @@ import java.io.ObjectOutputStream;
 import java.util.List;
 import java.util.Objects;
 
-public final class VariableNode extends Node implements IBodyContainer<VariableNode>, ITypeContainer<VariableNode> {
-	private static final long serialVersionUID = 816867116167517811L;
+public final class VariableNode extends Node implements IBodyContainer, ITypeContainer {
+	private static final long serialVersionUID = 4602645205363910430L;
 
 	@Nullable private String body;
 	@Nullable private Node type;
 
 	public VariableNode() {
+	}
+
+	public VariableNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	@Override
@@ -28,12 +32,10 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 		return body;
 	}
 
-	@Nonnull
 	@Override
-	public VariableNode setBody(@Nullable String body) {
+	public void setBody(@Nullable String body) {
 		checkReadOnly();
 		this.body = body;
-		return this;
 	}
 
 	@Nullable
@@ -42,12 +44,12 @@ public final class VariableNode extends Node implements IBodyContainer<VariableN
 		return type;
 	}
 
-	@Nonnull
 	@Override
-	public final VariableNode setType(@Nullable Node type) {
+	public final boolean setType(@Nullable Node type) {
 		checkReadOnly();
+		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
-		return this;
+		return true;
 	}
 
 	//<editor-fold desc="Node Comparator">

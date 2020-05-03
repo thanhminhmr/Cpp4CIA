@@ -13,12 +13,20 @@ import java.util.List;
 import java.util.Set;
 
 public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -9191507582907308880L;
+	private static final long serialVersionUID = 3537824434846443060L;
 
 	@Nonnull private transient Set<Node> bases;
 
-	public ClassNode() {
+	// THIS BLOCK WILL NOT BE CALLED WHEN DESERIALIZE
+	{
 		this.bases = new HashSet<>();
+	}
+
+	public ClassNode() {
+	}
+
+	public ClassNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	@Override
@@ -29,11 +37,12 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 
 	@Nonnull
 	public final Set<Node> getBases() {
-		return isReadOnly() ? bases : Collections.unmodifiableSet(bases);
+		return isWritable() ? Collections.unmodifiableSet(bases) : bases;
 	}
 
 	public final boolean addBases(@Nonnull Set<Node> bases) {
 		checkReadOnly();
+		for (final Node base : bases) if (base.getRoot() != getRoot()) return false;
 		return this.bases.addAll(bases);
 	}
 
@@ -44,7 +53,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 
 	public final boolean addBase(@Nonnull Node base) {
 		checkReadOnly();
-		return bases.add(base);
+		return base.getRoot() == getRoot() && bases.add(base);
 	}
 
 	public final boolean removeBase(@Nonnull Node base) {

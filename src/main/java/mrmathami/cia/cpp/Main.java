@@ -28,17 +28,24 @@ public final class Main {
 
 	private final VersionBuilderDebugger builderDebugger;
 
-	private Main(int debugLevel) {
-		this.builderDebugger = debugLevel > 0 ? new VersionBuilderDebugger() : null;
-		if (debugLevel > 1) builderDebugger.setSaveTranslationUnit(true);
+	private Main(boolean isDebuggerEnable, boolean isSaveTranslationUnit, boolean isLoadFileContent) {
+		this.builderDebugger = isDebuggerEnable ? new VersionBuilderDebugger() : null;
+		if (isDebuggerEnable) {
+			builderDebugger.setSaveTranslationUnit(isSaveTranslationUnit);
+			builderDebugger.setLoadFileContent(isLoadFileContent);
+		}
 	}
 
 	public static void main(String[] argv) {
-		if (argv.length < 1 || argv.length > 2) {
-			System.out.println("Usage: cpp4cia.jar <input.ini> [debugLevel]");
+		if (argv.length < 1 || argv.length > 4) {
+			System.out.println("Usage: cpp4cia.jar <input.ini> [isDebugOn=0] [isSaveTranslationUnit=0] [isLoadFileContent=0]");
 			return;
 		}
-		new Main(argv.length == 2 ? Integer.parseInt(argv[1]) : 0).build(Path.of(argv[0]));
+		new Main(
+				argv.length >= 2 && Integer.parseInt(argv[1]) != 0,
+				argv.length >= 3 && Integer.parseInt(argv[2]) != 0,
+				argv.length >= 4 && Integer.parseInt(argv[3]) != 0
+				).build(Path.of(argv[0]));
 	}
 
 	private void doLogging(String message) {

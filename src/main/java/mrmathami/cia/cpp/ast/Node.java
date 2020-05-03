@@ -19,16 +19,14 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.Stack;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Base of AST Tree.
  */
 public abstract class Node implements Serializable, Iterable<Node> {
-	private static final long serialVersionUID = -6771360850957417113L;
+	private static final long serialVersionUID = 2337301066735306279L;
 
 	@Nonnull private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
@@ -43,14 +41,24 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	@Nonnull private transient Map<Node, int[]> dependencyFrom;
 	@Nonnull private transient Map<Node, int[]> dependencyTo;
 
-	private transient boolean readOnly; // should not be written to anywhere else beside this class
-	@Nullable private transient Node rootNode; // should not access directly
+	private transient boolean writable; // should not access this directly
+	@Nullable private transient Node rootNode; // should not access this directly
 
-	Node() {
-		this.readOnly = false;
+	// THIS BLOCK WILL NOT BE CALLED WHEN DESERIALIZE
+	{
 		this.children = new LinkedList<>();
 		this.dependencyFrom = new IdentityHashMap<>();
 		this.dependencyTo = new IdentityHashMap<>();
+		this.writable = true;
+	}
+
+	Node() {
+	}
+
+	Node(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		this.name = name;
+		this.uniqueName = uniqueName;
+		this.signature = signature;
 	}
 
 	@Nonnull
@@ -65,24 +73,6 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		}
 		if (builder.length() > 1) builder.append(' ');
 		return builder.append('}').toString();
-	}
-
-	void internalLock() {
-		this.name = name.intern();
-		this.uniqueName = uniqueName.intern();
-		this.signature = signature.intern();
-		this.children = List.copyOf(children);
-		this.dependencyFrom = Map.copyOf(dependencyFrom);
-		this.dependencyTo = Map.copyOf(dependencyTo);
-		this.readOnly = true;
-	}
-
-	final void checkReadOnly() {
-		if (readOnly) throw new UnsupportedOperationException("Read-only Node!");
-	}
-
-	public final boolean isReadOnly() {
-		return readOnly;
 	}
 
 	//<editor-fold desc="Node">
@@ -157,7 +147,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Set<Node> getAllDependencyFrom() {
-		return readOnly ? dependencyFrom.keySet() : Collections.unmodifiableSet(dependencyFrom.keySet());
+		return isWritable() ? Collections.unmodifiableSet(dependencyFrom.keySet()) : dependencyFrom.keySet();
 	}
 
 	public final boolean transferAllDependencyFrom(@Nonnull Node node) {
@@ -219,7 +209,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 
 	@Nonnull
 	public final Set<Node> getAllDependencyTo() {
-		return readOnly ? dependencyTo.keySet() : Collections.unmodifiableSet(dependencyTo.keySet());
+		return isWritable() ? Collections.unmodifiableSet(dependencyTo.keySet()) : dependencyTo.keySet();
 	}
 
 	public final boolean transferAllDependencyTo(@Nonnull Node node) {
@@ -400,9 +390,28 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	//</editor-fold>
 
 	//<editor-fold desc="Object Helper">
+
+	void internalLock() {
+		this.name = name.intern();
+		this.uniqueName = uniqueName.intern();
+		this.signature = signature.intern();
+		this.children = List.copyOf(children);
+		this.dependencyFrom = Map.copyOf(dependencyFrom);
+		this.dependencyTo = Map.copyOf(dependencyTo);
+		this.writable = false;
+	}
+
+	final void checkReadOnly() {
+		if (!writable) throw new UnsupportedOperationException("Read-only Node!");
+	}
+
+	final boolean isWritable() {
+		return writable;
+	}
+
 	private void writeObject(@Nonnull ObjectOutputStream outputStream) throws IOException {
 		outputStream.defaultWriteObject();
-		if (readOnly) {
+		if (writable) {
 			outputStream.writeObject(List.copyOf(children));
 			outputStream.writeObject(Map.copyOf(dependencyFrom));
 			outputStream.writeObject(Map.copyOf(dependencyTo));
@@ -419,7 +428,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 		this.children = (List<Node>) inputStream.readObject();
 		this.dependencyFrom = (Map<Node, int[]>) inputStream.readObject();
 		this.dependencyTo = (Map<Node, int[]>) inputStream.readObject();
-		this.readOnly = true;
+		this.writable = false;
 	}
 	//</editor-fold>
 
@@ -680,7 +689,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 	 */
 	@Nonnull
 	public final List<Node> getChildren() {
-		return readOnly ? children : Collections.unmodifiableList(children);
+		return isWritable() ? Collections.unmodifiableList(children) : children;
 	}
 
 	private void internalRemoveDependencyRecursive() {
@@ -822,7 +831,7 @@ public abstract class Node implements Serializable, Iterable<Node> {
 				+ ", name: \"" + name
 				+ "\", uniqueName: \"" + uniqueName
 				+ "\", signature: \"" + signature
-				+ "\", dependencyFrom " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
+				+ "\", dependencyFrom: " + Utilities.mapToString(dependencyFrom, null, Node::countsToString)
 				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, Node::countsToString)
 				+ partialTreeElementString()
 				+ " }";

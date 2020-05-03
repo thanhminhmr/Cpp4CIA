@@ -26,7 +26,7 @@ public interface Triple<A, B, C> {
 }
 
 final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
-	private static final long serialVersionUID = -4622230648901699471L;
+	private static final long serialVersionUID = -3828980625182962533L;
 	private A a;
 	private B b;
 	private C c;
@@ -74,7 +74,7 @@ final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	}
 
 	@Override
-	public boolean equals(Object object) {
+	public final boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Triple)) return false;
 		final Triple<?, ?, ?> triple = (Triple<?, ?, ?>) object;
@@ -82,7 +82,7 @@ final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	}
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return Objects.hash(a, b, c);
 	}
 
@@ -93,7 +93,7 @@ final class MutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 }
 
 final class ImmutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
-	private static final long serialVersionUID = 1279580388589425867L;
+	private static final long serialVersionUID = -1181841448891793143L;
 	private final A a;
 	private final B b;
 	private final C c;
@@ -135,7 +135,7 @@ final class ImmutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	}
 
 	@Override
-	public boolean equals(Object object) {
+	public final boolean equals(Object object) {
 		if (this == object) return true;
 		if (!(object instanceof Triple)) return false;
 		final Triple<?, ?, ?> triple = (Triple<?, ?, ?>) object;
@@ -143,7 +143,7 @@ final class ImmutableTriple<A, B, C> implements Triple<A, B, C>, Serializable {
 	}
 
 	@Override
-	public int hashCode() {
+	public final int hashCode() {
 		return Objects.hash(a, b, c);
 	}
 

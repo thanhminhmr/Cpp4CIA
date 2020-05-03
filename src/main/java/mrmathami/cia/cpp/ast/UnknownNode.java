@@ -1,13 +1,18 @@
 package mrmathami.cia.cpp.ast;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 public final class UnknownNode extends Node {
-	private static final long serialVersionUID = 5253244210630760970L;
+	private static final long serialVersionUID = 4828860334527211201L;
 
 	public UnknownNode() {
+	}
+
+	public UnknownNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	//<editor-fold desc="Object Helper">

@@ -6,9 +6,13 @@ import java.io.ObjectOutputStream;
 import java.util.List;
 
 public final class NamespaceNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer {
-	private static final long serialVersionUID = -7182112379517811654L;
+	private static final long serialVersionUID = 4485573387809940424L;
 
 	public NamespaceNode() {
+	}
+
+	public NamespaceNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	@Nonnull

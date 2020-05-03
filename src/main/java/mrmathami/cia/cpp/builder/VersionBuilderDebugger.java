@@ -17,6 +17,7 @@ import java.util.Arrays;
 
 public final class VersionBuilderDebugger {
 	private boolean readableFileContent;
+	private boolean loadFileContent;
 	private boolean saveTranslationUnit;
 
 	private String versionName;
@@ -75,6 +76,14 @@ public final class VersionBuilderDebugger {
 		this.readableFileContent = readableFileContent;
 	}
 
+	public final boolean isLoadFileContent() {
+		return loadFileContent;
+	}
+
+	public final void setLoadFileContent(boolean loadFileContent) {
+		this.loadFileContent = loadFileContent;
+	}
+
 	public final boolean isSaveTranslationUnit() {
 		return saveTranslationUnit;
 	}
@@ -129,11 +138,13 @@ public final class VersionBuilderDebugger {
 
 
 	boolean loadFileContent() {
-		try {
-			this.fileContent = Files.readString(outputPath.resolve("output_" + versionName + ".cpp"), StandardCharsets.UTF_8).toCharArray();
-			return true;
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (loadFileContent) {
+			try {
+				this.fileContent = Files.readString(outputPath.resolve("output_" + versionName + ".cpp"), StandardCharsets.UTF_8).toCharArray();
+				return true;
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		return false;
 	}

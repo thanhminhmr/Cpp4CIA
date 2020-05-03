@@ -8,21 +8,30 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>, IClassContainer, IEnumContainer, IVariableContainer {
-	private static final long serialVersionUID = 4827973061998245590L;
+public final class FunctionNode extends Node implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer {
+	private static final long serialVersionUID = -2922635003614340901L;
 
 	@Nonnull private transient List<Node> parameters;
 	@Nullable private String body;
 	@Nullable private Node type;
 
-	public FunctionNode() {
+	// THIS BLOCK WILL NOT BE CALLED WHEN DESERIALIZE
+	{
 		this.parameters = new LinkedList<>();
+	}
+
+	public FunctionNode() {
+	}
+
+	public FunctionNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	@Override
@@ -34,11 +43,12 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 
 	@Nonnull
 	public final List<Node> getParameters() {
-		return isReadOnly() ? parameters : Collections.unmodifiableList(parameters);
+		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
 	public final boolean addParameters(@Nonnull List<Node> parameters) {
 		checkReadOnly();
+		for (final Node parameter : parameters) if (parameter.getRoot() != getRoot()) return false;
 		return this.parameters.addAll(parameters);
 	}
 
@@ -49,6 +59,7 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 
 	public final boolean addParameter(@Nonnull Node parameter) {
 		checkReadOnly();
+		if (parameter.getRoot() != getRoot()) return false;
 		parameters.add(parameter);
 		return true;
 	}
@@ -64,12 +75,10 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 		return body;
 	}
 
-	@Nonnull
 	@Override
-	public final FunctionNode setBody(@Nullable String body) {
+	public final void setBody(@Nullable String body) {
 		checkReadOnly();
 		this.body = body;
-		return this;
 	}
 
 	@Nullable
@@ -78,12 +87,12 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 		return type;
 	}
 
-	@Nonnull
 	@Override
-	public final FunctionNode setType(@Nullable Node type) {
+	public final boolean setType(@Nullable Node type) {
 		checkReadOnly();
+		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
-		return this;
+		return true;
 	}
 
 	@Nonnull
@@ -226,7 +235,9 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 
 	//<editor-fold desc="Object Helper">
 	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+		if (getParent() == null) {
+			throw new IOException("Only RootNode is directly Serializable!");
+		}
 		outputStream.defaultWriteObject();
 		outputStream.writeObject(List.copyOf(parameters));
 	}

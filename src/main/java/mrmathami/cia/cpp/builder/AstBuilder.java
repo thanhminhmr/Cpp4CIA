@@ -9,6 +9,7 @@ import mrmathami.cia.cpp.ast.IntegralNode;
 import mrmathami.cia.cpp.ast.NamespaceNode;
 import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
+import mrmathami.cia.cpp.ast.TypedefNode;
 import mrmathami.cia.cpp.ast.UnknownNode;
 import mrmathami.cia.cpp.ast.VariableNode;
 import mrmathami.util.Pair;
@@ -18,9 +19,8 @@ import org.eclipse.cdt.core.dom.ast.IASTASMDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTDeclarator;
-import org.eclipse.cdt.core.dom.ast.IASTElaboratedTypeSpecifier;
 import org.eclipse.cdt.core.dom.ast.IASTEnumerationSpecifier;
-import org.eclipse.cdt.core.dom.ast.IASTFunctionDeclarator;
+import org.eclipse.cdt.core.dom.ast.IASTExpression;
 import org.eclipse.cdt.core.dom.ast.IASTInitializer;
 import org.eclipse.cdt.core.dom.ast.IASTName;
 import org.eclipse.cdt.core.dom.ast.IASTNamedTypeSpecifier;
@@ -29,6 +29,7 @@ import org.eclipse.cdt.core.dom.ast.IASTProblemDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTSimpleDeclaration;
 import org.eclipse.cdt.core.dom.ast.IASTStatement;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
+import org.eclipse.cdt.core.dom.ast.IASTTypeId;
 import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.IProblemBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTAliasDeclaration;
@@ -59,6 +60,8 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTUsingDirective;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTVisibilityLabel;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPSpecialization;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPUsingDeclaration;
+import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousDeclarator;
 import org.eclipse.cdt.internal.core.model.ASTStringUtil;
 
 import javax.annotation.Nonnull;
@@ -68,10 +71,14 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 final class AstBuilder {
+	@Nonnull private static final Pattern PATTERN = Pattern.compile("\\{\\Q" + TranslationUnitBuilder.VIRTUAL_FILENAME + "\\E:\\d+}");
+
 	@Nonnull private final Map<String, Node> integralNodeMap = new HashMap<>();
 	@Nonnull private final Map<IBinding, Node> bindingNodeMap = new HashMap<>();
 	@Nonnull private final List<UnknownNode> unknownNodeList = new LinkedList<>();
@@ -99,50 +106,42 @@ final class AstBuilder {
 	}
 
 	private void cleanUp() {
-		// clean up nodes
-		for (final Node node : unknownNodeList) {
-			node.removeChildren();
-			node.removeAllDependency();
-		}
-		for (final Node node : integralNodeMap.values()) {
-			node.removeChildren();
-			node.removeAllDependency();
-		}
-
-		// replace unknown node with integral node
-		for (final UnknownNode node : List.copyOf(unknownNodeList)) {
-			final Node integralNode = createIntegralNode(firstNonBlank(node.getName(), node.getUniqueName(), node.getSignature()));
-			if (!replaceNode(node, integralNode)) integralNode.remove();
-		}
-
 		// remove all children of variable and function node
 		for (final Node node : List.copyOf(bindingNodeMap.values())) {
 			if (node instanceof VariableNode) {
+				final VariableNode variableNode = (VariableNode) node;
+				for (final Node childNode : variableNode) {
+					childNode.transferAllDependency(variableNode);
+					if (childNode instanceof UnknownNode) unknownNodeList.remove(childNode);
+				}
 				node.removeChildren();
+
 			} else if (node instanceof FunctionNode) {
-				final FunctionNode function = (FunctionNode) node;
-				for (final Node variable : function.getVariables()) {
-					variable.transferAllDependencyTo(function);
-					function.removeChild(variable);
+				final FunctionNode functionNode = (FunctionNode) node;
+				for (final Node childNode : List.copyOf(functionNode.getChildren())) {
+					if (childNode instanceof VariableNode
+							|| childNode instanceof TypedefNode
+							|| childNode instanceof UnknownNode) {
+						childNode.transferAllDependency(functionNode);
+						childNode.remove();
+						if (childNode instanceof UnknownNode) unknownNodeList.remove(childNode);
+					}
 				}
 			}
 		}
 
-		// move integral node to root
-		for (final Node integralNode : List.copyOf(integralNodeMap.values())) {
-			if (integralNode.getParent() == null) {
-				rootNode.addChild(integralNode);
-			} else if (integralNode.getParent() != rootNode) {
-				final String typeName = integralNode.getName();
-				integralNodeMap.remove(typeName, integralNode);
-				final Node newIntegralNode = createIntegralNode(typeName);
-				rootNode.addChild(newIntegralNode);
-				if (!integralNode.transfer(newIntegralNode)) {
-					integralNodeMap.remove(typeName, newIntegralNode);
-					newIntegralNode.remove();
-				}
-				integralNode.remove();
-			}
+		// replace unknown node with integral node
+		for (final UnknownNode unknownNode : List.copyOf(unknownNodeList)) {
+			assert unknownNode.getParent() != null;
+			unknownNode.transferAllDependency(unknownNode.getParent());
+			final Node integralNode = createIntegralNode(firstNonBlank(unknownNode.getName(), unknownNode.getUniqueName(), unknownNode.getSignature()));
+			if (!replaceNode(unknownNode, integralNode)) integralNode.remove();
+		}
+
+		// clean up nodes
+		for (final Node node : integralNodeMap.values()) {
+			node.removeChildren();
+			node.removeAllDependency();
 		}
 	}
 
@@ -211,23 +210,18 @@ final class AstBuilder {
 		return rootNode;
 	}
 
-	private boolean replaceNode(@Nonnull UnknownNode oldNode, @Nonnull Node newNode) {
-		assert !(newNode instanceof UnknownNode);
-		boolean isChanged = false;
-		unknownNodeList.remove(oldNode);
-		if (oldNode.getParent() != null) {
-			if (newNode.getParent() == null) oldNode.getParent().addChild(newNode);
-			isChanged = oldNode.transfer(newNode);
-			for (final Map.Entry<IBinding, Node> entry : bindingNodeMap.entrySet()) {
-				if (entry.getValue() == oldNode) entry.setValue(newNode);
-			}
-			for (final Pair<Node, IASTNode> pair : childrenCreationQueue) {
-				if (pair.getA() == oldNode) pair.setA(newNode);
-			}
-		} else {
-			bindingNodeMap.entrySet().removeIf(entry -> entry.getValue() == oldNode);
-			childrenCreationQueue.removeIf(pair -> pair.getA() == oldNode);
+	private boolean replaceNode(@Nonnull Node oldNode, @Nonnull Node newNode) {
+		assert oldNode.getParent() != null && newNode.getParent() != null;
+		if (oldNode instanceof UnknownNode) unknownNodeList.remove(oldNode);
+
+		for (final Map.Entry<IBinding, Node> entry : bindingNodeMap.entrySet()) {
+			if (entry.getValue() == oldNode) entry.setValue(newNode);
 		}
+		for (final Pair<Node, IASTNode> pair : childrenCreationQueue) {
+			if (pair.getA() == oldNode) pair.setA(newNode);
+		}
+
+		final boolean isChanged = oldNode.transfer(newNode);
 		oldNode.remove();
 		return isChanged;
 	}
@@ -237,97 +231,126 @@ final class AstBuilder {
 		final Node existNode = integralNodeMap.get(typeName);
 		if (existNode != null) return existNode;
 
-		final Node newNode = new IntegralNode()
-				.setName(typeName)
-				.setUniqueName(typeName)
-				.setSignature(typeName);
-
+		final Node newNode = new IntegralNode(typeName, typeName, typeName);
+		rootNode.addChild(newNode);
 		integralNodeMap.put(typeName, newNode);
 		return newNode;
 	}
 
 	@Nonnull
-	private Node createNode(@Nonnull IBinding binding, @Nullable IASTName astName, @Nullable String signature, @Nonnull Node buildingNode) {
-		if (binding instanceof ICPPSpecialization) binding = ((ICPPSpecialization) binding).getSpecializedBinding();
+	private Node createUnknownNode(@Nonnull Node parentNode, @Nonnull IBinding binding, @Nonnull String name, boolean createUseDependency) {
+		if (binding instanceof IProblemBinding) return createIntegralNode(name);
 
-		final Node existNode = bindingNodeMap.get(binding);
-		if (existNode != null && (!(existNode instanceof UnknownNode) || buildingNode instanceof UnknownNode)) {
+		final IBinding topBinding = binding instanceof ICPPSpecialization
+				? Objects.requireNonNullElse(((ICPPSpecialization) binding).getSpecializedBinding(), binding)
+				: binding;
+
+		final Node existNode = bindingNodeMap.get(topBinding);
+		if (existNode != null) {
+			if (createUseDependency) parentNode.addDependencyTo(existNode, DependencyType.USE);
 			return existNode;
 		}
 
-		final String name = firstNonBlank(
-				astName != null ? astName.toString() : null,
-				binding != null ? binding.getName() : null,
-				binding != null ? binding.toString() : null
-		);
-		final String uniqueName = firstNonBlank(binding instanceof ICPPBinding
-				? ASTTypeUtil.getQualifiedName((ICPPBinding) binding).replaceAll("\\{##ROOT##:\\d+}", "{ROOT}")
-				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
-
-		final Node newNode = buildingNode instanceof UnknownNode && binding instanceof IProblemBinding
-				? createIntegralNode(firstNonBlank(name, uniqueName, signature))
-				: buildingNode.setName(name).setUniqueName(uniqueName).setSignature(signature != null ? signature : uniqueName);
-
-		if (existNode != null) replaceNode((UnknownNode) existNode, newNode);
-
-		if (newNode instanceof UnknownNode) unknownNodeList.add((UnknownNode) newNode);
-		if (binding != null) bindingNodeMap.put(binding, newNode);
+		final UnknownNode newNode = new UnknownNode(name, name, name);
+		parentNode.addChild(newNode);
+		if (createUseDependency) parentNode.addDependencyTo(newNode, DependencyType.USE);
+		bindingNodeMap.put(topBinding, newNode);
+		unknownNodeList.add(newNode);
 		return newNode;
 	}
 
 	@Nonnull
-	private Node createFromDeclarator(@Nonnull Node typeNode, @Nonnull IASTDeclarator declarator) {
+	private Node createNode(@Nullable IBinding binding, @Nullable IASTName astName, @Nullable String signature,
+			@Nonnull Node buildingNode, @Nonnull Node parentNode) {
+		assert !(buildingNode instanceof UnknownNode) && !(buildingNode instanceof IntegralNode);
+		if (binding == null)
+			return createIntegralNode(astName != null ? astName.toString() : signature != null ? signature : "");
+
+		final IBinding topBinding = binding instanceof ICPPSpecialization
+				? Objects.requireNonNullElse(((ICPPSpecialization) binding).getSpecializedBinding(), binding)
+				: binding;
+
+		final Node existNode = bindingNodeMap.get(topBinding);
+		if (existNode != null && !(existNode instanceof UnknownNode)) return existNode;
+
+		final String name = firstNonBlank(astName != null ? astName.toString() : null, topBinding.getName());
+		final String uniqueName = firstNonBlank(topBinding instanceof ICPPBinding
+				? PATTERN.matcher(ASTTypeUtil.getQualifiedName((ICPPBinding) binding)).replaceAll("{ROOT}")
+				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
+
+		final Node newNode = buildingNode.setName(name).setUniqueName(uniqueName).setSignature(signature != null ? signature : uniqueName);
+		parentNode.addChild(newNode);
+		parentNode.addDependencyTo(newNode, DependencyType.MEMBER);
+
+		bindingNodeMap.put(topBinding, newNode);
+		if (existNode != null) replaceNode(existNode, newNode);
+		return newNode;
+	}
+
+	@Nonnull
+	private Node createFromDeclarator(@Nonnull Node parentNode, @Nonnull Node typeNode, @Nonnull IASTDeclarator declarator, boolean isTypedef) {
 		final IASTName declaratorName = declarator.getName();
 		final IBinding declaratorBinding = declaratorName.resolveBinding();
 		final String signature = ASTStringUtil.getSignatureString(declarator);
 
-		if (declarator instanceof ICPPASTFunctionDeclarator) {
-			// region
-			final ICPPASTFunctionDeclarator functionDeclarator = (ICPPASTFunctionDeclarator) declarator;
+		if (declarator instanceof IASTAmbiguousDeclarator) {
+			return createUnknownNode(parentNode, declaratorBinding, declaratorName.toString(), isTypedef);
 
+		} else if (declarator instanceof ICPPASTFunctionDeclarator) {
+			// region Function
+			final ICPPASTFunctionDeclarator functionDeclarator = (ICPPASTFunctionDeclarator) declarator;
 			final Node functionNode = createNode(declaratorBinding, declaratorName, signature,
-					new FunctionNode().setType(typeNode));
+					new FunctionNode(), parentNode);
 
 			if (functionNode instanceof FunctionNode) {
+				((FunctionNode) functionNode).setType(typeNode);
+				functionNode.addDependencyTo(typeNode, DependencyType.USE);
+
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
-					final IASTDeclSpecifier parameterSpecifier = functionParameter.getDeclSpecifier();
-					final ICPPASTDeclarator parameterDeclarator = functionParameter.getDeclarator();
-
-					final Node parameterType = createFromDeclSpecifier(typeNode, parameterSpecifier);
-					final Node parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
-
-					if (parameterNode.getParent() == null) {
-						functionNode.addChild(parameterNode);
-						functionNode.addDependencyTo(parameterNode, DependencyType.MEMBER);
-					}
-
-					if (parameterType.getParent() == null) {
-						functionNode.addChild(parameterType);
-						functionNode.addDependencyTo(parameterType, DependencyType.MEMBER);
-					}
+					final Node parameterType = createFromDeclSpecifier(functionNode, functionParameter.getDeclSpecifier());
+					createFromDeclarator(functionNode, parameterType, functionParameter.getDeclarator(), true);
 					((FunctionNode) functionNode).addParameter(parameterType);
-					functionNode.addDependencyTo(parameterType, DependencyType.USE);
+				}
+
+				final IASTInitializer initializer = declarator.getInitializer();
+				if (initializer != null) {
+					((FunctionNode) functionNode).setBody(initializer.getRawSignature());
+					childrenCreationQueue.add(Pair.mutableOf(functionNode, initializer));
 				}
 			}
 			// endregion
 			return functionNode;
 		} else if (declarator instanceof ICPPASTDeclarator) {
-			// region
-			final Node variableNode = createNode(declaratorBinding, declaratorName, signature, new VariableNode().setType(typeNode));
-			final IASTInitializer initializer = declarator.getInitializer();
-			if (initializer != null) {
-				childrenCreationQueue.add(Pair.mutableOf(variableNode, initializer));
-				//createChildrenFromAstNode(node, initializer);
-				if (variableNode instanceof VariableNode) {
-					((VariableNode) variableNode).setBody(initializer.getRawSignature());
+			if (isTypedef) {
+				// region Typedef
+				final Node typedefNode = createNode(declaratorBinding, declaratorName, signature,
+						new TypedefNode(), parentNode);
+				if (typedefNode instanceof TypedefNode) {
+					((TypedefNode) typedefNode).setType(typeNode);
+					typedefNode.addDependencyTo(typeNode, DependencyType.USE);
 				}
+				// endregion
+				return typedefNode;
+			} else {
+				// region Variable
+				final Node variableNode = createNode(declaratorBinding, declaratorName, signature,
+						new VariableNode(), parentNode);
+				if (variableNode instanceof VariableNode) {
+					((VariableNode) variableNode).setType(typeNode);
+					variableNode.addDependencyTo(typeNode, DependencyType.USE);
+
+					final IASTInitializer initializer = declarator.getInitializer();
+					if (initializer != null) {
+						((VariableNode) variableNode).setBody(initializer.getRawSignature());
+						childrenCreationQueue.add(Pair.mutableOf(variableNode, initializer));
+					}
+				}
+				// endregion
+				return variableNode;
 			}
-			// endregion
-			return variableNode;
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromDeclarator(typeNode = (" + Utilities.objectIdentifyString(typeNode)
-					+ "), declarator = (" + Utilities.objectIdentifyString(declarator) + "))");
+			throw new IllegalArgumentException("createFromDeclarator(declarator = (" + Utilities.objectIdentifyString(declarator) + "))");
 		}
 	}
 
@@ -336,111 +359,106 @@ final class AstBuilder {
 		final String signature = ASTStringUtil.getSignatureString(declSpecifier, null);
 
 		if (declSpecifier instanceof ICPPASTEnumerationSpecifier) {
-			// region
+			// region Enumeration
 			final ICPPASTEnumerationSpecifier enumerationSpecifier = (ICPPASTEnumerationSpecifier) declSpecifier;
 			final IASTName enumerationName = enumerationSpecifier.getName();
 			final IBinding enumerationBinding = enumerationName.resolveBinding();
 
-			final Node enumNode = createNode(enumerationBinding, enumerationName, signature, new EnumNode());
+			final Node enumNode = createNode(enumerationBinding, enumerationName, signature,
+					new EnumNode(), parentNode);
+			if (enumNode instanceof EnumNode) {
+				final ICPPASTDeclSpecifier enumBaseType = enumerationSpecifier.getBaseType();
+				final Node baseType = enumBaseType != null ? createFromDeclSpecifier(parentNode, enumBaseType) : null;
+				final Node nodeType = enumerationSpecifier.isScoped() ? enumNode : baseType;
 
-			final ICPPASTDeclSpecifier enumBaseType = enumerationSpecifier.getBaseType();
-			final Node baseType = enumBaseType != null ? createFromDeclSpecifier(enumNode, enumBaseType) : null;
-
-			final Node nodeType = enumerationSpecifier.isScoped() ? enumNode : baseType;
-			final StringBuilder bodyBuilder = enumNode.getName().isBlank() ? new StringBuilder() : null;
-			for (final IASTEnumerationSpecifier.IASTEnumerator enumerator : enumerationSpecifier.getEnumerators()) {
-				final IASTName enumeratorName = enumerator.getName();
-				final IBinding enumeratorBinding = enumeratorName.resolveBinding();
-
-				final Node enumeratorNode = createNode(enumeratorBinding, enumeratorName, null, new VariableNode().setType(nodeType));
-				if (bodyBuilder != null) {
-					bodyBuilder.append(bodyBuilder.length() > 0 ? ',' : "enum{")
-							.append(enumeratorNode.getName());
+				if (baseType != null) {
+					((EnumNode) enumNode).setType(baseType);
+					enumNode.addDependencyTo(baseType, DependencyType.USE);
 				}
 
-				enumNode.addChild(enumeratorNode);
-				enumNode.addDependencyTo(enumeratorNode, DependencyType.MEMBER);
-			}
-			if (enumNode instanceof EnumNode) {
-				((EnumNode) enumNode).setType(baseType);
-				if (bodyBuilder != null) enumNode.setName(bodyBuilder.append('}').toString());
-			}
-			parentNode.addChild(enumNode);
-			parentNode.addDependencyTo(enumNode, DependencyType.MEMBER);
-			// endregion
-			return enumNode;
-		} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
-			// region
-			final ICPPASTCompositeTypeSpecifier classSpecifier = (ICPPASTCompositeTypeSpecifier) declSpecifier;
-			final IASTName className = classSpecifier.getName();
-			final IBinding classBinding = className.resolveBinding();
+				final StringBuilder bodyBuilder = enumNode.getName().isBlank() ? new StringBuilder() : null;
+				for (final IASTEnumerationSpecifier.IASTEnumerator enumerator : enumerationSpecifier.getEnumerators()) {
+					final IASTName enumeratorName = enumerator.getName();
+					final IBinding enumeratorBinding = enumeratorName.resolveBinding();
+					final Node enumeratorNode = createNode(enumeratorBinding, enumeratorName, null,
+							new VariableNode(), enumNode);
+					if (enumeratorNode.getParent() == null) {
+						enumNode.addChild(enumeratorNode);
+						enumNode.addDependencyTo(enumeratorNode, DependencyType.MEMBER);
+					} else {
+						parentNode.addDependencyTo(enumNode, DependencyType.USE);
+					}
+					if (enumeratorNode instanceof VariableNode) {
+						if (nodeType != null) {
+							((VariableNode) enumeratorNode).setType(nodeType);
+							enumeratorNode.addDependencyTo(nodeType, DependencyType.USE);
+						}
 
-			final Node classNode = createNode(classBinding, className, signature, new ClassNode());
-			final StringBuilder bodyBuilder = classNode.getName().isBlank()
-					? new StringBuilder().append(classNode.getSignature()).append('{')
-					: null;
-			for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
-				final List<Node> nodeList = createChildrenFromDeclaration(classNode, classChildDeclaration);
-				if (bodyBuilder != null) {
-					for (final Node node : nodeList) {
-						bodyBuilder.append(node.getName()).append(';');
+						final IASTExpression expression = enumerator.getValue();
+						if (expression != null) {
+							((VariableNode) enumeratorNode).setBody(expression.getRawSignature());
+							childrenCreationQueue.add(Pair.mutableOf(enumeratorNode, expression));
+						}
+					}
+					if (bodyBuilder != null) {
+						bodyBuilder.append(bodyBuilder.length() > 0 ? ',' : "enum{").append(enumeratorNode.getName());
 					}
 				}
-			}
-			if (classNode instanceof ClassNode) {
 				if (bodyBuilder != null) {
-					classNode.setName(bodyBuilder.append('}').toString());
+					enumNode.setName(bodyBuilder.append('}').toString());
 				}
+			}
+			// endregion
+			return enumNode;
+
+		} else if (declSpecifier instanceof ICPPASTCompositeTypeSpecifier) {
+			// region Class, Struct, Union
+			final ICPPASTCompositeTypeSpecifier classSpecifier = (ICPPASTCompositeTypeSpecifier) declSpecifier;
+			final IASTName className = classSpecifier.getName();
+
+			final Node classNode = createNode(className.resolveBinding(), className, signature,
+					new ClassNode(), parentNode);
+			if (classNode instanceof ClassNode) {
 				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
 					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
 					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
 
-					final Node classBaseNode = createNode(classBaseNameBinding, null, null, new UnknownNode());
+					final Node classBaseNode = createUnknownNode(parentNode, classBaseNameBinding, classBaseNameBinding.getName(), true);
 					((ClassNode) classNode).addBase(classBaseNode);
 					classNode.addDependencyTo(classBaseNode, DependencyType.INHERITANCE);
 				}
-			}
-			if (classNode.getParent() == null) {
-				parentNode.addChild(classNode);
-				parentNode.addDependencyTo(classNode, DependencyType.MEMBER);
+
+				final StringBuilder bodyBuilder = classNode.getName().isBlank()
+						? new StringBuilder().append(classNode.getSignature()).append('{')
+						: null;
+				for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
+					final List<Node> nodeList = createChildrenFromDeclaration(classNode, classChildDeclaration);
+					if (bodyBuilder != null) {
+						for (final Node node : nodeList) bodyBuilder.append(node.getName()).append(';');
+					}
+				}
+				if (bodyBuilder != null) classNode.setName(bodyBuilder.append('}').toString());
 			}
 			// endregion
 			return classNode;
+
 		} else if (declSpecifier instanceof ICPPASTNamedTypeSpecifier) {
-			// region
-			final IASTNamedTypeSpecifier namedSpecifier = (IASTNamedTypeSpecifier) declSpecifier;
-			final IASTName namedName = namedSpecifier.getName();
-			final IBinding namedBinding = namedName.resolveBinding();
-
-			//noinspection UnnecessaryLocalVariable
-			final Node namedNode = createNode(namedBinding, namedName, signature, new UnknownNode());
+			// region Typename Type
+			final IASTName namedName = ((IASTNamedTypeSpecifier) declSpecifier).getName();
+			return createUnknownNode(parentNode, namedName.resolveBinding(), namedName.toString(), true);
 			// endregion
-			return namedNode;
+
 		} else if (declSpecifier instanceof ICPPASTElaboratedTypeSpecifier) {
-			// region
-			final ICPPASTElaboratedTypeSpecifier elaboratedSpecifier = (ICPPASTElaboratedTypeSpecifier) declSpecifier;
-			final IASTName elaboratedName = elaboratedSpecifier.getName();
-			final IBinding elaboratedBinding = elaboratedName.resolveBinding();
-
-			switch (elaboratedSpecifier.getKind()) {
-				case IASTElaboratedTypeSpecifier.k_enum:
-					return createNode(elaboratedBinding, elaboratedName, signature, new EnumNode());
-				case IASTElaboratedTypeSpecifier.k_struct:
-				case IASTElaboratedTypeSpecifier.k_union:
-				case ICPPASTElaboratedTypeSpecifier.k_class:
-					return createNode(elaboratedBinding, elaboratedName, signature, new ClassNode());
-			}
-
-			//noinspection UnnecessaryLocalVariable
-			final Node elaboratedNode = createNode(elaboratedBinding, elaboratedName, signature, new UnknownNode());
+			// region Forward Declaration
+			final IASTName elaboratedName = ((ICPPASTElaboratedTypeSpecifier) declSpecifier).getName();
+			return createUnknownNode(parentNode, elaboratedName.resolveBinding(), elaboratedName.toString(), true);
 			// endregion
-			return elaboratedNode;
+
 		} else if (declSpecifier instanceof ICPPASTSimpleDeclSpecifier) {
-			// region
-			//noinspection UnnecessaryLocalVariable
-			final Node simpleNode = createIntegralNode(signature);
+			// region Integral Type
+			return createIntegralNode(signature);
 			// endregion
-			return simpleNode;
+
 		} else {
 			// todo: debug?
 			throw new IllegalArgumentException("createFromDeclSpecifier(declSpecifier = (" + Utilities.objectIdentifyString(declSpecifier) + "))");
@@ -450,39 +468,49 @@ final class AstBuilder {
 	@Nonnull
 	private Node createFromTemplateParameter(@Nonnull Node parentNode, @Nonnull ICPPASTTemplateParameter templateParameter) {
 		if (templateParameter instanceof ICPPASTParameterDeclaration) {
+			// region Template Variable
 			final ICPPASTParameterDeclaration parameterDeclaration = (ICPPASTParameterDeclaration) templateParameter;
-
-			final IASTDeclSpecifier parameterSpecifier = parameterDeclaration.getDeclSpecifier();
-			final ICPPASTDeclarator parameterDeclarator = parameterDeclaration.getDeclarator();
-
-			final Node parameterType = createFromDeclSpecifier(parentNode, parameterSpecifier);
-			//noinspection UnnecessaryLocalVariable
-			final Node parameterNode = createFromDeclarator(parameterType, parameterDeclarator);
-
-			return parameterNode;
+			final Node parameterType = createFromDeclSpecifier(parentNode, parameterDeclaration.getDeclSpecifier());
+			return createFromDeclarator(parentNode, parameterType, parameterDeclaration.getDeclarator(), false);
+			// endregion
 
 		} else if (templateParameter instanceof ICPPASTSimpleTypeTemplateParameter) {
+			// region Template Typename
 			final ICPPASTSimpleTypeTemplateParameter simpleParameter = (ICPPASTSimpleTypeTemplateParameter) templateParameter;
 			final IASTName simpleName = simpleParameter.getName();
 			final IBinding simpleBinding = simpleName.resolveBinding();
 
-			//noinspection UnnecessaryLocalVariable
-			final Node variableNode = createNode(simpleBinding, simpleName, null, new VariableNode());
+			final Node typedefNode = createNode(simpleBinding, simpleName, null,
+					new TypedefNode(), parentNode);
 
-			return variableNode;
-		} else if (templateParameter instanceof ICPPASTTemplatedTypeTemplateParameter) {
-			final ICPPASTTemplatedTypeTemplateParameter nestedTemplateParameter = (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
-			final IASTName nestedTemplateName = nestedTemplateParameter.getName();
-			final IBinding nestedTemplateBinding = nestedTemplateName.resolveBinding();
-			final Node nestedTemplateNode = createNode(nestedTemplateBinding, nestedTemplateName, null, new VariableNode());
-
-			for (final ICPPASTTemplateParameter nestedParameter : nestedTemplateParameter.getTemplateParameters()) {
-				final Node nestedNode = createFromTemplateParameter(nestedTemplateNode, nestedParameter);
-				nestedTemplateNode.addChild(nestedNode);
-				nestedTemplateNode.addDependencyTo(nestedNode, DependencyType.MEMBER);
+			if (typedefNode instanceof TypedefNode) {
+				final IASTTypeId defaultType = simpleParameter.getDefaultType();
+				if (defaultType != null) {
+					final IASTDeclSpecifier elementSpecifier = defaultType.getDeclSpecifier();
+					final IASTDeclarator elementDeclarator = defaultType.getAbstractDeclarator();
+					final Node elementType = elementSpecifier != null
+							? createFromDeclSpecifier(typedefNode, elementSpecifier) : null;
+					final Node element = elementDeclarator != null && elementType != null
+							? createFromDeclarator(typedefNode, elementType, elementDeclarator, false) : null;
+					if (element != null || elementType != null) {
+						((TypedefNode) typedefNode).setType(element != null ? element : elementType);
+					}
+				}
 			}
+			// endregion
+			return typedefNode;
 
-			return nestedTemplateNode;
+		} else if (templateParameter instanceof ICPPASTTemplatedTypeTemplateParameter) {
+			// region Nested Template
+			final ICPPASTTemplatedTypeTemplateParameter nestedParameter = (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
+			final IASTName nestedName = nestedParameter.getName();
+			final Node nestedNode = createNode(nestedName.resolveBinding(), nestedName, null,
+					new TypedefNode(), parentNode);
+			for (final ICPPASTTemplateParameter innerParameter : nestedParameter.getTemplateParameters()) {
+				createFromTemplateParameter(nestedNode, innerParameter);
+			}
+			// endregion
+			return nestedNode;
 		} else {
 			// todo: debug?
 			throw new IllegalArgumentException("createFromTemplateParameter(parentNode = (" + Utilities.objectIdentifyString(parentNode)
@@ -493,180 +521,143 @@ final class AstBuilder {
 	@Nonnull
 	private List<Node> createChildrenFromDeclaration(@Nonnull Node parentNode, @Nonnull IASTDeclaration declaration) {
 		if (declaration instanceof ICPPASTVisibilityLabel
-				|| declaration instanceof ICPPASTUsingDeclaration
-				|| declaration instanceof ICPPASTNamespaceAlias
+				|| declaration instanceof IASTASMDeclaration
 				|| declaration instanceof IASTProblemDeclaration
 				|| declaration instanceof ICPPASTStaticAssertDeclaration
-				|| declaration instanceof ICPPASTExplicitTemplateInstantiation
-				|| declaration instanceof IASTASMDeclaration
-		) {
+				|| declaration instanceof ICPPASTExplicitTemplateInstantiation) {
 			// skipped
 			return List.of();
 
+		} else if (declaration instanceof ICPPASTUsingDeclaration) {
+			// region Using Declaration / Directive
+			final IASTName declarationName = ((ICPPASTUsingDeclaration) declaration).getName();
+			final IBinding declarationBinding = declarationName.resolveBinding();
+			final Node declarationNode = createNode(declarationBinding, declarationName, null, new TypedefNode(), parentNode);
+			if (declarationNode instanceof TypedefNode && declarationBinding instanceof ICPPUsingDeclaration) {
+				for (final IBinding delegateBinding : ((ICPPUsingDeclaration) declarationBinding).getDelegates()) {
+					createUnknownNode(declarationNode, delegateBinding, declarationName.toString(), true);
+				}
+			}
+			// endregion
+			return List.of(declarationNode);
+
 		} else if (declaration instanceof ICPPASTUsingDirective) {
-			final ICPPASTUsingDirective usingDirective = (ICPPASTUsingDirective) declaration;
-			final IASTName namespaceName = usingDirective.getQualifiedName();
-			final IBinding namespaceBinding = namespaceName.resolveBinding();
-
-			final Node namespaceNode = createNode(namespaceBinding, namespaceName, null, new NamespaceNode());
-			parentNode.addDependencyTo(namespaceNode, DependencyType.USE);
-			return List.of(namespaceNode);
-
-		} else if (declaration instanceof ICPPASTLinkageSpecification) {
-			final ICPPASTLinkageSpecification linkageSpecification = (ICPPASTLinkageSpecification) declaration;
-			final List<Node> childrenNode = new ArrayList<>();
-			for (final IASTDeclaration linkageDeclaration : linkageSpecification.getDeclarations(false)) {
-				childrenNode.addAll(createChildrenFromDeclaration(parentNode, linkageDeclaration));
-			}
-			return childrenNode;
-
-		} else if (declaration instanceof ICPPASTNamespaceDefinition) {
-			// region
-			final ICPPASTNamespaceDefinition namespaceDefinition = (ICPPASTNamespaceDefinition) declaration;
-			final IASTName namespaceName = namespaceDefinition.getName();
-			final IBinding namespaceBinding = namespaceName.resolveBinding();
-
-			final Node namespaceNode = createNode(namespaceBinding, namespaceName, null, new NamespaceNode());
-			final IASTDeclaration[] namespaceChildDeclarations = namespaceDefinition.getDeclarations(false);
-			for (final IASTDeclaration namespaceChildDeclaration : namespaceChildDeclarations) {
-				createChildrenFromDeclaration(namespaceNode, namespaceChildDeclaration);
-			}
+			// region Using Declaration / Directive
+			final IASTName usingName = ((ICPPASTUsingDirective) declaration).getQualifiedName();
+			final Node usingNode = createUnknownNode(parentNode, usingName.resolveBinding(), usingName.toString(), true);
 			// endregion
-			if (namespaceNode.getParent() == null) {
-				parentNode.addChild(namespaceNode);
-				parentNode.addDependencyTo(namespaceNode, DependencyType.MEMBER);
-			}
-			return List.of(namespaceNode);
-
-		} else if (declaration instanceof IASTSimpleDeclaration) {
-			// region
-			final IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) declaration;
-
-			final IASTDeclSpecifier simpleSpecifier = simpleDeclaration.getDeclSpecifier();
-			final IASTDeclarator[] simpleDeclarators = simpleDeclaration.getDeclarators();
-
-			final Node simpleNodeType = createFromDeclSpecifier(parentNode, simpleSpecifier);
-			if (simpleNodeType.getParent() == null) {
-				parentNode.addChild(simpleNodeType);
-				parentNode.addDependencyTo(simpleNodeType, DependencyType.MEMBER);
-			} else if (simpleDeclarators.length > 0) {
-				parentNode.addDependencyTo(simpleNodeType, DependencyType.USE);
-			}
-
-			final List<Node> simpleNodeList = new ArrayList<>();
-			for (final IASTDeclarator simpleDeclarator : simpleDeclarators) {
-				final Node simpleNode = createFromDeclarator(simpleNodeType, simpleDeclarator);
-				simpleNodeList.add(simpleNode);
-				if (simpleNode.getParent() == null) {
-					parentNode.addChild(simpleNode);
-					parentNode.addDependencyTo(simpleNode, DependencyType.MEMBER);
-				}
-				simpleNode.addDependencyTo(simpleNodeType, DependencyType.USE);
-			}
-
-			return simpleNodeList.size() > 0 ? simpleNodeList : List.of(simpleNodeType);
-			// endregion
-
-		} else if (declaration instanceof ICPPASTFunctionDefinition) {
-			// region
-			final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
-
-			final IASTDeclSpecifier functionSpecifier = functionDefinition.getDeclSpecifier();
-			final IASTFunctionDeclarator functionDeclarator = functionDefinition.getDeclarator();
-
-			final Node functionReturnType = createFromDeclSpecifier(parentNode, functionSpecifier);
-			final Node functionNode = createFromDeclarator(functionReturnType, functionDeclarator);
-
-			functionNode.addDependencyTo(functionReturnType, DependencyType.USE);
-
-			final StringBuilder functionBodyBuilder = new StringBuilder();
-
-			// function dependency
-			for (final ICPPASTConstructorChainInitializer memberChainInitializer : functionDefinition.getMemberInitializers()) {
-				final IASTName memberName = memberChainInitializer.getMemberInitializerId();
-				final IBinding memberBinding = memberName.resolveBinding();
-
-				final Node memberNode = createNode(memberBinding, memberName, null, new UnknownNode());
-				if (memberNode.getParent() == null) {
-					parentNode.addChild(memberNode);
-					parentNode.addDependencyTo(memberNode, DependencyType.MEMBER);
-				}
-				functionNode.addDependencyTo(memberNode, DependencyType.USE);
-
-				final IASTInitializer memberInitializer = memberChainInitializer.getInitializer();
-				childrenCreationQueue.add(Pair.mutableOf(functionNode, memberInitializer));
-				//createChildrenFromAstNode(functionNode, memberInitializer);
-
-				functionBodyBuilder.append(memberName.toString()).append('=').append(memberInitializer.getRawSignature()).append(';');
-			}
-
-			final IASTStatement functionBody = functionDefinition.getBody();
-			if (functionBody != null) {
-				childrenCreationQueue.add(Pair.mutableOf(functionNode, functionBody));
-				//createChildrenFromAstNode(functionNode, functionBody);
-				if (functionNode instanceof FunctionNode) {
-					((FunctionNode) functionNode).setBody(functionBodyBuilder.append(functionBody.getRawSignature()).toString());
-				}
-			}
-
-			if (functionNode.getParent() == null) {
-				parentNode.addChild(functionNode);
-				parentNode.addDependencyTo(functionNode, DependencyType.MEMBER);
-			}
-			return List.of(functionNode);
-			// endregion
-
-		} else if (declaration instanceof ICPPASTTemplateDeclaration) {
-			final ICPPASTTemplateDeclaration templateDeclaration = (ICPPASTTemplateDeclaration) declaration;
-
-			for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
-				final Node templateNode = createFromTemplateParameter(parentNode, templateParameter);
-				if (templateNode.getParent() == null) {
-					parentNode.addChild(templateNode);
-					parentNode.addDependencyTo(templateNode, DependencyType.MEMBER);
-				}
-			}
-
-			final IASTDeclaration innerDeclaration = templateDeclaration.getDeclaration();
-			//noinspection UnnecessaryLocalVariable
-			final List<Node> innerNodeList = createChildrenFromDeclaration(parentNode, innerDeclaration);
-
-//			for (final Node innerNode : innerNodeList) {
-//				parentNode.addChild(innerNode);
-//				parentNode.addDependencyTo(innerNode, DependencyType.MEMBER);
-//			}
-
-			return innerNodeList;
-
-		} else if (declaration instanceof ICPPASTAliasDeclaration) {
-			// region
-			final ICPPASTAliasDeclaration aliasDefinition = (ICPPASTAliasDeclaration) declaration;
-			final IASTName aliasName = aliasDefinition.getAlias();
-			final IBinding aliasBinding = aliasName.resolveBinding();
-
-			final ICPPASTTypeId aliasTypeId = aliasDefinition.getMappingTypeId();
-
-			final IASTDeclSpecifier aliasDeclSpecifier = aliasTypeId.getDeclSpecifier();
-			final Node aliasType = createFromDeclSpecifier(parentNode, aliasDeclSpecifier);
-
-			final IASTDeclarator aliasDeclarator = aliasTypeId.getAbstractDeclarator();
-			final Node aliasNodeType = createFromDeclarator(aliasType, aliasDeclarator);
-
-			final Node aliasNode = createNode(aliasBinding, aliasName,
-					ASTStringUtil.getSignatureString(aliasDeclSpecifier, aliasDeclarator),
-					new VariableNode().setType(aliasNodeType));
-
-			// endregion
-			parentNode.addChild(aliasNode);
-			parentNode.addDependencyTo(aliasNode, DependencyType.MEMBER);
-			parentNode.addDependencyTo(aliasType, DependencyType.USE);
-			parentNode.addDependencyTo(aliasNodeType, DependencyType.USE);
-			return List.of(aliasNode);
+			return List.of(usingNode);
 
 		} else {
-			// todo: debug?
-			throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = (" + Utilities.objectIdentifyString(parentNode)
-					+ "), declaration = (" + Utilities.objectIdentifyString(declaration) + "))");
+			if (declaration instanceof ICPPASTLinkageSpecification) {
+				final ICPPASTLinkageSpecification linkageSpecification = (ICPPASTLinkageSpecification) declaration;
+				// region extern "C"
+				final List<Node> childrenNode = new ArrayList<>();
+				for (final IASTDeclaration linkageDeclaration : linkageSpecification.getDeclarations(false)) {
+					childrenNode.addAll(createChildrenFromDeclaration(parentNode, linkageDeclaration));
+				}
+				// endregion
+				return childrenNode;
+
+			} else if (declaration instanceof ICPPASTNamespaceDefinition) {
+				final ICPPASTNamespaceDefinition namespaceDefinition = (ICPPASTNamespaceDefinition) declaration;
+				// region Namespace
+				final IASTName namespaceName = namespaceDefinition.getName();
+				final Node namespaceNode = createNode(namespaceName.resolveBinding(), namespaceName, null,
+						new NamespaceNode(), parentNode);
+				for (final IASTDeclaration namespaceDeclaration : namespaceDefinition.getDeclarations(false)) {
+					createChildrenFromDeclaration(namespaceNode, namespaceDeclaration);
+				}
+				// endregion
+				return List.of(namespaceNode);
+
+			} else if (declaration instanceof IASTSimpleDeclaration) {
+				final IASTSimpleDeclaration simpleDeclaration = (IASTSimpleDeclaration) declaration;
+				// region Simple Declaration
+				final IASTDeclSpecifier simpleSpecifier = simpleDeclaration.getDeclSpecifier();
+				final Node simpleNodeType = createFromDeclSpecifier(parentNode, simpleSpecifier);
+
+				final List<Node> simpleNodeList = new ArrayList<>();
+				final boolean isTypedef = simpleSpecifier.getStorageClass() == IASTDeclSpecifier.sc_typedef;
+				for (final IASTDeclarator simpleDeclarator : simpleDeclaration.getDeclarators()) {
+					simpleNodeList.add(createFromDeclarator(parentNode, simpleNodeType, simpleDeclarator, isTypedef));
+				}
+				// endregion
+				return simpleNodeList.size() > 0 ? simpleNodeList : List.of(simpleNodeType);
+
+			} else if (declaration instanceof ICPPASTFunctionDefinition) {
+				final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
+				// region Function
+				final Node functionReturnType = createFromDeclSpecifier(parentNode, functionDefinition.getDeclSpecifier());
+				final Node functionNode = createFromDeclarator(parentNode, functionReturnType, functionDefinition.getDeclarator(), false);
+				final StringBuilder functionBodyBuilder = new StringBuilder();
+				// function with constructor
+				for (final ICPPASTConstructorChainInitializer memberChainInitializer : functionDefinition.getMemberInitializers()) {
+					final IASTName memberName = memberChainInitializer.getMemberInitializerId();
+					createUnknownNode(functionNode, memberName.resolveBinding(), memberName.toString(), true);
+					functionBodyBuilder.append(memberName.toString()).append('(');
+					final IASTInitializer memberInitializer = memberChainInitializer.getInitializer();
+					if (memberInitializer != null) {
+						childrenCreationQueue.add(Pair.mutableOf(functionNode, memberInitializer));
+						functionBodyBuilder.append(memberInitializer.getRawSignature());
+					}
+					functionBodyBuilder.append(");");
+				}
+				// function with body
+				final IASTStatement functionBody = functionDefinition.getBody();
+				if (functionBody != null) {
+					childrenCreationQueue.add(Pair.mutableOf(functionNode, functionBody));
+					if (functionNode instanceof FunctionNode) {
+						((FunctionNode) functionNode).setBody(functionBodyBuilder.append(functionBody.getRawSignature()).toString());
+					}
+				}
+				// endregion
+				return List.of(functionNode);
+
+			} else if (declaration instanceof ICPPASTTemplateDeclaration) {
+				final ICPPASTTemplateDeclaration templateDeclaration = (ICPPASTTemplateDeclaration) declaration;
+				// region Template
+				final List<Node> innerNodeList = createChildrenFromDeclaration(parentNode, templateDeclaration.getDeclaration());
+				if (!innerNodeList.isEmpty()) {
+					final Node innerNode = innerNodeList.get(0);
+					for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
+						createFromTemplateParameter(innerNode, templateParameter);
+					}
+				}
+				// endregion
+				return innerNodeList;
+
+			} else if (declaration instanceof ICPPASTNamespaceAlias) {
+				final ICPPASTNamespaceAlias namespaceAlias = (ICPPASTNamespaceAlias) declaration;
+				// region Namespace Alias
+				final IASTName aliasName = namespaceAlias.getAlias();
+				final Node aliasNode = createNode(aliasName.resolveBinding(), aliasName, null,
+						new TypedefNode(), parentNode);
+				final IASTName mappingName = namespaceAlias.getMappingName();
+				createUnknownNode(aliasNode, mappingName.resolveBinding(), mappingName.toString(), true);
+				// endregion
+				return List.of(aliasNode);
+
+			} else if (declaration instanceof ICPPASTAliasDeclaration) {
+				final ICPPASTAliasDeclaration aliasDefinition = (ICPPASTAliasDeclaration) declaration;
+				// region Alias
+				final IASTName aliasName = aliasDefinition.getAlias();
+				final ICPPASTTypeId aliasTypeId = aliasDefinition.getMappingTypeId();
+				final IASTDeclSpecifier aliasDeclSpecifier = aliasTypeId.getDeclSpecifier();
+				final IASTDeclarator aliasDeclarator = aliasTypeId.getAbstractDeclarator();
+				final Node aliasNode = createNode(aliasName.resolveBinding(), aliasName,
+						ASTStringUtil.getSignatureString(aliasDeclSpecifier, aliasDeclarator),
+						new TypedefNode(), parentNode);
+				final Node aliasType = createFromDeclSpecifier(aliasNode, aliasDeclSpecifier);
+				createFromDeclarator(aliasNode, aliasType, aliasDeclarator, false);
+				// endregion
+				return List.of(aliasNode);
+
+			} else {
+				// todo: debug?
+				throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = (" + Utilities.objectIdentifyString(parentNode)
+						+ "), declaration = (" + Utilities.objectIdentifyString(declaration) + "))");
+			}
 		}
 	}
 
@@ -676,13 +667,9 @@ final class AstBuilder {
 				createChildrenFromDeclaration(parentNode, (IASTDeclaration) astChild);
 			} else if (astChild instanceof IASTName) {
 				final IASTName astName = (IASTName) astChild;
-				final IBinding astBinding = astName.resolveBinding();
-
-				final Node childNode = createNode(astBinding, astName, null, new UnknownNode());
-				if (!(childNode instanceof IntegralNode)) {
-					parentNode.addDependencyTo(childNode, childNode instanceof FunctionNode
-							? DependencyType.INVOCATION : DependencyType.USE);
-				}
+				final Node childNode = createUnknownNode(parentNode, astName.resolveBinding(), astName.toString(), false);
+				parentNode.addDependencyTo(childNode,
+						childNode instanceof FunctionNode ? DependencyType.INVOCATION : DependencyType.USE);
 			} else {
 				createChildrenFromAstNode(parentNode, astChild);
 			}

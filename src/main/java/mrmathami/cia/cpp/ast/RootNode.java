@@ -9,13 +9,11 @@ public final class RootNode extends Node implements IIntegralContainer, IClassCo
 	private int nodeCount;
 
 	public RootNode() {
-		setName("ROOT");
-		setUniqueName("ROOT");
-		setSignature("ROOT");
+		super("ROOT", "ROOT", "ROOT");
 	}
 
 	public final void lock() {
-		if (!isReadOnly()) internalLock();
+		if (isWritable()) internalLock();
 	}
 
 	public final int getNodeCount() {

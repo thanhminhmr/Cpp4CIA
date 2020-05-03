@@ -4,17 +4,16 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.List;
 
-public final class EnumNode extends Node implements ITypeContainer, IVariableContainer {
-	private static final long serialVersionUID = 5434017321552285583L;
+public final class TypedefNode extends Node implements ITypeContainer {
+	private static final long serialVersionUID = 6720389944669874144L;
 
 	@Nullable private Node type;
 
-	public EnumNode() {
+	public TypedefNode() {
 	}
 
-	public EnumNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+	public TypedefNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
 		super(name, uniqueName, signature);
 	}
 
@@ -35,7 +34,7 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 	//<editor-fold desc="Node Comparator">
 	@Override
 	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
-		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
@@ -47,7 +46,7 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 
 	@Override
 	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
-		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
@@ -59,7 +58,7 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 
 	@Override
 	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
-		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
@@ -71,8 +70,7 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 
 	@Override
 	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
-		return super.isIdentical(node, matcher)
-				&& matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.IDENTICAL);
+		return super.isIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.IDENTICAL);
 	}
 
 	@Override
@@ -96,12 +94,6 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 		return ", type: " + type;
 	}
 
-	@Nonnull
-	@Override
-	public final List<VariableNode> getVariables() {
-		return getChildrenList(VariableNode.class);
-	}
-
 	//<editor-fold desc="Object Helper">
 	private void writeObject(ObjectOutputStream outputStream) throws IOException {
 		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
@@ -109,4 +101,3 @@ public final class EnumNode extends Node implements ITypeContainer, IVariableCon
 	}
 	//</editor-fold>
 }
-
