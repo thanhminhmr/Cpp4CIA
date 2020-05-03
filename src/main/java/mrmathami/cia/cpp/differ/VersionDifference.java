@@ -1,22 +1,26 @@
-package mrmathami.cia.cpp;
+package mrmathami.cia.cpp.differ;
 
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.util.Pair;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
+import java.util.EnumMap;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 
 public final class VersionDifference implements Serializable {
-	private static final long serialVersionUID = 3954976070986020324L;
+	private static final long serialVersionUID = 5201230926401028541L;
 
 	@Nonnull private final ProjectVersion versionA;
 	@Nonnull private final ProjectVersion versionB;
@@ -24,27 +28,24 @@ public final class VersionDifference implements Serializable {
 	@Nonnull private final Set<Pair<Node, Node>> changedNodes;
 	@Nonnull private final Set<Pair<Node, Node>> unchangedNodes;
 	@Nonnull private final Set<Node> removedNodes;
+	@Nonnull private final double[] typeImpactWeights;
 	@Nonnull private final double[] impactWeights;
 
-	private VersionDifference(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
+	@Nullable private transient Map<DependencyType, Double> typeImpactWeightMap;
+	@Nullable private transient Map<Node, Double> impactWeightMap;
+
+	VersionDifference(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
 			@Nonnull Set<Node> addedNodes, @Nonnull Set<Pair<Node, Node>> changedNodes,
 			@Nonnull Set<Pair<Node, Node>> unchangedNodes, @Nonnull Set<Node> removedNodes,
-			@Nonnull double[] impactWeights) {
+			@Nonnull double[] typeImpactWeights, @Nonnull double[] impactWeights) {
 		this.versionA = versionA;
 		this.versionB = versionB;
 		this.addedNodes = Set.copyOf(addedNodes);
 		this.changedNodes = Set.copyOf(changedNodes);
 		this.unchangedNodes = Set.copyOf(unchangedNodes);
 		this.removedNodes = Set.copyOf(removedNodes);
+		this.typeImpactWeights = typeImpactWeights.clone();
 		this.impactWeights = impactWeights.clone();
-	}
-
-	@Nonnull
-	public static VersionDifference of(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
-			@Nonnull Set<Node> addedNodes, @Nonnull Set<Pair<Node, Node>> changedNodes,
-			@Nonnull Set<Pair<Node, Node>> unchangedNodes, @Nonnull Set<Node> removedNodes,
-			@Nonnull double[] impactWeights) {
-		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, impactWeights);
 	}
 
 	@Nonnull
@@ -94,11 +95,22 @@ public final class VersionDifference implements Serializable {
 	}
 
 	@Nonnull
+	public final Map<DependencyType, Double> getDependencyTypeImpactWeightMap() {
+		if (typeImpactWeightMap != null) return typeImpactWeightMap;
+		final Map<DependencyType, Double> map = new EnumMap<>(DependencyType.class);
+		for (final DependencyType type : DependencyType.values()) {
+			map.put(type, typeImpactWeights[type.ordinal()]);
+		}
+		return this.typeImpactWeightMap = Map.copyOf(map);
+	}
+
+	@Nonnull
 	public final Map<Node, Double> getImpactWeightMap() {
+		if (impactWeightMap != null) return impactWeightMap;
 		final Map<Node, Double> map = new IdentityHashMap<>();
 		final RootNode rootNode = versionB.getRootNode();
 		map.put(rootNode, impactWeights[0]); // root id == 0
 		for (final Node node : rootNode) map.put(node, impactWeights[node.getId()]);
-		return map;
+		return this.impactWeightMap = Map.copyOf(map);
 	}
 }

@@ -1,9 +1,11 @@
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 import mrmathami.cia.cpp.differ.VersionDiffer;
 import mrmathami.cia.cpp.differ.VersionDifferDebugger;
+import mrmathami.cia.cpp.differ.VersionDifference;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -105,7 +107,7 @@ public final class SerializerTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.WEIGHT_MAP);
+		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
 
 		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), projectVersion, projectVersion2,
 				difference.getAddedNodes(), difference.getRemovedNodes(), difference.getChangedNodes(),

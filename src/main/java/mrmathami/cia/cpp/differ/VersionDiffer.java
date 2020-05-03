@@ -1,12 +1,11 @@
 package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.CppException;
-import mrmathami.cia.cpp.ProjectVersion;
-import mrmathami.cia.cpp.VersionDifference;
 import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.IntegralNode;
 import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.util.Pair;
 
 import javax.annotation.Nonnull;
@@ -18,7 +17,7 @@ import java.util.Map;
 import java.util.Set;
 
 public final class VersionDiffer {
-	@Nonnull public static final Map<DependencyType, Double> WEIGHT_MAP = Map.of(
+	@Nonnull public static final Map<DependencyType, Double> IMPACT_WEIGHT_MAP = Map.of(
 			DependencyType.USE, 0.8495204,
 			DependencyType.MEMBER, 0.7816402,
 			DependencyType.INHERITANCE, 0.7071755,
@@ -31,7 +30,7 @@ public final class VersionDiffer {
 
 	@Nonnull
 	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
-			@Nonnull Map<DependencyType, Double> weightMap) throws CppException {
+			@Nonnull Map<DependencyType, Double> dependencyTypeImpactWeightMap) throws CppException {
 		final RootNode rootA = versionA.getRootNode();
 		final RootNode rootB = versionB.getRootNode();
 
@@ -82,8 +81,14 @@ public final class VersionDiffer {
 			}
 		}
 
-		final double[] weights = ImpactWeightBuilder.calculate(weightMap, rootB, changedListB);
+		final DependencyType[] types = DependencyType.values();
+		final double[] typeImpactWeights = new double[types.length];
+		for (final DependencyType type : types) {
+			typeImpactWeights[type.ordinal()] = dependencyTypeImpactWeightMap.get(type);
+		}
 
-		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, weights);
+		final double[] impactWeights = ImpactWeightBuilder.calculate(dependencyTypeImpactWeightMap, rootB, changedListB);
+
+		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, typeImpactWeights, impactWeights);
 	}
 }

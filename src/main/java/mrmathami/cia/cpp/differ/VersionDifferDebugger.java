@@ -1,8 +1,7 @@
 package mrmathami.cia.cpp.differ;
 
-import mrmathami.cia.cpp.ProjectVersion;
 import mrmathami.cia.cpp.ast.Node;
-import mrmathami.cia.cpp.ast.RootNode;
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.util.Pair;
 import mrmathami.util.Utilities;
 
@@ -13,18 +12,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedMap;
-import java.util.SortedSet;
-import java.util.TreeMap;
-import java.util.TreeSet;
 
 public final class VersionDifferDebugger {
 	private VersionDifferDebugger() {
 	}
 
-	public static void debugOutput(Path outputPath, ProjectVersion projectVersionA, ProjectVersion projectVersionB,
-			Set<Node> addedNodes, Set<Node> removedNodes, Set<Pair<Node, Node>> changedNodes,
-			Set<Pair<Node, Node>> unchangedNodes, Map<Node, Double> impactWeights) {
+	public static void debugOutput(Path outputPath, VersionDifference versionDifference) {
+		final ProjectVersion projectVersionA = versionDifference.getVersionA();
+		final ProjectVersion projectVersionB = versionDifference.getVersionB();
+		final Set<Node> addedNodes = versionDifference.getAddedNodes();
+		final Set<Node> removedNodes = versionDifference.getRemovedNodes();
+		final Set<Pair<Node, Node>> changedNodes = versionDifference.getChangedNodes();
+		final Set<Pair<Node, Node>> unchangedNodes = versionDifference.getUnchangedNodes();
+		final Map<Node, Double> impactWeightMap = versionDifference.getImpactWeightMap();
 
 		try (final FileWriter fileWriter = new FileWriter(outputPath.resolve("VersionDifference-"
 				+ projectVersionA.getVersionName() + "-" + projectVersionB.getVersionName() + ".log").toString())) {
@@ -38,8 +38,8 @@ public final class VersionDifferDebugger {
 			fileWriter.write(Utilities.collectionToString(unchangedNodes));
 			fileWriter.write("\n\nImpact weights:\n");
 
-			final List<Pair<Node, Double>> list = new ArrayList<>(impactWeights.size());
-			for (final Map.Entry<Node, Double> entry : impactWeights.entrySet()) {
+			final List<Pair<Node, Double>> list = new ArrayList<>(impactWeightMap.size());
+			for (final Map.Entry<Node, Double> entry : impactWeightMap.entrySet()) {
 				list.add(Pair.immutableOf(entry.getKey(), entry.getValue()));
 			}
 			list.sort((o1, o2) -> {

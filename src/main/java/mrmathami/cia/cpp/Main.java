@@ -1,8 +1,10 @@
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 import mrmathami.cia.cpp.differ.VersionDiffer;
+import mrmathami.cia.cpp.differ.VersionDifference;
 import mrmathami.util.Utilities;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
@@ -157,7 +159,7 @@ public final class Main {
 			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName() + "...");
 
 			try {
-				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB, VersionDiffer.WEIGHT_MAP);
+				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB, VersionDiffer.IMPACT_WEIGHT_MAP);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {

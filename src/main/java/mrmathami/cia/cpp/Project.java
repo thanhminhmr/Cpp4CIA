@@ -1,5 +1,8 @@
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.builder.ProjectVersion;
+import mrmathami.cia.cpp.differ.VersionDifference;
+
 import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,15 +19,10 @@ public final class Project implements Serializable {
 	@Nonnull private final List<ProjectVersion> versionList;
 	@Nonnull private final List<VersionDifference> differenceList;
 
-	private Project(@Nonnull String projectName, @Nonnull List<ProjectVersion> versionList, @Nonnull List<VersionDifference> differenceList) {
+	public Project(@Nonnull String projectName, @Nonnull List<ProjectVersion> versionList, @Nonnull List<VersionDifference> differenceList) {
 		this.projectName = projectName;
 		this.versionList = List.copyOf(versionList);
 		this.differenceList = List.copyOf(differenceList);
-	}
-
-	@Nonnull
-	public static Project of(@Nonnull String projectName, @Nonnull List<ProjectVersion> versionList, @Nonnull List<VersionDifference> differenceList) {
-		return new Project(projectName, versionList, differenceList);
 	}
 
 	@Nonnull
