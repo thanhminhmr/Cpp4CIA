@@ -207,7 +207,7 @@ public final class Main {
 
 			doLogging("Building Project " + projectName + "...");
 
-			final Project project = Project.of(projectName, versionList, differenceList);
+			final Project project = new Project(projectName, versionList, differenceList);
 			final String outputFileString = section.get("outputFile", "");
 			if (!outputFileString.isBlank()) {
 				final Path outputFilePath = Path.of(outputFileString);
