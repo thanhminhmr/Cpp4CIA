@@ -42,7 +42,10 @@ public final class VersionDifferDebugger {
 			for (final Map.Entry<Node, Double> entry : impactWeights.entrySet()) {
 				list.add(Pair.immutableOf(entry.getKey(), entry.getValue()));
 			}
-			list.sort((o1, o2) -> Double.compare(o2.getB(), o1.getB()));
+			list.sort((o1, o2) -> {
+				final int compare = Double.compare(o2.getB(), o1.getB());
+				return compare != 0 ? compare : Integer.compare(o1.getA().getId(), o2.getA().getId());
+			});
 			for (final Pair<Node, Double> pair : list) {
 				fileWriter.write(String.format("%.8f, %s\n", pair.getB(), pair.getA()));
 			}

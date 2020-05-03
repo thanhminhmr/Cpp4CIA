@@ -3,7 +3,6 @@ package mrmathami.cia.cpp;
 import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
@@ -50,7 +49,7 @@ public final class BuilderTest {
 		debugger.setSaveTranslationUnit(true);
 		debugger.setOutputPath(projectRoot);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("test", projectRoot, projectFiles, includePaths, debugger);
+		final ProjectVersion projectVersion = VersionBuilder.build("test", projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, debugger);
 
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);

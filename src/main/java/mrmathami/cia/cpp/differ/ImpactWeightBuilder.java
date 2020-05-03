@@ -1,6 +1,7 @@
 package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.CppException;
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.util.ThreadFactoryBuilder;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -29,7 +31,8 @@ final class ImpactWeightBuilder {
 	}
 
 	@Nonnull
-	private static Callable<double[]> createSingleCalculateTask(@Nonnull RootNode rootNode, @Nonnull Node changedNode) {
+	private static Callable<double[]> createSingleCalculateTask(@Nonnull Map<DependencyType, Double> weightMap,
+			@Nonnull RootNode rootNode, @Nonnull Node changedNode) {
 		return new Callable<>() {
 			private final int nodeCount = rootNode.getNodeCount();
 			@Nonnull private final double[] weights = new double[nodeCount];
@@ -41,8 +44,12 @@ final class ImpactWeightBuilder {
 					if (!pathSet.get(nextId)) {
 						pathSet.set(nextId);
 
-						// TODO: using real weight
-						final double nextWeight = currentWeight * 0.2;
+						double linkWeight = 1.0;
+						for (final Map.Entry<DependencyType, Integer> entry : currentNode.getNodeDependencyFrom(nextNode).entrySet()) {
+							linkWeight *= Math.pow(1.0 - weightMap.getOrDefault(entry.getKey(), 0.0), entry.getValue());
+						}
+
+						final double nextWeight = currentWeight * (1.0 - linkWeight);
 						weights[nextId] *= 1.0 - nextWeight;
 						recursiveCalculate(nextNode, nextWeight);
 
@@ -68,9 +75,10 @@ final class ImpactWeightBuilder {
 	}
 
 	@Nonnull
-	static double[] calculate(@Nonnull RootNode rootNode, @Nonnull List<Node> changedNodes) throws CppException {
+	static double[] calculate(@Nonnull Map<DependencyType, Double> weightMap, @Nonnull RootNode rootNode,
+			@Nonnull List<Node> changedNodes) throws CppException {
 		final ArrayList<Callable<double[]>> tasks = new ArrayList<>(changedNodes.size());
-		for (final Node node : changedNodes) tasks.add(createSingleCalculateTask(rootNode, node));
+		for (final Node node : changedNodes) tasks.add(createSingleCalculateTask(weightMap, rootNode, node));
 
 		final int nodeCount = rootNode.getNodeCount();
 		final double[] weights = new double[nodeCount];

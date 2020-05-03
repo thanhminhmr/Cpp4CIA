@@ -42,7 +42,7 @@ public final class DifferTest {
 
 		final List<Path> includePaths = List.of();
 
-		final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, debugger);
+		final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, debugger);
 
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
@@ -65,7 +65,7 @@ public final class DifferTest {
 //				);
 
 		final List<Path> includePaths2 = List.of();
-		final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, debugger);
+		final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, VersionBuilder.WEIGHT_MAP, debugger);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
@@ -73,7 +73,7 @@ public final class DifferTest {
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2);
+		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.WEIGHT_MAP);
 
 		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), projectVersion, projectVersion2,
 				difference.getAddedNodes(), difference.getRemovedNodes(), difference.getChangedNodes(),

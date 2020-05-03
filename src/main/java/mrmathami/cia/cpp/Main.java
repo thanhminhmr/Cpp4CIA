@@ -106,8 +106,8 @@ public final class Main {
 			try {
 				if (builderDebugger != null) builderDebugger.setOutputPath(projectRoot);
 				final ProjectVersion projectVersion = builderDebugger != null
-						? VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, builderDebugger)
-						: VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths);
+						? VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, builderDebugger)
+						: VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {
@@ -157,7 +157,7 @@ public final class Main {
 			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName() + "...");
 
 			try {
-				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB);
+				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB, VersionDiffer.WEIGHT_MAP);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {
