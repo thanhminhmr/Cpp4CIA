@@ -2,7 +2,7 @@ package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ast.DependencyType;
-import mrmathami.cia.cpp.ast.Node;
+import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.util.ThreadFactoryBuilder;
 
@@ -32,14 +32,14 @@ final class ImpactWeightBuilder {
 
 	@Nonnull
 	private static Callable<double[]> createSingleCalculateTask(@Nonnull Map<DependencyType, Double> weightMap,
-			@Nonnull RootNode rootNode, @Nonnull Node changedNode) {
+			@Nonnull RootNode rootNode, @Nonnull CppNode changedNode) {
 		return new Callable<>() {
 			private final int nodeCount = rootNode.getNodeCount();
 			@Nonnull private final double[] weights = new double[nodeCount];
 			@Nonnull private final BitSet pathSet = new BitSet(nodeCount);
 
-			private void recursiveCalculate(@Nonnull Node currentNode, double currentWeight) {
-				for (final Node nextNode : currentNode.getAllDependencyFrom()) {
+			private void recursiveCalculate(@Nonnull CppNode currentNode, double currentWeight) {
+				for (final CppNode nextNode : currentNode.getAllDependencyFrom()) {
 					final int nextId = nextNode.getId();
 					if (!pathSet.get(nextId)) {
 						pathSet.set(nextId);
@@ -76,9 +76,9 @@ final class ImpactWeightBuilder {
 
 	@Nonnull
 	static double[] calculate(@Nonnull Map<DependencyType, Double> weightMap, @Nonnull RootNode rootNode,
-			@Nonnull List<Node> changedNodes) throws CppException {
+			@Nonnull List<CppNode> changedNodes) throws CppException {
 		final ArrayList<Callable<double[]>> tasks = new ArrayList<>(changedNodes.size());
-		for (final Node node : changedNodes) tasks.add(createSingleCalculateTask(weightMap, rootNode, node));
+		for (final CppNode node : changedNodes) tasks.add(createSingleCalculateTask(weightMap, rootNode, node));
 
 		final int nodeCount = rootNode.getNodeCount();
 		final double[] weights = new double[nodeCount];

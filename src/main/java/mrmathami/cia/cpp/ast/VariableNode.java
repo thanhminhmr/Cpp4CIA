@@ -4,14 +4,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.List;
 import java.util.Objects;
 
-public final class VariableNode extends Node implements IBodyContainer, ITypeContainer {
-	private static final long serialVersionUID = 4602645205363910430L;
+public final class VariableNode extends CppNode implements IBodyContainer, ITypeContainer {
+	private static final long serialVersionUID = -7716874065327722815L;
 
 	@Nullable private String body;
-	@Nullable private Node type;
+	@Nullable private CppNode type;
 
 	public VariableNode() {
 	}
@@ -40,12 +39,12 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 
 	@Nullable
 	@Override
-	public final Node getType() {
+	public final CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable Node type) {
+	public final boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
@@ -54,7 +53,7 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -66,7 +65,7 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -78,7 +77,7 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -90,7 +89,7 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isIdentical(node, matcher)
 				&& Objects.equals(body, ((VariableNode) node).body)
 				&& matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.IDENTICAL);
@@ -106,7 +105,7 @@ public final class VariableNode extends Node implements IBodyContainer, ITypeCon
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;

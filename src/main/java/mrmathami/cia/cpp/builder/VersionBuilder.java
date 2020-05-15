@@ -2,7 +2,7 @@ package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ast.DependencyType;
-import mrmathami.cia.cpp.ast.Node;
+import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.RootNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
@@ -73,9 +73,9 @@ public final class VersionBuilder {
 	@Nonnull
 	private static double[] calculateWeights(@Nonnull double[] weightMap, @Nonnull RootNode rootNode) {
 		final double[] weights = new double[rootNode.getNodeCount()];
-		for (final Node node : rootNode) {
+		for (final CppNode node : rootNode) {
 			double directWeight = 0.0;
-			for (final Node dependencyNode : node.getAllDependencyFrom()) {
+			for (final CppNode dependencyNode : node.getAllDependencyFrom()) {
 				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
 					directWeight += weightMap[entry.getKey().ordinal()] * entry.getValue();
 				}

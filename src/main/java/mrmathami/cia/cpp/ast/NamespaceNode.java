@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
-public final class NamespaceNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+public final class NamespaceNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
 	private static final long serialVersionUID = 1802743308915207304L;
 
 	public NamespaceNode() {

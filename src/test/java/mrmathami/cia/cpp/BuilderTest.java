@@ -33,7 +33,7 @@ public final class BuilderTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		//System.in.read();
+		System.in.read();
 		long start_time = System.nanoTime();
 
 		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cppcia\\test");

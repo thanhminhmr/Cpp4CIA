@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.ast.DependencyType;
-import mrmathami.cia.cpp.ast.Node;
+import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.util.Pair;
@@ -24,19 +24,19 @@ public final class VersionDifference implements Serializable {
 
 	@Nonnull private final ProjectVersion versionA;
 	@Nonnull private final ProjectVersion versionB;
-	@Nonnull private final Set<Node> addedNodes;
-	@Nonnull private final Set<Pair<Node, Node>> changedNodes;
-	@Nonnull private final Set<Pair<Node, Node>> unchangedNodes;
-	@Nonnull private final Set<Node> removedNodes;
+	@Nonnull private final Set<CppNode> addedNodes;
+	@Nonnull private final Set<Pair<CppNode, CppNode>> changedNodes;
+	@Nonnull private final Set<Pair<CppNode, CppNode>> unchangedNodes;
+	@Nonnull private final Set<CppNode> removedNodes;
 	@Nonnull private final double[] typeImpactWeights;
 	@Nonnull private final double[] impactWeights;
 
 	@Nullable private transient Map<DependencyType, Double> typeImpactWeightMap;
-	@Nullable private transient Map<Node, Double> impactWeightMap;
+	@Nullable private transient Map<CppNode, Double> impactWeightMap;
 
 	VersionDifference(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
-			@Nonnull Set<Node> addedNodes, @Nonnull Set<Pair<Node, Node>> changedNodes,
-			@Nonnull Set<Pair<Node, Node>> unchangedNodes, @Nonnull Set<Node> removedNodes,
+			@Nonnull Set<CppNode> addedNodes, @Nonnull Set<Pair<CppNode, CppNode>> changedNodes,
+			@Nonnull Set<Pair<CppNode, CppNode>> unchangedNodes, @Nonnull Set<CppNode> removedNodes,
 			@Nonnull double[] typeImpactWeights, @Nonnull double[] impactWeights) {
 		this.versionA = versionA;
 		this.versionB = versionB;
@@ -75,22 +75,22 @@ public final class VersionDifference implements Serializable {
 	}
 
 	@Nonnull
-	public final Set<Node> getAddedNodes() {
+	public final Set<CppNode> getAddedNodes() {
 		return addedNodes;
 	}
 
 	@Nonnull
-	public final Set<Pair<Node, Node>> getChangedNodes() {
+	public final Set<Pair<CppNode, CppNode>> getChangedNodes() {
 		return changedNodes;
 	}
 
 	@Nonnull
-	public final Set<Pair<Node, Node>> getUnchangedNodes() {
+	public final Set<Pair<CppNode, CppNode>> getUnchangedNodes() {
 		return unchangedNodes;
 	}
 
 	@Nonnull
-	public final Set<Node> getRemovedNodes() {
+	public final Set<CppNode> getRemovedNodes() {
 		return removedNodes;
 	}
 
@@ -105,12 +105,12 @@ public final class VersionDifference implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<Node, Double> getImpactWeightMap() {
+	public final Map<CppNode, Double> getImpactWeightMap() {
 		if (impactWeightMap != null) return impactWeightMap;
-		final Map<Node, Double> map = new IdentityHashMap<>();
+		final Map<CppNode, Double> map = new IdentityHashMap<>();
 		final RootNode rootNode = versionB.getRootNode();
 		map.put(rootNode, impactWeights[0]); // root id == 0
-		for (final Node node : rootNode) map.put(node, impactWeights[node.getId()]);
+		for (final CppNode node : rootNode) map.put(node, impactWeights[node.getId()]);
 		return this.impactWeightMap = Map.copyOf(map);
 	}
 }

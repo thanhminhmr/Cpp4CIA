@@ -12,15 +12,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public final class ClassNode extends Node implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = 6935164970557780371L;
+public final class ClassNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = -6768126335469290258L;
 
-	@Nonnull private transient Set<Node> bases;
-
-	// THIS BLOCK WILL NOT BE CALLED WHEN DESERIALIZE
-	{
-		this.bases = new HashSet<>();
-	}
+	@Nonnull private transient Set<CppNode> bases = new HashSet<>();
 
 	public ClassNode() {
 	}
@@ -36,13 +31,13 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	}
 
 	@Nonnull
-	public final Set<Node> getBases() {
+	public final Set<CppNode> getBases() {
 		return isWritable() ? Collections.unmodifiableSet(bases) : bases;
 	}
 
-	public final boolean addBases(@Nonnull Set<Node> bases) {
+	public final boolean addBases(@Nonnull Set<CppNode> bases) {
 		checkReadOnly();
-		for (final Node base : bases) if (base.getRoot() != getRoot()) return false;
+		for (final CppNode base : bases) if (base.getRoot() != getRoot()) return false;
 		return this.bases.addAll(bases);
 	}
 
@@ -51,12 +46,12 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 		bases.clear();
 	}
 
-	public final boolean addBase(@Nonnull Node base) {
+	public final boolean addBase(@Nonnull CppNode base) {
 		checkReadOnly();
 		return base.getRoot() == getRoot() && bases.add(base);
 	}
 
-	public final boolean removeBase(@Nonnull Node base) {
+	public final boolean removeBase(@Nonnull CppNode base) {
 		checkReadOnly();
 		return bases.remove(base);
 	}
@@ -93,11 +88,11 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
 		final Set<Wrapper> set = new HashSet<>();
-		for (final Node base : bases) set.add(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher));
-		for (final Node base : ((ClassNode) node).bases) {
+		for (final CppNode base : bases) set.add(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher));
+		for (final CppNode base : ((ClassNode) node).bases) {
 			if (!set.remove(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher))) return false;
 		}
 		return set.isEmpty();
@@ -111,11 +106,11 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
 		final Set<Wrapper> set = new HashSet<>();
-		for (final Node base : bases) set.add(new Wrapper(base, MatchLevel.IDENTICAL, matcher));
-		for (final Node base : ((ClassNode) node).bases) {
+		for (final CppNode base : bases) set.add(new Wrapper(base, MatchLevel.IDENTICAL, matcher));
+		for (final CppNode base : ((ClassNode) node).bases) {
 			if (!set.remove(new Wrapper(base, MatchLevel.IDENTICAL, matcher))) return false;
 		}
 		return set.isEmpty();
@@ -130,7 +125,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (!bases.contains(fromNode)) return false;
 		bases.remove(fromNode);
 		if (toNode != null) bases.add(toNode);
@@ -152,7 +147,7 @@ public final class ClassNode extends Node implements IClassContainer, IEnumConta
 	@SuppressWarnings("unchecked")
 	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
 		inputStream.defaultReadObject();
-		this.bases = (Set<Node>) inputStream.readObject();
+		this.bases = (Set<CppNode>) inputStream.readObject();
 	}
 	//</editor-fold>
 }

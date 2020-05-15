@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.ast.DependencyType;
-import mrmathami.cia.cpp.ast.Node;
+import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.RootNode;
 
 import javax.annotation.Nonnull;
@@ -28,7 +28,7 @@ public final class ProjectVersion implements Serializable {
 	@Nonnull private final double[] weights;
 
 	@Nullable private transient Map<DependencyType, Double> typeWeightMap;
-	@Nullable private transient Map<Node, Double> weightMap;
+	@Nullable private transient Map<CppNode, Double> weightMap;
 
 	ProjectVersion(@Nonnull String versionName, @Nonnull List<String> projectFiles,
 			@Nonnull List<String> includePaths, @Nonnull RootNode rootNode,
@@ -86,11 +86,11 @@ public final class ProjectVersion implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<Node, Double> getWeightMap() {
+	public final Map<CppNode, Double> getWeightMap() {
 		if (weightMap != null) return weightMap;
-		final Map<Node, Double> map = new IdentityHashMap<>();
+		final Map<CppNode, Double> map = new IdentityHashMap<>();
 		map.put(rootNode, weights[0]); // root id == 0
-		for (final Node node : rootNode) map.put(node, weights[node.getId()]);
+		for (final CppNode node : rootNode) map.put(node, weights[node.getId()]);
 		return this.weightMap = Map.copyOf(map);
 	}
 }

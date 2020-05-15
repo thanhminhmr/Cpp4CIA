@@ -5,7 +5,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public final class UnknownNode extends Node {
+public final class UnknownNode extends CppNode {
 	private static final long serialVersionUID = 4828860334527211201L;
 
 	public UnknownNode() {

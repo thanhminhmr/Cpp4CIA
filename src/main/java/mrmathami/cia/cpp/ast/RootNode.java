@@ -3,7 +3,7 @@ package mrmathami.cia.cpp.ast;
 import javax.annotation.Nonnull;
 import java.util.List;
 
-public final class RootNode extends Node implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
+public final class RootNode extends CppNode implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
 	private static final long serialVersionUID = 4616684807799617419L;
 
 	private int nodeCount;

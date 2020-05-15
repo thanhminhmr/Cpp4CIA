@@ -7,7 +7,7 @@ import javax.annotation.Nullable;
  */
 public interface ITypeContainer {
 	@Nullable
-	Node getType();
+	CppNode getType();
 
-	boolean setType(@Nullable Node type);
+	boolean setType(@Nullable CppNode type);
 }

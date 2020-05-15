@@ -8,24 +8,18 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = 340513828605234603L;
+public final class FunctionNode extends CppNode implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = -2779864800917566027L;
 
-	@Nonnull private transient List<Node> parameters;
+	@Nonnull private transient List<CppNode> parameters = new LinkedList<>();
 	@Nullable private String body;
-	@Nullable private Node type;
-
-	// THIS BLOCK WILL NOT BE CALLED WHEN DESERIALIZE
-	{
-		this.parameters = new LinkedList<>();
-	}
+	@Nullable private CppNode type;
 
 	public FunctionNode() {
 	}
@@ -42,13 +36,13 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Nonnull
-	public final List<Node> getParameters() {
+	public final List<CppNode> getParameters() {
 		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
-	public final boolean addParameters(@Nonnull List<Node> parameters) {
+	public final boolean addParameters(@Nonnull List<CppNode> parameters) {
 		checkReadOnly();
-		for (final Node parameter : parameters) if (parameter.getRoot() != getRoot()) return false;
+		for (final CppNode parameter : parameters) if (parameter.getRoot() != getRoot()) return false;
 		return this.parameters.addAll(parameters);
 	}
 
@@ -57,14 +51,14 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 		parameters.clear();
 	}
 
-	public final boolean addParameter(@Nonnull Node parameter) {
+	public final boolean addParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		if (parameter.getRoot() != getRoot()) return false;
 		parameters.add(parameter);
 		return true;
 	}
 
-	public final boolean removeParameter(@Nonnull Node parameter) {
+	public final boolean removeParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		return parameters.remove(parameter);
 	}
@@ -83,12 +77,12 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 
 	@Nullable
 	@Override
-	public final Node getType() {
+	public final CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable Node type) {
+	public final boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
@@ -121,12 +115,12 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
@@ -143,12 +137,12 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
@@ -165,12 +159,12 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.SIMILAR)) break;
@@ -187,13 +181,13 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!Objects.equals(body, function.body) || !matcher.isNodeMatch(type, function.type, MatchLevel.IDENTICAL))
 			return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.IDENTICAL)) break;
@@ -212,13 +206,13 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		boolean isChanged = false;
 		if (type == fromNode) {
 			this.type = toNode;
 			isChanged = true;
 		}
-		final ListIterator<Node> iterator = parameters.listIterator();
+		final ListIterator<CppNode> iterator = parameters.listIterator();
 		while (iterator.hasNext()) {
 			if (iterator.next() == fromNode) {
 				isChanged = true;
@@ -251,7 +245,7 @@ public final class FunctionNode extends Node implements IBodyContainer, ITypeCon
 	@SuppressWarnings("unchecked")
 	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
 		inputStream.defaultReadObject();
-		this.parameters = (List<Node>) inputStream.readObject();
+		this.parameters = (List<CppNode>) inputStream.readObject();
 	}
 	//</editor-fold>
 }

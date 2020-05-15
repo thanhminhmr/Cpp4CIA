@@ -4,7 +4,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 
-public final class IntegralNode extends Node {
+public final class IntegralNode extends CppNode {
 	private static final long serialVersionUID = 5082730452633391643L;
 
 	public IntegralNode() {

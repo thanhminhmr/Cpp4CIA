@@ -6,10 +6,10 @@ import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
 
-public final class TypedefNode extends Node implements ITypeContainer, ITypedefContainer {
-	private static final long serialVersionUID = 4653337164369098190L;
+public final class TypedefNode extends CppNode implements ITypeContainer, ITypedefContainer {
+	private static final long serialVersionUID = -8518260617904889021L;
 
-	@Nullable private Node type;
+	@Nullable private CppNode type;
 
 	public TypedefNode() {
 	}
@@ -20,12 +20,12 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 
 	@Nullable
 	@Override
-	public final Node getType() {
+	public final CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable Node type) {
+	public final boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && type.getRoot() != getRoot()) return false;
 		this.type = type;
@@ -40,7 +40,7 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -52,7 +52,7 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -64,7 +64,7 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.SIMILAR);
 	}
 
@@ -76,7 +76,7 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.IDENTICAL);
 	}
 
@@ -89,7 +89,7 @@ public final class TypedefNode extends Node implements ITypeContainer, ITypedefC
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;

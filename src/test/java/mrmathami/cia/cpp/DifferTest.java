@@ -77,9 +77,7 @@ public final class DifferTest {
 
 		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
 
-		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), projectVersion, projectVersion2,
-				difference.getAddedNodes(), difference.getRemovedNodes(), difference.getChangedNodes(),
-				difference.getUnchangedNodes(), difference.getImpactWeightMap());
+		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), difference);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project1_project2.VersionDifference")) {
@@ -87,7 +85,7 @@ public final class DifferTest {
 		}
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final Project project = Project.of("project", List.of(projectVersion, projectVersion2), List.of(difference));
+		final Project project = new Project("project", List.of(projectVersion, projectVersion2), List.of(difference));
 		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project.Project")) {
 			project.toOutputStream(fos);
 		}
