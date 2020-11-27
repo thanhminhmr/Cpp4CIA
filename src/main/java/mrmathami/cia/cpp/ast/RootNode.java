@@ -1,6 +1,6 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.util.List;
 
 public final class RootNode extends CppNode implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {

@@ -20,199 +20,157 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.Reader;
 
-/* pp */ class JoinReader /* extends Reader */ implements Closeable {
+class JoinReader implements Closeable {
 
-    private final Reader in;
+	private final Reader in;
 
-    private PreprocessorListener listener;
-    private LexerSource source;
-    private boolean trigraphs;
-    private boolean warnings;
+	private LexerSource source;
+	private boolean trigraphs;
+	private boolean warnings;
 
-    private int newlines;
-    private boolean flushnl;
-    private int[] unget;
-    private int uptr;
+	private int newlines;
+	private boolean flushNewLine;
+	private final int[] unGetBuffer;
+	private int unGetIndex;
 
-    public JoinReader(Reader in, boolean trigraphs) {
-        this.in = in;
-        this.trigraphs = trigraphs;
-        this.newlines = 0;
-        this.flushnl = false;
-        this.unget = new int[2];
-        this.uptr = 0;
-    }
+	private boolean rawString;
 
-    public JoinReader(Reader in) {
-        this(in, false);
-    }
+	public JoinReader(Reader in, boolean trigraphs) {
+		this.in = in;
+		this.trigraphs = trigraphs;
+		this.newlines = 0;
+		this.flushNewLine = false;
+		this.unGetBuffer = new int[8];
+		this.unGetIndex = 0;
+	}
 
-    public void setTrigraphs(boolean enable, boolean warnings) {
-        this.trigraphs = enable;
-        this.warnings = warnings;
-    }
+	public JoinReader(Reader in) {
+		this(in, false);
+	}
 
-    /* pp */ void init(Preprocessor pp, LexerSource s) {
-        this.listener = pp.getListener();
-        this.source = s;
-        setTrigraphs(pp.getFeature(Feature.TRIGRAPHS),
-                pp.getWarning(Warning.TRIGRAPHS));
-    }
+	public void setTrigraphs(boolean enable, boolean warnings) {
+		this.trigraphs = enable;
+		this.warnings = warnings;
+	}
 
-    private int __read() throws IOException {
-        if (uptr > 0)
-            return unget[--uptr];
-        return in.read();
-    }
+	void init(Preprocessor pp, LexerSource s) {
+		this.source = s;
+		setTrigraphs(pp.getFeature(Feature.TRIGRAPHS), pp.getWarning(Warning.TRIGRAPHS));
+	}
 
-    private void _unread(int c) {
-        if (c != -1)
-            unget[uptr++] = c;
-        assert uptr <= unget.length :
-                "JoinReader ungets too many characters";
-    }
+	private int __read() throws IOException {
+		return unGetIndex > 0 ? unGetBuffer[--unGetIndex] : in.read();
+	}
 
-    protected void warning(String msg)
-            throws LexerException {
-        if (source != null)
-            source.warning(msg);
-        else
-            throw new LexerException(msg);
-    }
+	private void _unread(int c) {
+		if (c != -1) unGetBuffer[unGetIndex++] = c;
+		assert unGetIndex <= unGetBuffer.length : "JoinReader ungets too many characters";
+	}
 
-    private char trigraph(char raw, char repl)
-            throws IOException, LexerException {
-        if (trigraphs) {
-            if (warnings)
-                warning("trigraph ??" + raw + " converted to " + repl);
-            return repl;
-        } else {
-            if (warnings)
-                warning("trigraph ??" + raw + " ignored");
-            _unread(raw);
-            _unread('?');
-            return '?';
-        }
-    }
+	protected void warning(String msg)
+			throws LexerException {
+		if (source == null) throw new LexerException(msg);
+		source.warning(msg);
+	}
 
-    private int _read()
-            throws IOException, LexerException {
-        int c = __read();
-        if (c == '?' && (trigraphs || warnings)) {
-            int d = __read();
-            if (d == '?') {
-                int e = __read();
-                switch (e) {
-                    case '(':
-                        return trigraph('(', '[');
-                    case ')':
-                        return trigraph(')', ']');
-                    case '<':
-                        return trigraph('<', '{');
-                    case '>':
-                        return trigraph('>', '}');
-                    case '=':
-                        return trigraph('=', '#');
-                    case '/':
-                        return trigraph('/', '\\');
-                    case '\'':
-                        return trigraph('\'', '^');
-                    case '!':
-                        return trigraph('!', '|');
-                    case '-':
-                        return trigraph('-', '~');
-                }
-                _unread(e);
-            }
-            _unread(d);
-        }
-        return c;
-    }
+	private char trigraph(char raw, char repl) throws LexerException {
+		if (trigraphs) {
+			if (warnings) warning("trigraph ??" + raw + " converted to " + repl);
+			return repl;
+		} else {
+			if (warnings) warning("trigraph ??" + raw + " ignored");
+			_unread(raw);
+			_unread('?');
+			return '?';
+		}
+	}
 
-    public int read()
-            throws IOException, LexerException {
-        if (flushnl) {
-            if (newlines > 0) {
-                newlines--;
-                return '\n';
-            }
-            flushnl = false;
-        }
+	private int _read() throws IOException, LexerException {
+		int c = __read();
+		if (c == '?' && (trigraphs || warnings)) {
+			int d = __read();
+			if (d == '?') {
+				int e = __read();
+				switch (e) {
+					case '(':
+						return trigraph('(', '[');
+					case ')':
+						return trigraph(')', ']');
+					case '<':
+						return trigraph('<', '{');
+					case '>':
+						return trigraph('>', '}');
+					case '=':
+						return trigraph('=', '#');
+					case '/':
+						return trigraph('/', '\\');
+					case '\'':
+						return trigraph('\'', '^');
+					case '!':
+						return trigraph('!', '|');
+					case '-':
+						return trigraph('-', '~');
+				}
+				_unread(e);
+			}
+			_unread(d);
+		}
+		return c;
+	}
 
-        for (;;) {
-            int c = _read();
-            switch (c) {
-                case '\\':
-                    int d = _read();
-                    switch (d) {
-                        case '\n':
-                            newlines++;
-                            continue;
-                        case '\r':
-                            newlines++;
-                            int e = _read();
-                            if (e != '\n')
-                                _unread(e);
-                            continue;
-                        default:
-                            _unread(d);
-                            return c;
-                    }
-                case '\r':
-                case '\n':
-                case '\u2028':
-                case '\u2029':
-                case '\u000B':
-                case '\u000C':
-                case '\u0085':
-                    flushnl = true;
-                    return c;
-                case -1:
-                    if (newlines > 0) {
-                        newlines--;
-                        return '\n';
-                    }
-                default:
-                    return c;
-            }
-        }
-    }
+	public int read() throws IOException, LexerException {
+		if (flushNewLine) {
+			if (newlines > 0) {
+				newlines--;
+				return '\n';
+			}
+			flushNewLine = false;
+		}
 
-    public int read(char cbuf[], int off, int len)
-            throws IOException, LexerException {
-        for (int i = 0; i < len; i++) {
-            int ch = read();
-            if (ch == -1)
-                return i;
-            cbuf[off + i] = (char) ch;
-        }
-        return len;
-    }
+		while (true) {
+			int c = _read();
+			if (c == '\\') {
+				if (rawString) return c;
+				int d = _read();
+				if (d == '\n') {
+					newlines++;
+					continue;
+				} else if (d == '\r') {
+					newlines++;
+					int e = _read();
+					if (e != '\n')
+						_unread(e);
+					continue;
+				}
+				_unread(d);
+				return c;
+			} else if (c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029'
+					|| c == '\u000B' || c == '\u000C' || c == '\u0085') {
+				flushNewLine = true;
+				return c;
+			} else if (c == -1) {
+				if (newlines > 0) {
+					newlines--;
+					return '\n';
+				}
+				return -1;
+			}
+			return c;
+		}
+	}
 
-    @Override
-    public void close()
-            throws IOException {
-        in.close();
-    }
+	public void setRawString(boolean rawString) {
+		this.rawString = rawString;
+	}
 
-    @Override
-    public String toString() {
-        return "JoinReader(nl=" + newlines + ")";
-    }
+	@Override
+	public void close() throws IOException {
+		in.close();
+	}
 
-    /*
-     public static void main(String[] args) throws IOException {
-     FileReader		f = new FileReader(new File(args[0]));
-     BufferedReader	b = new BufferedReader(f);
-     JoinReader		r = new JoinReader(b);
-     BufferedWriter	w = new BufferedWriter(
-     new java.io.OutputStreamWriter(System.out)
-     );
-     int				c;
-     while ((c = r.read()) != -1) {
-     w.write((char)c);
-     }
-     w.close();
-     }
-     */
+	@Override
+	public String toString() {
+		return "JoinReader(nl=" + newlines + ")";
+	}
+
 }

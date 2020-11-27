@@ -16,53 +16,53 @@
  */
 package org.anarres.cpp;
 
-/* pp */ class State {
+class State {
 
-    boolean parent;
-    boolean active;
-    boolean sawElse;
+	boolean parent;
+	boolean active;
+	boolean sawElse;
 
-    /* pp */ State() {
-        this.parent = true;
-        this.active = true;
-        this.sawElse = false;
-    }
+	State() {
+		this.parent = true;
+		this.active = true;
+		this.sawElse = false;
+	}
 
-    /* pp */ State(State parent) {
-        this.parent = parent.isParentActive() && parent.isActive();
-        this.active = true;
-        this.sawElse = false;
-    }
+	State(State parent) {
+		this.parent = parent.isParentActive() && parent.isActive();
+		this.active = true;
+		this.sawElse = false;
+	}
 
-    /* Required for #elif */
-    /* pp */ void setParentActive(boolean b) {
-        this.parent = b;
-    }
+	/* Required for #elif */
+	void setParentActive(boolean b) {
+		this.parent = b;
+	}
 
-    /* pp */ boolean isParentActive() {
-        return parent;
-    }
+	boolean isParentActive() {
+		return parent;
+	}
 
-    /* pp */ void setActive(boolean b) {
-        this.active = b;
-    }
+	void setActive(boolean b) {
+		this.active = b;
+	}
 
-    /* pp */ boolean isActive() {
-        return active;
-    }
+	boolean isActive() {
+		return active;
+	}
 
-    /* pp */ void setSawElse() {
-        sawElse = true;
-    }
+	void setSawElse() {
+		sawElse = true;
+	}
 
-    /* pp */ boolean sawElse() {
-        return sawElse;
-    }
+	boolean sawElse() {
+		return sawElse;
+	}
 
-    @Override
-    public String toString() {
-        return "parent=" + parent
-                + ", active=" + active
-                + ", sawelse=" + sawElse;
-    }
+	@Override
+	public String toString() {
+		return "parent=" + parent
+				+ ", active=" + active
+				+ ", sawelse=" + sawElse;
+	}
 }

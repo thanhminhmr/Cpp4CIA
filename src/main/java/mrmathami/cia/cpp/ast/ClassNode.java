@@ -1,15 +1,17 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.util.Utilities;
+import mrmathami.utils.Utilities;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public final class ClassNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
@@ -37,7 +39,9 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 
 	public final boolean addBases(@Nonnull Set<CppNode> bases) {
 		checkReadOnly();
-		for (final CppNode base : bases) if (base.getRoot() != getRoot()) return false;
+		for (final CppNode base : bases) {
+			if (base == this || base.getRoot() != getRoot()) return false;
+		}
 		return this.bases.addAll(bases);
 	}
 
@@ -48,7 +52,7 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 
 	public final boolean addBase(@Nonnull CppNode base) {
 		checkReadOnly();
-		return base.getRoot() == getRoot() && bases.add(base);
+		return base != this && base.getRoot() == getRoot() && bases.add(base);
 	}
 
 	public final boolean removeBase(@Nonnull CppNode base) {
@@ -90,12 +94,22 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	@Override
 	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
-		final Set<Wrapper> set = new HashSet<>();
-		for (final CppNode base : bases) set.add(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher));
-		for (final CppNode base : ((ClassNode) node).bases) {
-			if (!set.remove(new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher))) return false;
+		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
+		final int basesSize = bases.size();
+		if (basesSize != nodeBases.size()) return false;
+		final Map<Wrapper, int[]> map = new HashMap<>(basesSize);
+		for (final CppNode base : this.bases) {
+			final Wrapper wrapper = new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			final int[] countWrapper = map.computeIfAbsent(wrapper, any -> new int[]{0});
+			countWrapper[0] += 1;
 		}
-		return set.isEmpty();
+		for (final CppNode base : nodeBases) {
+			final Wrapper wrapper = new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+			final int[] countWrapper = map.get(wrapper);
+			if (countWrapper == null) return false;
+			if (--countWrapper[0] == 0) map.remove(wrapper);
+		}
+		return map.isEmpty();
 	}
 
 	@Override
@@ -108,12 +122,22 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	@Override
 	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
-		final Set<Wrapper> set = new HashSet<>();
-		for (final CppNode base : bases) set.add(new Wrapper(base, MatchLevel.IDENTICAL, matcher));
-		for (final CppNode base : ((ClassNode) node).bases) {
-			if (!set.remove(new Wrapper(base, MatchLevel.IDENTICAL, matcher))) return false;
+		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
+		final int basesSize = bases.size();
+		if (basesSize != nodeBases.size()) return false;
+		final Map<Wrapper, int[]> map = new HashMap<>(basesSize);
+		for (final CppNode base : this.bases) {
+			final Wrapper wrapper = new Wrapper(base, MatchLevel.IDENTICAL, matcher);
+			final int[] countWrapper = map.computeIfAbsent(wrapper, any -> new int[]{0});
+			countWrapper[0] += 1;
 		}
-		return set.isEmpty();
+		for (final CppNode base : nodeBases) {
+			final Wrapper wrapper = new Wrapper(base, MatchLevel.IDENTICAL, matcher);
+			final int[] countWrapper = map.get(wrapper);
+			if (countWrapper == null) return false;
+			if (--countWrapper[0] == 0) map.remove(wrapper);
+		}
+		return map.isEmpty();
 	}
 
 	@Override

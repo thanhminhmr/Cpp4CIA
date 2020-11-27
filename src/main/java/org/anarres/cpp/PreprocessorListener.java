@@ -16,44 +16,43 @@
  */
 package org.anarres.cpp;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 
 /**
  * A handler for preprocessor events, primarily errors and warnings.
- *
+ * <p>
  * If no PreprocessorListener is installed in a Preprocessor, all
  * error and warning events will throw an exception. Installing a
  * listener allows more intelligent handling of these events.
  */
 public interface PreprocessorListener {
 
-    /**
-     * Handles a warning.
-     *
-     * The behaviour of this method is defined by the
-     * implementation. It may simply record the error message, or
-     * it may throw an exception.
-     */
-    public void handleWarning(@Nonnull Source source, int line, int column,
-            @Nonnull String msg)
-            throws LexerException;
+	/**
+	 * Handles a warning.
+	 * <p>
+	 * The behaviour of this method is defined by the
+	 * implementation. It may simply record the error message, or
+	 * it may throw an exception.
+	 */
+	void handleWarning(@Nonnull Source source, int line, int column,
+			@Nonnull String msg)
+			throws LexerException;
 
-    /**
-     * Handles an error.
-     *
-     * The behaviour of this method is defined by the
-     * implementation. It may simply record the error message, or
-     * it may throw an exception.
-     */
-    public void handleError(@Nonnull Source source, int line, int column,
-            @Nonnull String msg)
-            throws LexerException;
+	/**
+	 * Handles an error.
+	 * <p>
+	 * The behaviour of this method is defined by the
+	 * implementation. It may simply record the error message, or
+	 * it may throw an exception.
+	 */
+	void handleError(@Nonnull Source source, int line, int column,
+			@Nonnull String msg)
+			throws LexerException;
 
-    public enum SourceChangeEvent {
+	enum SourceChangeEvent {
+		SUSPEND, PUSH, POP, RESUME
+	}
 
-        SUSPEND, PUSH, POP, RESUME;
-    }
-
-    public void handleSourceChange(@Nonnull Source source, @Nonnull SourceChangeEvent event);
+	void handleSourceChange(@Nonnull Source source, @Nonnull SourceChangeEvent event);
 
 }

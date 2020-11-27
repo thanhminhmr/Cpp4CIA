@@ -1,14 +1,14 @@
 package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.CppException;
+import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.IntegralNode;
-import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.builder.ProjectVersion;
-import mrmathami.util.Pair;
+import mrmathami.utils.Pair;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;

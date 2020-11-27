@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>mrmathami.cia.cpp</groupId>
+	<artifactId>mrmathami.cia.cpp.core</artifactId>
+	<packaging>jar</packaging>
+	<version>1.0.0</version>
+
+	<dependencies>
+		<dependency>
+			<groupId>mrmathami</groupId>
+			<artifactId>mrmathami.utils</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+
+		<!-- region Eclipse CDT -->
+		<dependency>
+			<groupId>org.eclipse.cdt</groupId>
+			<artifactId>org.eclipse.cdt.core</artifactId>
+			<version>7.0.1-SNAPSHOT</version>
+		</dependency>
+		<!-- endregion Eclipse CDT -->
+
+		<!-- region jCPP -->
+		<dependency>
+			<groupId>com.github.albfernandez</groupId>
+			<artifactId>juniversalchardet</artifactId>
+			<version>2.4.0</version>
+		</dependency>
+		<!-- endregion jCPP -->
+	</dependencies>
+
+	<repositories>
+		<repository>
+			<id>my-repo</id>
+			<name>MrMaThaMi personal Repo</name>
+			<url>https://raw.githubusercontent.com/thanhminhmr/repository/main/</url>
+		</repository>
+	</repositories>
+</project>

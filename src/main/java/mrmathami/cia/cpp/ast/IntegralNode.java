@@ -1,6 +1,6 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 

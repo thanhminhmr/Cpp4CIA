@@ -19,10 +19,9 @@ public final class VersionBuilderDebugger {
 	private boolean readableFileContent;
 	private boolean loadFileContent;
 	private boolean saveTranslationUnit;
-
-	private String versionName;
 	private Path outputPath;
 
+	private String versionName;
 	private char[] fileContent;
 
 	private static void _printTranslationUnit(Writer writer, IASTTranslationUnit translationUnit, IASTNode node, int level) throws IOException {
@@ -92,20 +91,21 @@ public final class VersionBuilderDebugger {
 		this.saveTranslationUnit = saveTranslationUnit;
 	}
 
-	public final String getVersionName() {
-		return versionName;
-	}
-
-	public final void setVersionName(String versionName) {
-		this.versionName = versionName;
-	}
-
 	public final Path getOutputPath() {
 		return outputPath;
 	}
 
 	public final void setOutputPath(Path outputPath) {
 		this.outputPath = outputPath;
+	}
+
+
+	final String getVersionName() {
+		return versionName;
+	}
+
+	final void setVersionName(String versionName) {
+		this.versionName = versionName;
 	}
 
 

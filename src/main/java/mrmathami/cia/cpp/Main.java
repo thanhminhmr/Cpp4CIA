@@ -1,3 +1,4 @@
+/*
 package mrmathami.cia.cpp;
 
 import mrmathami.cia.cpp.builder.ProjectVersion;
@@ -5,7 +6,7 @@ import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 import mrmathami.cia.cpp.differ.VersionDiffer;
 import mrmathami.cia.cpp.differ.VersionDifference;
-import mrmathami.util.Utilities;
+import mrmathami.utils.Utilities;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
 import org.ini4j.Profile;
@@ -47,7 +48,7 @@ public final class Main {
 				argv.length >= 2 && Integer.parseInt(argv[1]) != 0,
 				argv.length >= 3 && Integer.parseInt(argv[2]) != 0,
 				argv.length >= 4 && Integer.parseInt(argv[3]) != 0
-				).build(Path.of(argv[0]));
+		).build(Path.of(argv[0]));
 	}
 
 	private void doLogging(String message) {
@@ -238,3 +239,4 @@ public final class Main {
 		return null;
 	}
 }
+*/

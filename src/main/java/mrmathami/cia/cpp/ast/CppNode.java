@@ -1,10 +1,11 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.util.Pair;
-import mrmathami.util.Utilities;
+import mrmathami.utils.IntsWrapper;
+import mrmathami.utils.Pair;
+import mrmathami.utils.Utilities;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -12,7 +13,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -22,13 +22,13 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Stack;
 
+import static mrmathami.cia.cpp.ast.DependencyMap.DEPENDENCY_ZERO;
+
 /**
  * Base of AST Tree.
  */
 public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	private static final long serialVersionUID = -7556411197265241247L;
-
-	@Nonnull private static final int[] DEPENDENCY_ZERO = new int[DependencyType.values.length];
 
 	private int id;
 
@@ -60,7 +60,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 			int typeCount = counts[type];
 			if (typeCount != 0) {
 				if (builder.length() > 1) builder.append(',');
-				builder.append(' ').append(DependencyType.values[type]).append(": ").append(typeCount);
+				builder.append(' ').append(DependencyType.values.get(type)).append(": ").append(typeCount);
 			}
 		}
 		if (builder.length() > 1) builder.append(' ');
@@ -244,19 +244,23 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	public final boolean equalsAllDependencyTo(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		if (dependencyTo.size() != node.dependencyTo.size()) return false;
-		final HashMap<Wrapper, int[]> nodeDependencyTo = new HashMap<>();
+		final int dependencyToSize = dependencyTo.size();
+		if (dependencyToSize != node.dependencyTo.size()) return false;
+		final Map<Pair<Wrapper, IntsWrapper>, int[]> map = new HashMap<>(dependencyToSize);
 		for (final Map.Entry<CppNode, int[]> entry : node.dependencyTo.entrySet()) {
 			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
-			nodeDependencyTo.put(wrapper, entry.getValue());
+			final Pair<Wrapper, IntsWrapper> pair = Pair.immutableOf(wrapper, IntsWrapper.of(entry.getValue()));
+			final int[] countWrapper = map.computeIfAbsent(pair, any -> new int[]{0});
+			countWrapper[0] += 1;
 		}
 		for (final Map.Entry<CppNode, int[]> entry : dependencyTo.entrySet()) {
 			final Wrapper wrapper = new Wrapper(entry.getKey(), MatchLevel.PROTOTYPE_IDENTICAL, matcher);
-			final int[] counts = nodeDependencyTo.get(wrapper);
-			if (counts == null || !Arrays.equals(counts, entry.getValue())) return false;
-			nodeDependencyTo.remove(wrapper);
+			final Pair<Wrapper, IntsWrapper> pair = Pair.immutableOf(wrapper, IntsWrapper.of(entry.getValue()));
+			final int[] countWrapper = map.get(pair);
+			if (countWrapper == null) return false;
+			if (--countWrapper[0] == 0) map.remove(pair);
 		}
-		return nodeDependencyTo.isEmpty();
+		return map.isEmpty();
 	}
 
 	//</editor-fold>
@@ -264,11 +268,11 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	//<editor-fold desc="Node Dependency From">
 
 	@Nonnull
-	public final Map<DependencyType, Integer> getNodeDependencyFrom(@Nonnull CppNode node) {
+	public final DependencyMap getNodeDependencyFrom(@Nonnull CppNode node) {
 		return node.getNodeDependencyTo(this);
 	}
 
-	public final boolean addNodeDependencyFrom(@Nonnull CppNode node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+	public final boolean addNodeDependencyFrom(@Nonnull CppNode node, @Nonnull DependencyMap dependencyMap) {
 		return node.addNodeDependencyTo(this, dependencyMap);
 	}
 
@@ -281,33 +285,28 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	//<editor-fold desc="Node Dependency To">
 
 	@Nonnull
-	public final Map<DependencyType, Integer> getNodeDependencyTo(@Nonnull CppNode node) {
+	public final DependencyMap getNodeDependencyTo(@Nonnull CppNode node) {
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-		if (counts == null) return Map.of();
-
-		final Map<DependencyType, Integer> map = new EnumMap<>(DependencyType.class);
-		for (int i = 0; i < counts.length; i++) {
-			if (counts[i] != 0) map.put(DependencyType.values[i], counts[i]);
-		}
-		return map;
+		if (counts == null) return DependencyMap.ZERO;
+		return new DependencyMap(counts);
 	}
 
-	public final boolean addNodeDependencyTo(@Nonnull CppNode node, @Nonnull Map<DependencyType, Integer> dependencyMap) {
+	public final boolean addNodeDependencyTo(@Nonnull CppNode node, @Nonnull DependencyMap dependencyMap) {
 		checkReadOnly();
 		if (node == this || getRoot() != node.getRoot()) return false;
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
 		if (counts != null) {
 			// add it to old one
-			for (final Map.Entry<DependencyType, Integer> entry : dependencyMap.entrySet()) {
-				counts[entry.getKey().ordinal()] += entry.getValue();
+			for (final DependencyType type : DependencyType.values) {
+				counts[type.ordinal()] += dependencyMap.getCount(type);
 			}
 		} else {
 			// create new one
-			final int[] newCounts = new int[DependencyType.values.length];
-			for (final Map.Entry<DependencyType, Integer> entry : dependencyMap.entrySet()) {
-				newCounts[entry.getKey().ordinal()] = entry.getValue();
+			final int[] newCounts = new int[DependencyType.values.size()];
+			for (final DependencyType type : DependencyType.values) {
+				newCounts[type.ordinal()] += dependencyMap.getCount(type);
 			}
 			if (!Arrays.equals(newCounts, DEPENDENCY_ZERO)) {
 				// if not empty, put it in
@@ -358,7 +357,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 		if (counts != null) {
 			counts[type.ordinal()] += 1;
 		} else {
-			final int[] newCounts = new int[DependencyType.values.length];
+			final int[] newCounts = new int[DependencyType.values.size()];
 			newCounts[type.ordinal()] += 1;
 			dependencyTo.put(node, newCounts);
 			node.dependencyFrom.put(this, newCounts);
@@ -536,7 +535,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	public static final class Matcher {
-		@Nonnull private final Map<Pair<CppNode, CppNode>, MatchLevel> map = new HashMap<>();
+		@Nonnull private final Map<Pair<CppNode, CppNode>, Pair<MatchLevel, MatchLevel>> map = new HashMap<>();
 		@Nonnull private final Map<CppNode, int[]> hashcodeMap = new IdentityHashMap<>();
 
 		public Matcher() {
@@ -545,13 +544,24 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 		public final boolean isNodeMatch(@Nullable CppNode nodeA, @Nullable CppNode nodeB, @Nonnull MatchLevel level) {
 			if (nodeA == nodeB) return true;
 			if (nodeA == null || nodeB == null) return false;
-			final Pair<CppNode, CppNode> pair = Pair.immutableOf(nodeA, nodeB);
-			final MatchLevel oldLevel = map.get(pair);
-			if (oldLevel == null || oldLevel.compareTo(level) < 0) {
-				map.put(pair, level);
-				return level.matcher.isNodeMatch(nodeA, nodeB, this);
+			final Pair<CppNode, CppNode> nodePair = Pair.immutableOf(nodeA, nodeB);
+			final Pair<MatchLevel, MatchLevel> levelPair = map.get(nodePair);
+			if (levelPair != null) {
+				final MatchLevel bottomLevel = levelPair.getA();
+				if (bottomLevel != null && bottomLevel.compareTo(level) >= 0) return true;
+				final MatchLevel topLevel = levelPair.getB();
+				if (topLevel != null && topLevel.compareTo(level) <= 0) return false;
 			}
-			return true;
+			final Pair<MatchLevel, MatchLevel> newLevelPair = levelPair != null ? levelPair
+					: Pair.mutableOf(null, null);
+			if (levelPair == null) map.put(nodePair, newLevelPair);
+			if (level.matcher.isNodeMatch(nodeA, nodeB, this)) {
+				newLevelPair.setA(level);
+				return true;
+			} else {
+				newLevelPair.setB(level);
+				return false;
+			}
 		}
 
 		public final int nodeHashcode(@Nullable CppNode node, @Nonnull MatchLevel level) {

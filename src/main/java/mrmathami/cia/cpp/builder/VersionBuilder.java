@@ -1,12 +1,13 @@
 package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.CppException;
-import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.CppNode;
+import mrmathami.cia.cpp.ast.DependencyMap;
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.RootNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,7 +32,7 @@ public final class VersionBuilder {
 		final List<Path> paths = new ArrayList<>();
 		final Set<Path> pathSet = new HashSet<>();
 		for (final Path path : pathList) {
-			final Path realPath = path.toAbsolutePath();
+			final Path realPath = path.toAbsolutePath().normalize();
 			if (pathSet.add(realPath)) {
 				paths.add(realPath);
 			}
@@ -76,8 +77,9 @@ public final class VersionBuilder {
 		for (final CppNode node : rootNode) {
 			double directWeight = 0.0;
 			for (final CppNode dependencyNode : node.getAllDependencyFrom()) {
-				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
-					directWeight += weightMap[entry.getKey().ordinal()] * entry.getValue();
+				final DependencyMap dependencyMap = node.getNodeDependencyFrom(dependencyNode);
+				for (final DependencyType type : DependencyType.values) {
+					directWeight += weightMap[type.ordinal()] * dependencyMap.getCount(type);
 				}
 			}
 			weights[node.getId()] = directWeight;
@@ -98,7 +100,7 @@ public final class VersionBuilder {
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 		final RootNode root = AstBuilder.build(translationUnit);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
@@ -137,7 +139,7 @@ public final class VersionBuilder {
 
 		debugger.saveRoot(root);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 

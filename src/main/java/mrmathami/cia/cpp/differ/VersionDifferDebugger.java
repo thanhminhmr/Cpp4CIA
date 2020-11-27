@@ -2,8 +2,8 @@ package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.builder.ProjectVersion;
-import mrmathami.util.Pair;
-import mrmathami.util.Utilities;
+import mrmathami.utils.Pair;
+import mrmathami.utils.Utilities;
 
 import java.io.FileWriter;
 import java.io.IOException;

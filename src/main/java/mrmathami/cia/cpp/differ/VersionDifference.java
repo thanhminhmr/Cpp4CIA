@@ -1,13 +1,13 @@
 package mrmathami.cia.cpp.differ;
 
-import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.CppNode;
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.builder.ProjectVersion;
-import mrmathami.util.Pair;
+import mrmathami.utils.Pair;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;

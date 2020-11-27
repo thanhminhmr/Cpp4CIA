@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
@@ -27,7 +27,7 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 	@Override
 	public final boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
-		if (type != null && type.getRoot() != getRoot()) return false;
+		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
 		return true;
 	}

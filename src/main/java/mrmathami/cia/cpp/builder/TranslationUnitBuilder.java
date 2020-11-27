@@ -12,11 +12,13 @@ import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.core.runtime.CoreException;
+import org.mozilla.universalchardet.ReaderFactory;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
+import java.io.CharArrayWriter;
 import java.io.IOException;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -37,9 +39,8 @@ final class TranslationUnitBuilder {
 
 	@Nonnull
 	private static Set<Path> createFileIncludes(@Nonnull IASTTranslationUnit translationUnit,
-			@Nonnull List<Path> projectFiles, @Nonnull List<Path> internalIncludePaths, @Nonnull Path currentFolder) {
+			@Nonnull Set<Path> projectFileSet, @Nonnull List<Path> internalIncludePaths, @Nonnull Path currentFolder) {
 		final Set<Path> includeSet = new HashSet<>();
-		final Set<Path> projectFileSet = Set.copyOf(projectFiles);
 		for (final IASTPreprocessorIncludeStatement includeDirective : translationUnit.getIncludeDirectives()) {
 			if (includeDirective.isActive()) {
 				final String includeFileName = includeDirective.getName().toString();
@@ -64,18 +65,23 @@ final class TranslationUnitBuilder {
 	static Map<Path, Set<Path>> createIncludeMap(@Nonnull List<Path> projectFiles,
 			@Nonnull List<Path> internalIncludePaths) throws CppException {
 		final Map<Path, Set<Path>> includeMap = new HashMap<>();
+		final Set<Path> projectFileSet = Set.copyOf(projectFiles);
 		for (final Path currentFile : projectFiles) {
-			try {
+			try (final CharArrayWriter writer = new CharArrayWriter()) {
+				try (final Reader reader
+						= ReaderFactory.createBufferedReader(currentFile.toFile(), StandardCharsets.UTF_8)) {
+					reader.transferTo(writer);
+				}
 				final IASTTranslationUnit translationUnit = GPP_LANGUAGE.getASTTranslationUnit(
-						FileContent.create(currentFile.toString(),
-								Files.readString(currentFile, StandardCharsets.UTF_8).toCharArray()),
+						FileContent.create(currentFile.toString(), writer.toCharArray()),
 						SCANNER_INFO, EMPTY_PROVIDER, null,
 						ILanguage.OPTION_NO_IMAGE_LOCATIONS
 								| ILanguage.OPTION_SKIP_FUNCTION_BODIES
 								| ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS,
 						LOG_SERVICE);
 
-				includeMap.put(currentFile, createFileIncludes(translationUnit, projectFiles, internalIncludePaths, currentFile.getParent()));
+				includeMap.put(currentFile, createFileIncludes(translationUnit, projectFileSet, internalIncludePaths,
+						currentFile.getParent()));
 			} catch (CoreException e) {
 				throw new CppException("Cannot create TranslationUnit!", e);
 			} catch (IOException e) {

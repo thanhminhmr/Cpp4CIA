@@ -3,7 +3,7 @@ package mrmathami.cia.cpp;
 import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.cia.cpp.differ.VersionDifference;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;

@@ -1,6 +1,6 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nullable;
 
 public interface IBodyContainer {
 	@Nullable
