@@ -1,13 +1,13 @@
 package mrmathami.cia.cpp.builder;
 
 import mrmathami.cia.cpp.CppException;
-import mrmathami.cia.cpp.ProjectVersion;
+import mrmathami.cia.cpp.ast.CppNode;
+import mrmathami.cia.cpp.ast.DependencyMap;
 import mrmathami.cia.cpp.ast.DependencyType;
-import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -16,6 +16,14 @@ import java.util.Map;
 import java.util.Set;
 
 public final class VersionBuilder {
+	@Nonnull public static final Map<DependencyType, Double> WEIGHT_MAP = Map.of(
+			DependencyType.USE, 4.0,
+			DependencyType.MEMBER, 3.0,
+			DependencyType.INHERITANCE, 4.0,
+			DependencyType.INVOCATION, 3.5,
+			DependencyType.OVERRIDE, 3.3
+	);
+
 	private VersionBuilder() {
 	}
 
@@ -24,7 +32,7 @@ public final class VersionBuilder {
 		final List<Path> paths = new ArrayList<>();
 		final Set<Path> pathSet = new HashSet<>();
 		for (final Path path : pathList) {
-			final Path realPath = path.toAbsolutePath();
+			final Path realPath = path.toAbsolutePath().normalize();
 			if (pathSet.add(realPath)) {
 				paths.add(realPath);
 			}
@@ -64,13 +72,14 @@ public final class VersionBuilder {
 	}
 
 	@Nonnull
-	private static double[] calculateWeights(@Nonnull RootNode rootNode) {
+	private static double[] calculateWeights(@Nonnull double[] weightMap, @Nonnull RootNode rootNode) {
 		final double[] weights = new double[rootNode.getNodeCount()];
-		for (final Node node : rootNode) {
+		for (final CppNode node : rootNode) {
 			double directWeight = 0.0;
-			for (final Node dependencyNode : node.getAllDependencyFrom()) {
-				for (final Map.Entry<DependencyType, Integer> entry : node.getNodeDependencyFrom(dependencyNode).entrySet()) {
-					directWeight += entry.getKey().getWeight() * entry.getValue();
+			for (final CppNode dependencyNode : node.getAllDependencyFrom()) {
+				final DependencyMap dependencyMap = node.getNodeDependencyFrom(dependencyNode);
+				for (final DependencyType type : DependencyType.values) {
+					directWeight += weightMap[type.ordinal()] * dependencyMap.getCount(type);
 				}
 			}
 			weights[node.getId()] = directWeight;
@@ -80,31 +89,35 @@ public final class VersionBuilder {
 
 	@Nonnull
 	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
-			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths) throws CppException {
+			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,
+			@Nonnull Map<DependencyType, Double> dependencyTypeWeightMap) throws CppException {
 		final List<Path> projectFileList = createPathList(projectFiles);
 		final List<Path> externalIncludePaths = createPathList(includePaths);
 		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
 		final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
 
 		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, false);
-
 		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
-
 		final RootNode root = AstBuilder.build(translationUnit);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final double[] weights = calculateWeights(root);
-		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
+		final DependencyType[] types = DependencyType.values();
+		final double[] typeWeights = new double[types.length];
+		for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
+
+		final double[] weights = calculateWeights(typeWeights, root);
+		return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
 	}
 
 	//*
 	@Nonnull
 	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
 			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,
-			@Nonnull VersionBuilderDebugger debugger) throws CppException {
+			@Nonnull Map<DependencyType, Double> dependencyTypeWeightMap, @Nonnull VersionBuilderDebugger debugger)
+			throws CppException {
 		final List<Path> projectFileList = createPathList(projectFiles);
 		final List<Path> externalIncludePaths = createPathList(includePaths);
 		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
@@ -126,12 +139,16 @@ public final class VersionBuilder {
 
 		debugger.saveRoot(root);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath();
+		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
 		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final double[] weights = calculateWeights(root);
-		return ProjectVersion.of(versionName, projectFilePaths, projectIncludePaths, root, weights);
+		final DependencyType[] types = DependencyType.values();
+		final double[] typeWeights = new double[types.length];
+		for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
+
+		final double[] weights = calculateWeights(typeWeights, root);
+		return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
 	}
 	//*/
 }

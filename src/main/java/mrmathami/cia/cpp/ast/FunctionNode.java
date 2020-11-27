@@ -1,9 +1,9 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.util.Utilities;
+import mrmathami.utils.Utilities;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -14,15 +14,18 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Objects;
 
-public final class FunctionNode extends Node implements IBodyContainer<FunctionNode>, ITypeContainer<FunctionNode>, IClassContainer, IEnumContainer, IVariableContainer {
-	private static final long serialVersionUID = 4827973061998245590L;
+public final class FunctionNode extends CppNode implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
+	private static final long serialVersionUID = -2779864800917566027L;
 
-	@Nonnull private transient List<Node> parameters;
+	@Nonnull private transient List<CppNode> parameters = new LinkedList<>();
 	@Nullable private String body;
-	@Nullable private Node type;
+	@Nullable private CppNode type;
 
 	public FunctionNode() {
-		this.parameters = new LinkedList<>();
+	}
+
+	public FunctionNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
+		super(name, uniqueName, signature);
 	}
 
 	@Override
@@ -33,12 +36,15 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	}
 
 	@Nonnull
-	public final List<Node> getParameters() {
-		return isReadOnly() ? parameters : Collections.unmodifiableList(parameters);
+	public final List<CppNode> getParameters() {
+		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
-	public final boolean addParameters(@Nonnull List<Node> parameters) {
+	public final boolean addParameters(@Nonnull List<CppNode> parameters) {
 		checkReadOnly();
+		for (final CppNode parameter : parameters) {
+			if (parameter == this || parameter.getRoot() != getRoot()) return false;
+		}
 		return this.parameters.addAll(parameters);
 	}
 
@@ -47,13 +53,14 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 		parameters.clear();
 	}
 
-	public final boolean addParameter(@Nonnull Node parameter) {
+	public final boolean addParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
+		if (parameter == this || parameter.getRoot() != getRoot()) return false;
 		parameters.add(parameter);
 		return true;
 	}
 
-	public final boolean removeParameter(@Nonnull Node parameter) {
+	public final boolean removeParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		return parameters.remove(parameter);
 	}
@@ -64,26 +71,24 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 		return body;
 	}
 
-	@Nonnull
 	@Override
-	public final FunctionNode setBody(@Nullable String body) {
+	public final void setBody(@Nullable String body) {
 		checkReadOnly();
 		this.body = body;
-		return this;
 	}
 
 	@Nullable
 	@Override
-	public final Node getType() {
+	public final CppNode getType() {
 		return type;
 	}
 
-	@Nonnull
 	@Override
-	public final FunctionNode setType(@Nullable Node type) {
+	public final boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
+		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
-		return this;
+		return true;
 	}
 
 	@Nonnull
@@ -104,14 +109,20 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 		return getChildrenList(VariableNode.class);
 	}
 
+	@Nonnull
+	@Override
+	public final List<TypedefNode> getTypedefs() {
+		return getChildrenList(TypedefNode.class);
+	}
+
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
-		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+//		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
@@ -122,18 +133,18 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@Override
 	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeSimilarHashcode(matcher);
-		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+//		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		result = 31 * result + parameters.size(); // prototype similar
 		return result;
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
-		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+//		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
 			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_SIMILAR)) break;
@@ -144,21 +155,21 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@Override
 	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeIdenticalHashcode(matcher);
-		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+//		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		result = 31 * result + parameters.size(); // prototype similar
 		return result;
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
-		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		if (!matcher.isNodeMatch(type, function.type, MatchLevel.PROTOTYPE_IDENTICAL)) return false;
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
-			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.SIMILAR)) break;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_IDENTICAL)) break;
 		}
 		return false;
 	}
@@ -166,22 +177,24 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@Override
 	protected final int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
-		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		result = 31 * result + parameters.size(); // similar
 		return result;
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull Node node, @Nonnull Matcher matcher) {
+	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
-		if (!Objects.equals(body, function.body) || !matcher.isNodeMatch(type, function.type, MatchLevel.IDENTICAL))
+		if (!Objects.equals(body, function.body)
+				|| !matcher.isNodeMatch(type, function.type, MatchLevel.PROTOTYPE_IDENTICAL)) {
 			return false;
-		final Iterator<Node> iteratorA = parameters.iterator();
-		final Iterator<Node> iteratorB = function.parameters.iterator();
+		}
+		final Iterator<CppNode> iteratorA = parameters.iterator();
+		final Iterator<CppNode> iteratorB = function.parameters.iterator();
 		while (iteratorA.hasNext() == iteratorB.hasNext()) {
 			if (!iteratorA.hasNext()) return true;
-			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.IDENTICAL)) break;
+			if (!matcher.isNodeMatch(iteratorA.next(), iteratorB.next(), MatchLevel.PROTOTYPE_IDENTICAL)) break;
 		}
 		return false;
 	}
@@ -190,20 +203,20 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	protected final int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + (body != null ? body.hashCode() : 0);
-		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.IDENTICAL);
+		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		result = 31 * result + parameters.size(); // identical
 		return result;
 	}
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull Node fromNode, @Nullable Node toNode) {
+	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		boolean isChanged = false;
 		if (type == fromNode) {
 			this.type = toNode;
 			isChanged = true;
 		}
-		final ListIterator<Node> iterator = parameters.listIterator();
+		final ListIterator<CppNode> iterator = parameters.listIterator();
 		while (iterator.hasNext()) {
 			if (iterator.next() == fromNode) {
 				isChanged = true;
@@ -226,7 +239,9 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 
 	//<editor-fold desc="Object Helper">
 	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+		if (getParent() == null) {
+			throw new IOException("Only RootNode is directly Serializable!");
+		}
 		outputStream.defaultWriteObject();
 		outputStream.writeObject(List.copyOf(parameters));
 	}
@@ -234,7 +249,7 @@ public final class FunctionNode extends Node implements IBodyContainer<FunctionN
 	@SuppressWarnings("unchecked")
 	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
 		inputStream.defaultReadObject();
-		this.parameters = (List<Node>) inputStream.readObject();
+		this.parameters = (List<CppNode>) inputStream.readObject();
 	}
 	//</editor-fold>
 }

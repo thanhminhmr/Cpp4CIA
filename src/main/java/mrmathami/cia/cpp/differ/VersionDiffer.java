@@ -1,14 +1,14 @@
 package mrmathami.cia.cpp.differ;
 
 import mrmathami.cia.cpp.CppException;
-import mrmathami.cia.cpp.ProjectVersion;
-import mrmathami.cia.cpp.VersionDifference;
+import mrmathami.cia.cpp.ast.CppNode;
+import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.IntegralNode;
-import mrmathami.cia.cpp.ast.Node;
 import mrmathami.cia.cpp.ast.RootNode;
-import mrmathami.util.Pair;
+import mrmathami.cia.cpp.builder.ProjectVersion;
+import mrmathami.utils.Pair;
 
-import javax.annotation.Nonnull;
+import mrmathami.annotations.Nonnull;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -17,43 +17,52 @@ import java.util.Map;
 import java.util.Set;
 
 public final class VersionDiffer {
+	@Nonnull public static final Map<DependencyType, Double> IMPACT_WEIGHT_MAP = Map.of(
+			DependencyType.USE, 0.8495204,
+			DependencyType.MEMBER, 0.7816402,
+			DependencyType.INHERITANCE, 0.7071755,
+			DependencyType.INVOCATION, 0.7487174,
+			DependencyType.OVERRIDE, 0.7128108
+	);
+
 	private VersionDiffer() {
 	}
 
 	@Nonnull
-	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB) throws CppException {
+	public static VersionDifference compare(@Nonnull ProjectVersion versionA, @Nonnull ProjectVersion versionB,
+			@Nonnull Map<DependencyType, Double> dependencyTypeImpactWeightMap) throws CppException {
 		final RootNode rootA = versionA.getRootNode();
 		final RootNode rootB = versionB.getRootNode();
 
-		final Node.Matcher matcher = new Node.Matcher();
+		final CppNode.Matcher matcher = new CppNode.Matcher();
 
-		final Map<Node.Wrapper, Node> nodeMapA = new HashMap<>();
-		final Map<Node.Wrapper, Node> nodeMapB = new HashMap<>();
-		nodeMapA.put(new Node.Wrapper(rootA, Node.MatchLevel.SIMILAR, matcher), rootA);
-		nodeMapB.put(new Node.Wrapper(rootB, Node.MatchLevel.SIMILAR, matcher), rootB);
-		for (final Node nodeA : rootA) {
+		final Map<CppNode.Wrapper, CppNode> nodeMapA = new HashMap<>();
+		final Map<CppNode.Wrapper, CppNode> nodeMapB = new HashMap<>();
+		nodeMapA.put(new CppNode.Wrapper(rootA, CppNode.MatchLevel.SIMILAR, matcher), rootA);
+		nodeMapB.put(new CppNode.Wrapper(rootB, CppNode.MatchLevel.SIMILAR, matcher), rootB);
+		for (final CppNode nodeA : rootA) {
 			if (!(nodeA instanceof IntegralNode)) {
-				nodeMapA.put(new Node.Wrapper(nodeA, Node.MatchLevel.SIMILAR, matcher), nodeA);
+				nodeMapA.put(new CppNode.Wrapper(nodeA, CppNode.MatchLevel.SIMILAR, matcher), nodeA);
 			}
 		}
-		for (final Node nodeB : rootB) {
+		for (final CppNode nodeB : rootB) {
 			if (!(nodeB instanceof IntegralNode)) {
-				nodeMapB.put(new Node.Wrapper(nodeB, Node.MatchLevel.SIMILAR, matcher), nodeB);
+				nodeMapB.put(new CppNode.Wrapper(nodeB, CppNode.MatchLevel.SIMILAR, matcher), nodeB);
 			}
 		}
 
-		final Set<Node> addedNodes = new HashSet<>();
-		final Set<Pair<Node, Node>> changedNodes = new HashSet<>();
-		final Set<Pair<Node, Node>> unchangedNodes = new HashSet<>();
-		final Set<Node> removedNodes = new HashSet<>();
+		final Set<CppNode> addedNodes = new HashSet<>();
+		final Set<Pair<CppNode, CppNode>> changedNodes = new HashSet<>();
+		final Set<Pair<CppNode, CppNode>> unchangedNodes = new HashSet<>();
+		final Set<CppNode> removedNodes = new HashSet<>();
 
-		final List<Node> changedListB = new LinkedList<>();
+		final List<CppNode> changedListB = new LinkedList<>();
 
-		for (final Node.Wrapper wrapperA : nodeMapA.keySet()) {
-			final Node nodeA = wrapperA.getNode();
-			final Node nodeB = nodeMapB.get(wrapperA);
+		for (final CppNode.Wrapper wrapperA : nodeMapA.keySet()) {
+			final CppNode nodeA = wrapperA.getNode();
+			final CppNode nodeB = nodeMapB.get(wrapperA);
 			if (nodeB != null) {
-				if (matcher.isNodeMatch(nodeA, nodeB, Node.MatchLevel.IDENTICAL)) {
+				if (matcher.isNodeMatch(nodeA, nodeB, CppNode.MatchLevel.IDENTICAL)) {
 					unchangedNodes.add(Pair.immutableOf(nodeA, nodeB));
 				} else {
 					changedNodes.add(Pair.immutableOf(nodeA, nodeB));
@@ -63,17 +72,23 @@ public final class VersionDiffer {
 				removedNodes.add(nodeA);
 			}
 		}
-		for (final Node.Wrapper wrapperB : nodeMapB.keySet()) {
-			final Node nodeA = nodeMapA.get(wrapperB);
-			final Node nodeB = wrapperB.getNode();
+		for (final CppNode.Wrapper wrapperB : nodeMapB.keySet()) {
+			final CppNode nodeA = nodeMapA.get(wrapperB);
+			final CppNode nodeB = wrapperB.getNode();
 			if (nodeA == null) {
 				addedNodes.add(nodeB);
 				changedListB.add(nodeB);
 			}
 		}
 
-		final double[] weights = ImpactWeightBuilder.calculate(rootB, changedListB);
+		final DependencyType[] types = DependencyType.values();
+		final double[] typeImpactWeights = new double[types.length];
+		for (final DependencyType type : types) {
+			typeImpactWeights[type.ordinal()] = dependencyTypeImpactWeightMap.get(type);
+		}
 
-		return VersionDifference.of(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, weights);
+		final double[] impactWeights = ImpactWeightBuilder.calculate(dependencyTypeImpactWeightMap, rootB, changedListB);
+
+		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, typeImpactWeights, impactWeights);
 	}
 }

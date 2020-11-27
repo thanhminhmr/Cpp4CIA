@@ -4,8 +4,8 @@
 		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
-	<groupId>mrmathami</groupId>
-	<artifactId>cppcia</artifactId>
+	<groupId>mrmathami.cia.cpp</groupId>
+	<artifactId>mrmathami.cia.cpp.core</artifactId>
 	<packaging>jar</packaging>
 	<version>1.0-SNAPSHOT</version>
 
@@ -15,57 +15,131 @@
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>mrmathami</groupId>
+			<artifactId>mrmathami.utils</artifactId>
+			<version>1.0.1</version>
+		</dependency>
+
 		<!-- region Eclipse CDT -->
 		<dependency>
-			<groupId>org.eclipse.platform</groupId>
-			<artifactId>org.eclipse.core.runtime</artifactId>
-			<version>3.17.100</version>
-		</dependency>
-		<dependency>
 			<groupId>org.eclipse.cdt</groupId>
-			<artifactId>core</artifactId>
-			<version>6.11.0</version>
-			<type>jar</type>
-			<scope>system</scope>
-			<systemPath>${project.basedir}/lib/org.eclipse.cdt.core_6.11.0.202003081657.jar</systemPath>
-		</dependency>
-		<dependency>
-			<groupId>com.ibm.icu</groupId>
-			<artifactId>icu4j</artifactId>
-			<version>64.1</version>
+			<artifactId>org.eclipse.cdt.core</artifactId>
+			<version>7.0.1-SNAPSHOT</version>
 		</dependency>
 		<!-- endregion Eclipse CDT -->
 
 		<!-- region jCPP -->
 		<dependency>
-			<groupId>com.google.code.findbugs</groupId>
-			<artifactId>jsr305</artifactId>
-			<version>3.0.2</version>
+			<groupId>com.github.albfernandez</groupId>
+			<artifactId>juniversalchardet</artifactId>
+			<version>2.4.0</version>
 		</dependency>
-		<!--        <dependency>-->
-		<!--            <groupId>org.slf4j</groupId>-->
-		<!--            <artifactId>slf4j-api</artifactId>-->
-		<!--            <version>1.7.30</version>-->
-		<!--        </dependency>-->
 		<!-- endregion jCPP -->
 
-		<!--        <dependency>-->
-		<!--            <groupId>it.unimi.dsi</groupId>-->
-		<!--            <artifactId>fastutil</artifactId>-->
-		<!--            <version>8.3.1</version>-->
-		<!--        </dependency>-->
-
-		<dependency>
-			<groupId>org.ini4j</groupId>
-			<artifactId>ini4j</artifactId>
-			<version>0.5.4</version>
-		</dependency>
+		<!--<dependency>-->
+		<!--	<groupId>org.ini4j</groupId>-->
+		<!--	<artifactId>ini4j</artifactId>-->
+		<!--	<version>0.5.4</version>-->
+		<!--</dependency>-->
 	</dependencies>
 
 
 	<build>
-		<directory>build/target/</directory>
+		<directory>${project.basedir}/build/target-${project.build.finalName}</directory>
 		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>versions-maven-plugin</artifactId>
+				<version>2.8.1</version>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-source-plugin</artifactId>
+				<version>3.2.1</version>
+				<executions>
+					<execution>
+						<id>attach-sources</id>
+						<goals>
+							<goal>jar</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<archive>
+						<addMavenDescriptor>false</addMavenDescriptor>
+					</archive>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-install-plugin</artifactId>
+				<version>3.0.0-M1</version>
+				<executions>
+					<execution>
+						<id>install-cdt-local</id>
+						<phase>validate</phase>
+						<configuration>
+							<groupId>org.eclipse.cdt</groupId>
+							<artifactId>org.eclipse.cdt.core</artifactId>
+							<version>7.0.1-SNAPSHOT</version>
+							<packaging>jar</packaging>
+							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.jar</file>
+							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT-sources.jar</sources>
+							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.pom</pomFile>
+						</configuration>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>install-cdt-external</id>
+						<phase>validate</phase>
+						<configuration>
+							<groupId>org.eclipse.cdt</groupId>
+							<artifactId>org.eclipse.cdt.core</artifactId>
+							<version>7.0.1-SNAPSHOT</version>
+							<packaging>jar</packaging>
+							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.jar</file>
+							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT-sources.jar</sources>
+							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.pom</pomFile>
+							<localRepositoryPath>repository</localRepositoryPath>
+						</configuration>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+					</execution>
+
+					<execution>
+						<id>install-local</id>
+						<phase>install</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>${project.build.directory}/${project.build.finalName}.jar</file>
+							<sources>${project.build.directory}/${project.build.finalName}-sources.jar</sources>
+							<pomFile>${project.basedir}/pom-no-build.txt</pomFile>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-external</id>
+						<phase>install</phase>
+						<goals>
+							<goal>install-file</goal>
+						</goals>
+						<configuration>
+							<file>${project.build.directory}/${project.build.finalName}.jar</file>
+							<sources>${project.build.directory}/${project.build.finalName}-sources.jar</sources>
+							<pomFile>${project.basedir}/pom-no-build.txt</pomFile>
+							<localRepositoryPath>repository</localRepositoryPath>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -80,35 +154,26 @@
 					<showDeprecation>true</showDeprecation>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-dependency-plugin</artifactId>
-				<executions>
-					<execution>
-						<id>unpack</id>
-						<phase>generate-sources</phase>
-						<goals>
-							<goal>unpack-dependencies</goal>
-						</goals>
-						<configuration>
-							<outputDirectory>${project.build.outputDirectory}</outputDirectory>
-							<excludes>OSGI-INF/*, META-INF/*</excludes>
-						</configuration>
-					</execution>
-				</executions>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.0.2</version>
-				<configuration>
-					<archive>
-						<manifestEntries>
-							<Main-Class>mrmathami.cia.cpp.Main</Main-Class>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
+
+			<!--<plugin>-->
+			<!--	<groupId>org.apache.maven.plugins</groupId>-->
+			<!--	<artifactId>maven-jar-plugin</artifactId>-->
+			<!--	<version>3.2.0</version>-->
+			<!--	<configuration>-->
+			<!--		<archive>-->
+			<!--			<manifestEntries>-->
+			<!--				<Main-Class>mrmathami.cia.cpp.Main</Main-Class>-->
+			<!--			</manifestEntries>-->
+			<!--		</archive>-->
+			<!--	</configuration>-->
+			<!--</plugin>-->
 		</plugins>
 	</build>
+	<repositories>
+		<repository>
+			<id>my-repo</id>
+			<name>MrMaThaMi personal Repo</name>
+			<url>https://raw.githubusercontent.com/thanhminhmr/repository/main/</url>
+		</repository>
+	</repositories>
 </project>

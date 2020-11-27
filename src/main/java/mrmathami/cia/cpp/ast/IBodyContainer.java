@@ -1,12 +1,10 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nullable;
 
-public interface IBodyContainer<E extends Node> {
+public interface IBodyContainer {
 	@Nullable
 	String getBody();
 
-	@Nonnull
-	E setBody(@Nullable String body);
+	void setBody(@Nullable String body);
 }

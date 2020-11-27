@@ -1,15 +1,13 @@
 package mrmathami.cia.cpp.ast;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import mrmathami.annotations.Nullable;
 
 /**
  * Hold a type
  */
-public interface ITypeContainer<E extends Node> {
+public interface ITypeContainer {
 	@Nullable
-	Node getType();
+	CppNode getType();
 
-	@Nonnull
-	E setType(@Nullable Node type);
+	boolean setType(@Nullable CppNode type);
 }

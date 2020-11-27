@@ -16,85 +16,53 @@
  */
 package org.anarres.cpp;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
+import mrmathami.annotations.Nonnull;
 import java.io.IOException;
 import java.nio.charset.Charset;
-import javax.annotation.Nonnull;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * A {@link Source} which lexes a file.
- *
+ * <p>
  * The input is buffered.
  *
  * @see Source
  */
 public class FileLexerSource extends InputLexerSource {
 
-    private final String path;
-    private final File file;
+	private final Path file;
 
-    /**
-     * Creates a new Source for lexing the given File.
-     *
-     * Preprocessor directives are honoured within the file.
-     */
-    public FileLexerSource(@Nonnull File file, @Nonnull Charset charset, @Nonnull String path)
-            throws IOException {
-        super(new FileInputStream(file), charset);
-        this.file = file;
-        this.path = path;
-    }
+	/**
+	 * Creates a new Source for lexing the given File.
+	 * <p>
+	 * Preprocessor directives are honoured within the file.
+	 */
+	public FileLexerSource(@Nonnull Path file) throws IOException {
+		super(Files.newInputStream(file));
+		this.file = file;
+	}
 
-    public FileLexerSource(@Nonnull File file, @Nonnull String path)
-            throws IOException {
-        this(file, Charset.defaultCharset(), path);
-    }
+	public FileLexerSource(@Nonnull Path file, @Nonnull Charset charset) throws IOException {
+		super(Files.newBufferedReader(file, charset));
+		this.file = file;
+	}
 
-    public FileLexerSource(@Nonnull File file, @Nonnull Charset charset)
-            throws IOException {
-        this(file, charset, file.getPath());
-    }
+	/**
+	 * This is not necessarily the same as getFile().getPath() in case we are in a chroot.
+	 */
+	@Override
+	public Path getPath() {
+		return file;
+	}
 
-//    @Deprecated
-//    public FileLexerSource(@Nonnull File file)
-//            throws IOException {
-//        this(file, Charset.defaultCharset());
-//    }
+	@Override
+	public String getName() {
+		return file.getFileName().toString();
+	}
 
-    public FileLexerSource(@Nonnull String path, @Nonnull Charset charset)
-            throws IOException {
-        this(new File(path), charset, path);
-    }
-
-//    @Deprecated
-//    public FileLexerSource(@Nonnull String path)
-//            throws IOException {
-//        this(path, Charset.defaultCharset());
-//    }
-
-    @Nonnull
-    public File getFile() {
-        return file;
-    }
-
-    /**
-     * This is not necessarily the same as getFile().getPath() in case we are in a chroot.
-     */
-    @Override
-    public String getPath() {
-        return path;
-    }
-
-    @Override
-    public String getName() {
-        return getPath();
-    }
-
-    @Override
-    public String toString() {
-        return "file " + getPath();
-    }
+	@Override
+	public String toString() {
+		return "file " + getPath();
+	}
 }

@@ -1,13 +1,15 @@
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -31,31 +33,32 @@ public final class BuilderTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		//System.in.read();
+		System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0");
+		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cppcia\\test");
 		final List<Path> projectFiles =
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\main.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\java-cia\\testData\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.h")
+						projectRoot.resolve("main.cpp")
 				);
 
 
 		final List<Path> includePaths = List.of();
 
 		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
+		debugger.setLoadFileContent(false);
 		debugger.setSaveTranslationUnit(true);
-		debugger.setOutputPath(Path.of("C:\\WINDOWS\\TEMP\\Temp"));
+		debugger.setOutputPath(projectRoot);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("CmderLauncher", projectRoot, projectFiles, includePaths, debugger);
+		final ProjectVersion projectVersion = VersionBuilder.build("test", projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, debugger);
 
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\CmderLauncher.proj")) {
-			projectVersion.toOutputStream(fos);
+		try (final OutputStream outputStream = Files.newOutputStream(projectRoot.resolve(
+				projectVersion.getVersionName() + ".proj"),
+				StandardOpenOption.WRITE, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
+			projectVersion.toOutputStream(outputStream);
 		}
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);

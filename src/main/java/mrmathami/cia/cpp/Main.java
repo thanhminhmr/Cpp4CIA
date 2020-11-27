@@ -1,9 +1,12 @@
+/*
 package mrmathami.cia.cpp;
 
+import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.cia.cpp.builder.VersionBuilder;
 import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 import mrmathami.cia.cpp.differ.VersionDiffer;
-import mrmathami.util.Utilities;
+import mrmathami.cia.cpp.differ.VersionDifference;
+import mrmathami.utils.Utilities;
 import org.ini4j.Ini;
 import org.ini4j.InvalidFileFormatException;
 import org.ini4j.Profile;
@@ -28,17 +31,24 @@ public final class Main {
 
 	private final VersionBuilderDebugger builderDebugger;
 
-	private Main(int debugLevel) {
-		this.builderDebugger = debugLevel > 0 ? new VersionBuilderDebugger() : null;
-		if (debugLevel > 1) builderDebugger.setSaveTranslationUnit(true);
+	private Main(boolean isDebuggerEnable, boolean isSaveTranslationUnit, boolean isLoadFileContent) {
+		this.builderDebugger = isDebuggerEnable ? new VersionBuilderDebugger() : null;
+		if (isDebuggerEnable) {
+			builderDebugger.setSaveTranslationUnit(isSaveTranslationUnit);
+			builderDebugger.setLoadFileContent(isLoadFileContent);
+		}
 	}
 
 	public static void main(String[] argv) {
-		if (argv.length < 1 || argv.length > 2) {
-			System.out.println("Usage: cpp4cia.jar <input.ini> [debugLevel]");
+		if (argv.length < 1 || argv.length > 4) {
+			System.out.println("Usage: cpp4cia.jar <input.ini> [isDebugOn=0] [isSaveTranslationUnit=0] [isLoadFileContent=0]");
 			return;
 		}
-		new Main(argv.length == 2 ? Integer.parseInt(argv[1]) : 0).build(Path.of(argv[0]));
+		new Main(
+				argv.length >= 2 && Integer.parseInt(argv[1]) != 0,
+				argv.length >= 3 && Integer.parseInt(argv[2]) != 0,
+				argv.length >= 4 && Integer.parseInt(argv[3]) != 0
+		).build(Path.of(argv[0]));
 	}
 
 	private void doLogging(String message) {
@@ -99,8 +109,8 @@ public final class Main {
 			try {
 				if (builderDebugger != null) builderDebugger.setOutputPath(projectRoot);
 				final ProjectVersion projectVersion = builderDebugger != null
-						? VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, builderDebugger)
-						: VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths);
+						? VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, builderDebugger)
+						: VersionBuilder.build(versionName, projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {
@@ -150,7 +160,7 @@ public final class Main {
 			doLogging("Building VersionDifference " + versionA.getVersionName() + "-" + versionB.getVersionName() + "...");
 
 			try {
-				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB);
+				final VersionDifference versionDifference = VersionDiffer.compare(versionA, versionB, VersionDiffer.IMPACT_WEIGHT_MAP);
 
 				final String outputFileString = section.get("outputFile", "");
 				if (!outputFileString.isBlank()) {
@@ -198,7 +208,7 @@ public final class Main {
 
 			doLogging("Building Project " + projectName + "...");
 
-			final Project project = Project.of(projectName, versionList, differenceList);
+			final Project project = new Project(projectName, versionList, differenceList);
 			final String outputFileString = section.get("outputFile", "");
 			if (!outputFileString.isBlank()) {
 				final Path outputFilePath = Path.of(outputFileString);
@@ -229,3 +239,4 @@ public final class Main {
 		return null;
 	}
 }
+*/
