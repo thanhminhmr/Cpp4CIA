@@ -13,7 +13,7 @@
         <dependency>
             <groupId>mrmathami</groupId>
             <artifactId>mrmathami.utils</artifactId>
-            <version>[1.0,)</version>
+            <version>1.0.6</version>
         </dependency>
 
 		<!-- region Eclipse CDT -->

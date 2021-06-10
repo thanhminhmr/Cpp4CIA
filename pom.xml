@@ -18,14 +18,14 @@
 		<dependency>
 			<groupId>mrmathami</groupId>
 			<artifactId>mrmathami.utils</artifactId>
-			<version>[1.0,)</version>
+			<version>1.0.6</version>
 		</dependency>
 
 		<!-- region Eclipse CDT -->
 		<dependency>
 			<groupId>org.eclipse.cdt</groupId>
 			<artifactId>org.eclipse.cdt.core</artifactId>
-			<version>7.0.1-SNAPSHOT</version>
+			<version>7.2.100-SNAPSHOT</version>
 		</dependency>
 		<!-- endregion Eclipse CDT -->
 
@@ -84,11 +84,11 @@
 						<configuration>
 							<groupId>org.eclipse.cdt</groupId>
 							<artifactId>org.eclipse.cdt.core</artifactId>
-							<version>7.0.1-SNAPSHOT</version>
+							<version>7.2.100-SNAPSHOT</version>
 							<packaging>jar</packaging>
-							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.jar</file>
-							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT-sources.jar</sources>
-							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.pom</pomFile>
+							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT.jar</file>
+							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT-sources.jar</sources>
+							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT.pom</pomFile>
 						</configuration>
 						<goals>
 							<goal>install-file</goal>
@@ -100,11 +100,11 @@
 						<configuration>
 							<groupId>org.eclipse.cdt</groupId>
 							<artifactId>org.eclipse.cdt.core</artifactId>
-							<version>7.0.1-SNAPSHOT</version>
+							<version>7.2.100-SNAPSHOT</version>
 							<packaging>jar</packaging>
-							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.jar</file>
-							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT-sources.jar</sources>
-							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.0.1-SNAPSHOT.pom</pomFile>
+							<file>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT.jar</file>
+							<sources>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT-sources.jar</sources>
+							<pomFile>${project.basedir}/lib/org.eclipse.cdt.core-7.2.100-SNAPSHOT.pom</pomFile>
 							<localRepositoryPath>repository</localRepositoryPath>
 						</configuration>
 						<goals>
