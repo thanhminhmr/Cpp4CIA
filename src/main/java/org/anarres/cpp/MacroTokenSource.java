@@ -59,10 +59,6 @@ class MacroTokenSource extends Source {
 
 	/* XXX Called from Preprocessor [ugly]. */
 	static void escape(@Nonnull StringBuilder buf, @Nonnull CharSequence cs) {
-		if (buf == null)
-			throw new NullPointerException("Buffer was null.");
-		if (cs == null)
-			throw new NullPointerException("CharSequence was null.");
 		for (int i = 0; i < cs.length(); i++) {
 			char c = cs.charAt(i);
 			switch (c) {
@@ -81,12 +77,6 @@ class MacroTokenSource extends Source {
 				default:
 					buf.append(c);
 			}
-		}
-	}
-
-	private void concat(@Nonnull StringBuilder buf, @Nonnull Macro.Argument arg) {
-		for (Token tok : arg) {
-			buf.append(tok.getText());
 		}
 	}
 
@@ -193,9 +183,7 @@ class MacroTokenSource extends Source {
 				arg = null;
 			}
 
-			if (!tokens.hasNext())
-				return new Token(EOF, -1, -1, "");    /* End of macro. */
-
+			if (!tokens.hasNext()) return Token.eof;    /* End of macro. */
 			Token tok = tokens.next();
 			int idx;
 			switch (tok.getType()) {

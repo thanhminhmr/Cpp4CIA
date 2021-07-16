@@ -2,6 +2,7 @@ package mrmathami.cia.cpp.ast;
 
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.Objects;
@@ -113,9 +114,18 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 
 	@Nonnull
 	@Override
-	final String partialTreeElementString() {
-		return ", type: " + type
-				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);
+	final String partialElementString() {
+		final StringBuilder builder = new StringBuilder();
+		builder.append(", \"type\": ").append(type)
+				.append(", \"body\": ");
+		if (body != null) {
+			builder.append("\"");
+			escapeBody(builder, body);
+			builder.append("\"");
+		} else {
+			builder.append("null");
+		}
+		return builder.toString();
 	}
 
 	//<editor-fold desc="Object Helper">

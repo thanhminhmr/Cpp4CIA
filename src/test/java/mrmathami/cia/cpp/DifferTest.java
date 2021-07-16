@@ -23,15 +23,15 @@ public final class DifferTest {
 		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
 		debugger.setLoadFileContent(false);
 		debugger.setSaveTranslationUnit(false);
-		debugger.setOutputPath(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"));
+		debugger.setOutputPath(Path.of("./test"));
 
 		// ==========
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq714");
+		final Path projectRoot = Path.of("./test/cpp/zpaq714");
 		final List<Path> projectFiles =
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq714\\zpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq714\\libzpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq714\\libzpaq.h")
+						Path.of("./test/zpaq714/zpaq.cpp"),
+						Path.of("./test/zpaq714/libzpaq.cpp"),
+						Path.of("./test/zpaq714/libzpaq.h")
 				);
 
 //		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.0");
@@ -50,12 +50,12 @@ public final class DifferTest {
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
 		// ==========
-		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq715");
+		final Path projectRoot2 = Path.of("./test/zpaq715");
 		final List<Path> projectFiles2 =
 				List.of(
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq715\\zpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq715\\libzpaq.cpp"),
-						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\zpaq715\\libzpaq.h")
+						Path.of("./test/zpaq715/zpaq.cpp"),
+						Path.of("./test/zpaq715/libzpaq.cpp"),
+						Path.of("./test/zpaq715/libzpaq.h")
 				);
 
 //		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.1");
@@ -77,16 +77,16 @@ public final class DifferTest {
 
 		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
 
-		VersionDifferDebugger.debugOutput(Path.of("C:\\WINDOWS\\TEMP\\Temp\\"), difference);
+		VersionDifferDebugger.debugOutput(Path.of("./test"), difference);
 
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project1_project2.VersionDifference")) {
+		try (final FileOutputStream fos = new FileOutputStream("./test/project1_project2.VersionDifference")) {
 			difference.toOutputStream(fos);
 		}
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
 		final Project project = new Project("project", List.of(projectVersion, projectVersion2), List.of(difference));
-		try (final FileOutputStream fos = new FileOutputStream("C:\\WINDOWS\\TEMP\\Temp\\project.Project")) {
+		try (final FileOutputStream fos = new FileOutputStream("./test/project.Project")) {
 			project.toOutputStream(fos);
 		}
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);

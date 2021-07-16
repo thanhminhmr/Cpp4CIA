@@ -65,7 +65,7 @@ public final class RootNode extends CppNode implements IIntegralContainer, IClas
 
 	@Nonnull
 	@Override
-	final String partialTreeElementString() {
-		return ", nodeCount: " + nodeCount;
+	final String partialElementString() {
+		return ", \"nodeCount\": " + nodeCount;
 	}
 }

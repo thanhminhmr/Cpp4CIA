@@ -157,8 +157,8 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Nonnull
-	final String partialTreeElementString() {
-		return ", bases: " + Utilities.collectionToString(bases);
+	final String partialElementString() {
+		return ", \"bases\": " + Utilities.collectionToString(bases);
 	}
 
 	//<editor-fold desc="Object Helper">

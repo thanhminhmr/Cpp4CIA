@@ -2,6 +2,7 @@ package mrmathami.utils;
 
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Collection;
@@ -43,8 +44,11 @@ public final class Utilities {
 		final StringBuilder builder = new StringBuilder().append("[");
 		for (final Map.Entry<K, V> entry : map.entrySet()) {
 			if (builder.length() > 1) builder.append(',');
-			builder.append("\n\t").append(keyToString != null ? keyToString.apply(entry.getKey()) : entry.getKey())
-					.append(" = ").append(valueToString != null ? valueToString.apply(entry.getValue()) : entry.getValue());
+			builder.append("\n\t[")
+					.append(keyToString != null ? keyToString.apply(entry.getKey()) : entry.getKey())
+					.append(", ")
+					.append(valueToString != null ? valueToString.apply(entry.getValue()) : entry.getValue())
+					.append(']');
 		}
 		if (builder.length() > 1) builder.append('\n');
 		return builder.append(']').toString();

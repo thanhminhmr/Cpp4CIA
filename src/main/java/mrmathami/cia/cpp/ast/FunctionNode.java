@@ -1,9 +1,9 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.utils.Utilities;
-
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+import mrmathami.utils.Utilities;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -231,17 +231,24 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Nonnull
-	final String partialTreeElementString() {
-		return ", type: " + type
-				+ ", parameters: " + Utilities.collectionToString(parameters)
-				+ ", body: " + (body != null ? "\"" + body.replaceAll("\"", "\\\\\"") + "\"" : null);
+	final String partialElementString() {
+		final StringBuilder builder = new StringBuilder()
+				.append(", \"type\": ").append(type)
+				.append(", \"parameters\": ").append(Utilities.collectionToString(parameters))
+				.append(", \"body\": ");
+		if (body != null) {
+			builder.append("\"");
+			escapeBody(builder, body);
+			builder.append("\"");
+		} else {
+			builder.append("null");
+		}
+		return builder.toString();
 	}
 
 	//<editor-fold desc="Object Helper">
 	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) {
-			throw new IOException("Only RootNode is directly Serializable!");
-		}
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
 		outputStream.defaultWriteObject();
 		outputStream.writeObject(List.copyOf(parameters));
 	}
