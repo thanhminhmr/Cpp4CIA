@@ -16,9 +16,7 @@ public final class IntegralNode extends CppNode {
 
 	//<editor-fold desc="Object Helper">
 	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) {
-			throw new IOException("Only RootNode is directly Serializable!");
-		}
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
 		outputStream.defaultWriteObject();
 	}
 	//</editor-fold>

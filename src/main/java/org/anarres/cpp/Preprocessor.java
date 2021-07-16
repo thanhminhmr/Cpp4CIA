@@ -581,6 +581,10 @@ public class Preprocessor implements Closeable {
 	private Token next_source() {
 		if (inputs.isEmpty()) return Token.eof;
 		final Source source = inputs.remove();
+		final Path path = source.getPath();
+		if (path == null || includes.add(path)) {
+
+		}
 		push_source(source, true);
 		return line_token(source.getLine(), source.getName(), " 1");
 	}
@@ -1098,7 +1102,7 @@ public class Preprocessor implements Closeable {
 			if (includes.contains(normalizedFile)) {
 				push_source(new FileLexerSource(normalizedFile), true);
 				return true;
-			} else if (Files.exists(normalizedFile)) {
+			} else if (Files.isRegularFile(normalizedFile)) {
 				includes.add(normalizedFile);
 				push_source(new FileLexerSource(normalizedFile), true);
 				return true;

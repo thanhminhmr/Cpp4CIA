@@ -1,11 +1,11 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import mrmathami.utils.IntsWrapper;
 import mrmathami.utils.Pair;
 import mrmathami.utils.Utilities;
 
-import mrmathami.annotations.Nonnull;
-import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -59,12 +59,41 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 		for (int type = 0; type < counts.length; type++) {
 			int typeCount = counts[type];
 			if (typeCount != 0) {
-				if (builder.length() > 1) builder.append(',');
-				builder.append(' ').append(DependencyType.values.get(type)).append(": ").append(typeCount);
+				builder.append(builder.length() > 1 ? ", \"" : " \"")
+						.append(DependencyType.values.get(type)).append("\": ").append(typeCount);
 			}
 		}
 		if (builder.length() > 1) builder.append(' ');
 		return builder.append('}').toString();
+	}
+
+	static void escapeBody(@Nonnull StringBuilder builder, @Nonnull String body) {
+		for (final int codePoint : body.codePoints().toArray()) {
+			if (codePoint == '\\' || codePoint == '/' || codePoint == '"') {
+				builder.append('\\').appendCodePoint(codePoint);
+			} else if (codePoint == '\b') {
+				builder.append("\\b");
+			} else if (codePoint == '\f') {
+				builder.append("\\f");
+			} else if (codePoint == '\n') {
+				builder.append("\\n");
+			} else if (codePoint == '\r') {
+				builder.append("\\r");
+			} else if (codePoint == '\t') {
+				builder.append("\\t");
+			} else if (codePoint < 32) {
+				builder.append("\\u00").append(codePoint <= 0xF ? '0' : '1')
+						.append((char) ((codePoint <= 0x9 ? '0' : 49) + (codePoint & 0xF)));
+			} else if (codePoint < 127) {
+				// yes, the 127th character is a control character
+				builder.appendCodePoint(codePoint);
+			} else if (codePoint < 65535) {
+				builder.append("\\u").append(String.format("%04X", codePoint));
+			} else {
+				// new unicode characters are more than 2 bytes
+				builder.append("\\U").append(String.format("%08X", codePoint));
+			}
+		}
 	}
 
 	//<editor-fold desc="Node">
@@ -815,31 +844,31 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 
 	//<editor-fold desc="toString">
 	@Nonnull
+	private String innerHeaderString() {
+		return "\"class\": \"" + getClass().getSimpleName()
+				+ "\", \"id\": " + id
+				+ ", \"name\": \"" + name
+				+ "\", \"uniqueName\": \"" + uniqueName
+				+ "\", \"signature\": \"" + signature + "\"";
+	}
+
+
+	@Nonnull
 	public final String toString() {
-		return "(" + Utilities.objectIdentifyString(this)
-				+ ") { id: " + id
-				+ ", name: \"" + name
-				+ "\", uniqueName: \"" + uniqueName
-				+ "\", signature: \"" + signature
-				+ "\" }";
+		return "{ " + innerHeaderString() + " }";
 	}
 
 	@Nonnull
-	String partialTreeElementString() {
+	String partialElementString() {
 		return "";
 	}
 
 	@Nonnull
-	public final String toTreeElementString() {
-		return "(" + Utilities.objectIdentifyString(this)
-				+ ") { id: " + id
-				+ ", name: \"" + name
-				+ "\", uniqueName: \"" + uniqueName
-				+ "\", signature: \"" + signature
-				+ "\", dependencyFrom: " + Utilities.mapToString(dependencyFrom, null, CppNode::countsToString)
-				+ ", dependencyTo: " + Utilities.mapToString(dependencyTo, null, CppNode::countsToString)
-				+ partialTreeElementString()
-				+ " }";
+	private String innerElementString() {
+		return innerHeaderString()
+				+ ", \"dependencyFrom\": " + Utilities.mapToString(dependencyFrom, null, CppNode::countsToString)
+				+ ", \"dependencyTo\": " + Utilities.mapToString(dependencyTo, null, CppNode::countsToString)
+				+ partialElementString();
 	}
 
 	@Nonnull
@@ -852,12 +881,12 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	// Build tree to string internally by using a StringBuilder.
 	private void internalToString(@Nonnull StringBuilder builder, int level) {
 		final String alignString = "\t".repeat(level);
+		builder.append(alignString).append("{ ")
+				.append(innerElementString().replace("\n", "\n" + alignString));
 		if (children.isEmpty()) {
-			builder.append(alignString).append("{ value: ")
-					.append(this.toTreeElementString().replace("\n", "\n" + alignString)).append(" }");
+			builder.append(" }");
 		} else {
-			builder.append(alignString).append("{ value: ")
-					.append(this.toTreeElementString().replace("\n", "\n" + alignString)).append(", children: [\n");
+			builder.append(", \"children\": [\n");
 
 			children.get(0).internalToString(builder, level + 1);
 			for (int i = 1; i < children.size(); i++) {

@@ -97,8 +97,8 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 
 	@Nonnull
 	@Override
-	final String partialTreeElementString() {
-		return ", type: " + type;
+	final String partialElementString() {
+		return ", \"type\": " + type;
 	}
 
 	//<editor-fold desc="Object Helper">

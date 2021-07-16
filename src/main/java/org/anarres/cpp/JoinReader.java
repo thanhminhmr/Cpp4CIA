@@ -29,7 +29,7 @@ class JoinReader implements Closeable {
 	private boolean warnings;
 
 	private int newlines;
-	private boolean flushNewLine;
+	private boolean endOfLine;
 	private final int[] unGetBuffer;
 	private int unGetIndex;
 
@@ -39,7 +39,7 @@ class JoinReader implements Closeable {
 		this.in = in;
 		this.trigraphs = trigraphs;
 		this.newlines = 0;
-		this.flushNewLine = false;
+		this.endOfLine = false;
 		this.unGetBuffer = new int[8];
 		this.unGetIndex = 0;
 	}
@@ -119,16 +119,28 @@ class JoinReader implements Closeable {
 	}
 
 	public int read() throws IOException, LexerException {
-		if (flushNewLine) {
-			if (newlines > 0) {
-				newlines--;
-				return '\n';
-			}
-			flushNewLine = false;
-		}
-
 		while (true) {
 			int c = _read();
+			if (c == -1) {
+				if (endOfLine) {
+					if (newlines > 0) {
+						newlines--;
+						return '\n';
+					}
+					return -1;
+				} else {
+					endOfLine = true;
+					return '\n';
+				}
+			}
+			if (endOfLine) {
+				if (newlines > 0) {
+					newlines--;
+					_unread(c);
+					return '\n';
+				}
+				endOfLine = false;
+			}
 			if (c == '\\') {
 				if (rawString) return c;
 				int d = _read();
@@ -138,22 +150,20 @@ class JoinReader implements Closeable {
 				} else if (d == '\r') {
 					newlines++;
 					int e = _read();
-					if (e != '\n')
-						_unread(e);
+					if (e != '\n') _unread(e);
 					continue;
 				}
 				_unread(d);
 				return c;
 			} else if (c == '\r' || c == '\n' || c == '\u2028' || c == '\u2029'
 					|| c == '\u000B' || c == '\u000C' || c == '\u0085') {
-				flushNewLine = true;
-				return c;
-			} else if (c == -1) {
-				if (newlines > 0) {
-					newlines--;
-					return '\n';
+				if (rawString) return c;
+				endOfLine = true;
+				if (c == '\r') {
+					int d = _read();
+					if (d != '\n') _unread(d);
 				}
-				return -1;
+				return '\n';
 			}
 			return c;
 		}

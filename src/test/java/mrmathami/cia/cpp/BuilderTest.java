@@ -33,13 +33,14 @@ public final class BuilderTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		System.in.read();
+//		System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cppcia\\test");
+		final Path projectRoot = Path.of("./test/CIACPP_Bug2_macro/");
 		final List<Path> projectFiles =
 				List.of(
-						projectRoot.resolve("main.cpp")
+						projectRoot.resolve("header.h"),
+						projectRoot.resolve("source.cpp")
 				);
 
 
