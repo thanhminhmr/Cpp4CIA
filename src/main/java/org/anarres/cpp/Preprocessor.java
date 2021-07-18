@@ -35,6 +35,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Set;
 import java.util.Stack;
@@ -582,9 +583,7 @@ public class Preprocessor implements Closeable {
 		if (inputs.isEmpty()) return Token.eof;
 		final Source source = inputs.remove();
 		final Path path = source.getPath();
-		if (path == null || includes.add(path)) {
-
-		}
+		if (path != null) includes.add(path);
 		push_source(source, true);
 		return line_token(source.getLine(), source.getName(), " 1");
 	}
@@ -625,7 +624,7 @@ public class Preprocessor implements Closeable {
 	private Token source_token() throws IOException, LexerException {
 		while (true) {
 			final Token token = nextSourceTokenCheckPushback();
-			if (token.getType() == EOF && source.isAutoPop()) {
+			if (token.getType() == EOF && source != null && source.isAutoPop()) {
 				final Token lineMark = pop_source();
 				if (lineMark != null) return lineMark;
 				continue;
@@ -820,7 +819,7 @@ public class Preprocessor implements Closeable {
 					new Token(NUMBER,
 							orig.getLine(), orig.getColumn(),
 							Integer.toString(orig.getLine()),
-							new NumericValue(10, Integer.toString(orig.getLine())))), true);
+							new NumberToken(10, Integer.toString(orig.getLine())))), true);
 		} else if (m == __FILE__) {
 			StringBuilder buf = new StringBuilder("\"");
 			String name = getSource().getName();
@@ -854,7 +853,7 @@ public class Preprocessor implements Closeable {
 					new Token(NUMBER,
 							orig.getLine(), orig.getColumn(),
 							Integer.toString(value),
-							new NumericValue(10, Integer.toString(value)))), true);
+							new NumberToken(10, Integer.toString(value)))), true);
 		} else {
 			push_source(new MacroTokenSource(m, args), true);
 		}
@@ -1318,13 +1317,13 @@ public class Preprocessor implements Closeable {
 				// System.out.println("Core token is " + la);
 				if (la.getType() != IDENTIFIER) {
 					error(la, "defined() needs identifier, not " + la.getText());
-					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "0", new NumericValue(10, "0"));
+					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "0", new NumberToken(10, "0"));
 				} else if (macros.containsKey(la.getText())) {
 					// System.out.println("Found macro");
-					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "1", new NumericValue(10, "1"));
+					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "1", new NumberToken(10, "1"));
 				} else {
 					// System.out.println("Not found macro");
-					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "0", new NumericValue(10, "0"));
+					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "0", new NumberToken(10, "0"));
 				}
 
 				if (paren) {
@@ -1397,18 +1396,19 @@ public class Preprocessor implements Closeable {
 		if (value instanceof Character)
 			return (Character) value;
 		String text = String.valueOf(value);
-		if (text.length() == 0)
-			return 0;
+		if (text.length() == 0) return 0;
 		return text.charAt(0);
 	}
 
-	private long expr(int priority) throws IOException, LexerException {
+	// TODO This long return needs to be replaced with an object
+	@Nonnull
+	private Value expr(int priority) throws IOException, LexerException {
 		/*
 		 * (new Exception("expr(" + priority + ") called")).printStackTrace();
 		 */
 
 		Token tok = expr_token();
-		long lhs, rhs;
+		Value lhs, rhs;
 
 		// System.out.println("Expr lhs token is " + tok);
 		switch (tok.getType()) {
@@ -1418,42 +1418,38 @@ public class Preprocessor implements Closeable {
 				if (tok.getType() != ')') {
 					expr_untoken(tok);
 					error(tok, "Missing ) in expression. Got " + tok.getText());
-					return 0;
+					return Value.INTEGER_ZERO;
 				}
 				break;
 
 			case '~':
-				lhs = ~expr(11);
+				lhs = expr(11).not();
 				break;
 			case '!':
-				lhs = expr(11) == 0 ? 1 : 0;
+				lhs = expr(11).equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 				break;
 			case '-':
-				lhs = -expr(11);
+				lhs = expr(11).negate();
 				break;
 			case NUMBER:
-				NumericValue value = (NumericValue) tok.getValue();
-				lhs = value.longValue();
+				lhs = ((NumberToken) Objects.requireNonNull(tok.getValue())).value();
 				break;
 			case CHARACTER:
-				lhs = expr_char(tok);
+				lhs = Value.of(expr_char(tok));
 				break;
 			case IDENTIFIER:
 				if (warnings.contains(Warning.UNDEF))
-					warning(tok, "Undefined token '" + tok.getText()
-							+ "' encountered in conditional.");
-				lhs = 0;
+					warning(tok, "Undefined token '" + tok.getText() + "' encountered in conditional.");
+				lhs = Value.INTEGER_ZERO;
 				break;
 
 			default:
 				expr_untoken(tok);
-				error(tok,
-						"Bad token in expression: " + tok.getText());
-				return 0;
+				error(tok, "Bad token in expression: " + tok.getText());
+				return Value.INTEGER_ZERO;
 		}
 
-		EXPR:
-		for (; ; ) {
+		while (true) {
 			// System.out.println("expr: lhs is " + lhs + ", pri = " + priority);
 			Token op = expr_token();
 			int pri = expr_priority(op);    /* 0 if not a binop. */
@@ -1466,69 +1462,69 @@ public class Preprocessor implements Closeable {
 			// System.out.println("rhs token is " + rhs);
 			switch (op.getType()) {
 				case '/':
-					if (rhs == 0) {
+					if (rhs.equals(0)) {
 						error(op, "Division by zero");
-						lhs = 0;
+						lhs = Value.INTEGER_ZERO;
 					} else {
-						lhs = lhs / rhs;
+						lhs = lhs.divide(rhs);
 					}
 					break;
 				case '%':
-					if (rhs == 0) {
+					if (rhs.equals(0)) {
 						error(op, "Modulus by zero");
-						lhs = 0;
+						lhs = Value.INTEGER_ZERO;
 					} else {
-						lhs = lhs % rhs;
+						lhs = lhs.remainder(rhs);
 					}
 					break;
 				case '*':
-					lhs = lhs * rhs;
+					lhs = lhs.multiply(rhs);
 					break;
 				case '+':
-					lhs = lhs + rhs;
+					lhs = lhs.add(rhs);
 					break;
 				case '-':
-					lhs = lhs - rhs;
+					lhs = lhs.subtract(rhs);
 					break;
 				case '<':
-					lhs = lhs < rhs ? 1 : 0;
+					lhs = lhs.compareTo(rhs) < 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case '>':
-					lhs = lhs > rhs ? 1 : 0;
+					lhs = lhs.compareTo(rhs) > 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case '&':
-					lhs = lhs & rhs;
+					lhs = lhs.and(rhs);
 					break;
 				case '^':
-					lhs = lhs ^ rhs;
+					lhs = lhs.xor(rhs);
 					break;
 				case '|':
-					lhs = lhs | rhs;
+					lhs = lhs.or(rhs);
 					break;
 
 				case LSH:
-					lhs = lhs << rhs;
+					lhs = lhs.shiftLeft(rhs);
 					break;
 				case RSH:
-					lhs = lhs >> rhs;
+					lhs = lhs.shiftRight(rhs);
 					break;
 				case LE:
-					lhs = lhs <= rhs ? 1 : 0;
+					lhs = lhs.compareTo(rhs) <= 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case GE:
-					lhs = lhs >= rhs ? 1 : 0;
+					lhs = lhs.compareTo(rhs) >= 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case EQ:
-					lhs = lhs == rhs ? 1 : 0;
+					lhs = lhs.equals(rhs) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case NE:
-					lhs = lhs != rhs ? 1 : 0;
+					lhs = !lhs.equals(rhs) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case LAND:
-					lhs = (lhs != 0) && (rhs != 0) ? 1 : 0;
+					lhs = !lhs.equals(0) && !rhs.equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 				case LOR:
-					lhs = (lhs != 0) || (rhs != 0) ? 1 : 0;
+					lhs = !lhs.equals(0) || !rhs.equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
 					break;
 
 				case '?': {
@@ -1536,16 +1532,17 @@ public class Preprocessor implements Closeable {
 					if (tok.getType() != ':') {
 						expr_untoken(tok);
 						error(tok, "Missing : in conditional expression. Got " + tok.getText());
-						return 0;
+						return Value.INTEGER_ZERO;
 					}
-					long falseResult = expr(0);
-					lhs = (lhs != 0) ? rhs : falseResult;
+					// do not simplify this! always need to consume the token!
+					final Value falseResult = expr(0);
+					lhs = !lhs.equals(0) ? rhs : falseResult;
+					break;
 				}
-				break;
 
 				default:
 					error(op, "Unexpected operator " + op.getText());
-					return 0;
+					return Value.INTEGER_ZERO;
 
 			}
 		}
@@ -1621,7 +1618,7 @@ public class Preprocessor implements Closeable {
 				push_state();
 				if (isActive()) {
 					this.expr_token = null;
-					states.peek().setActive(expr(0) != 0);
+					states.peek().setActive(!expr(0).equals(0));
 					final Token expressionToken = expr_token();    /* unget */
 					return expressionToken.getType() == NL ? expressionToken : source_skipLine(true);
 				}
@@ -1643,7 +1640,7 @@ public class Preprocessor implements Closeable {
 					return source_skipLine(false);
 				} else {
 					this.expr_token = null;
-					state.setActive(expr(0) != 0);
+					state.setActive(!expr(0).equals(0));
 					final Token expressionToken = expr_token();    /* unget */
 					return expressionToken.getType() == NL ? expressionToken : source_skipLine(true);
 				}

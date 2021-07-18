@@ -483,46 +483,46 @@ public class LexerSource extends Source {
 	}
 
 	@Nonnull
-	private Token _number_suffix(StringBuilder text, NumericValue value, int d)
+	private Token _number_suffix(StringBuilder text, NumberToken value, int d)
 			throws IOException,
 			LexerException {
 		int flags = 0;    // U, I, L, LL, F, D, MSB
 		while (true) {
 			if (d == 'U' || d == 'u') {
-				if ((flags & NumericValue.F_UNSIGNED) != 0)
+				if ((flags & NumberToken.F_UNSIGNED) != 0)
 					warning("Duplicate unsigned suffix " + d);
-				flags |= NumericValue.F_UNSIGNED;
+				flags |= NumberToken.F_UNSIGNED;
 				text.append((char) d);
 				d = read();
 			} else if (d == 'L' || d == 'l') {
-				if ((flags & NumericValue.FF_SIZE) != 0)
+				if ((flags & NumberToken.FF_SIZE) != 0)
 					warning("Multiple length suffixes after " + text);
 				text.append((char) d);
 				int e = read();
 				if (e == d) {    // Case must match. Ll is Welsh.
-					flags |= NumericValue.F_LONG_LONG;
+					flags |= NumberToken.F_LONG_LONG;
 					text.append((char) e);
 					d = read();
 				} else {
-					flags |= NumericValue.F_LONG;
+					flags |= NumberToken.F_LONG;
 					d = e;
 				}
 			} else if (d == 'I' || d == 'i') {
-				if ((flags & NumericValue.FF_SIZE) != 0)
+				if ((flags & NumberToken.FF_SIZE) != 0)
 					warning("Multiple length suffixes after " + text);
-				flags |= NumericValue.F_INT;
+				flags |= NumberToken.F_INT;
 				text.append((char) d);
 				d = read();
 			} else if (d == 'F' || d == 'f') {
-				if ((flags & NumericValue.FF_SIZE) != 0)
+				if ((flags & NumberToken.FF_SIZE) != 0)
 					warning("Multiple length suffixes after " + text);
-				flags |= NumericValue.F_FLOAT;
+				flags |= NumberToken.F_FLOAT;
 				text.append((char) d);
 				d = read();
 			} else if (d == 'D' || d == 'd') {
-				if ((flags & NumericValue.FF_SIZE) != 0)
+				if ((flags & NumberToken.FF_SIZE) != 0)
 					warning("Multiple length suffixes after " + text);
-				flags |= NumericValue.F_DOUBLE;
+				flags |= NumberToken.F_DOUBLE;
 				text.append((char) d);
 				d = read();
 			} else if (Character.isUnicodeIdentifierPart(d)) {
@@ -545,9 +545,7 @@ public class LexerSource extends Source {
 
 	/* Either a decimal part, or a hex exponent. */
 	@Nonnull
-	private String _number_part(StringBuilder text, int base, boolean sign)
-			throws IOException,
-			LexerException {
+	private String _number_part(StringBuilder text, int base, boolean sign) throws IOException, LexerException {
 		StringBuilder part = new StringBuilder();
 		int d = read();
 		if (sign && d == '-') {
@@ -564,47 +562,34 @@ public class LexerSource extends Source {
 		return part.toString();
 	}
 
-	/* We do not know whether know the first digit is valid. */
+	/* We do not know whether the first digit is valid. */
 	@Nonnull
-	private Token number_hex(char x)
-			throws IOException,
-			LexerException {
-		StringBuilder text = new StringBuilder("0");
-		text.append(x);
-		String integer = _number_part(text, 16, false);
-		NumericValue value = new NumericValue(16, integer);
-		int d = read();
-		if (d == '.') {
-			text.append((char) d);
-			String fraction = _number_part(text, 16, false);
-			value.setFractionalPart(fraction);
-			d = read();
+	private Token number_hex_bin(int d, boolean hex) throws IOException, LexerException {
+		final StringBuilder text = new StringBuilder("0").append((char) d);
+		String integer = _number_part(text, hex ? 16 : 2, false);
+		NumberToken value = new NumberToken(hex ? 16 : 2, integer);
+		d = read();
+		if (hex) {
+			if (d == '.') {
+				text.append((char) d);
+				String fraction = _number_part(text, 16, false);
+				value.setFractionalPart(fraction);
+				d = read();
+			}
+			if (d == 'P' || d == 'p') {
+				text.append((char) d);
+				String exponent = _number_part(text, 10, true);
+				value.setExponent(true, exponent);
+				d = read();
+			}
 		}
-		if (d == 'P' || d == 'p') {
-			text.append((char) d);
-			String exponent = _number_part(text, 10, true);
-			value.setExponent(2, exponent);
-			d = read();
-		}
-		// XXX Make sure it's got enough parts
 		return _number_suffix(text, value, d);
-	}
-
-	private static boolean is_octal(@Nonnull String text) {
-		if (!text.startsWith("0"))
-			return false;
-		for (int i = 0; i < text.length(); i++)
-			if (Character.digit(text.charAt(i), 8) == -1)
-				return false;
-		return true;
 	}
 
 	/* We know we have at least one valid digit, but empty is not
 	 * fine. */
 	@Nonnull
-	private Token number_decimal()
-			throws IOException,
-			LexerException {
+	private Token number_decimal() throws IOException, LexerException {
 		StringBuilder text = new StringBuilder();
 		String integer = _number_part(text, 10, false);
 		String fraction = null;
@@ -622,16 +607,15 @@ public class LexerSource extends Source {
 		}
 		int base = 10;
 		if (fraction == null && exponent == null && integer.startsWith("0")) {
-			if (!is_octal(integer))
-				warning("Decimal constant starts with 0, but not octal: " + integer);
-			else
+			if (integer.replaceAll("[0-7]+", "").isEmpty()) {
 				base = 8;
+			} else {
+				warning("Decimal constant starts with 0, but not octal: " + integer);
+			}
 		}
-		NumericValue value = new NumericValue(base, integer);
-		if (fraction != null)
-			value.setFractionalPart(fraction);
-		if (exponent != null)
-			value.setExponent(10, exponent);
+		NumberToken value = new NumberToken(base, integer);
+		if (fraction != null) value.setFractionalPart(fraction);
+		if (exponent != null) value.setExponent(false, exponent);
 		// XXX Make sure it's got enough parts
 		return _number_suffix(text, value, d);
 	}
@@ -677,8 +661,8 @@ public class LexerSource extends Source {
 		int c = read();
 		if (c == '0') {
 			int d = read();
-			if (d == 'x' || d == 'X') {
-				tok = number_hex((char) d);
+			if (d == 'x' || d == 'X' || d == 'b' || d == 'B') {
+				tok = number_hex_bin(d, d == 'x' || d == 'X');
 			} else {
 				unread(d);
 				unread(c);
@@ -695,17 +679,14 @@ public class LexerSource extends Source {
 
 	@Nonnull
 	private Token identifier(int c) throws IOException, LexerException {
-		StringBuilder text = new StringBuilder();
+		final StringBuilder text = new StringBuilder().append((char) c);
 		int d;
-		text.append((char) c);
 		while (true) {
 			d = read();
-			if (Character.isIdentifierIgnorable(d))
-				;
-			else if (Character.isJavaIdentifierPart(d))
+			if (!Character.isIdentifierIgnorable(d)) {
+				if (!Character.isJavaIdentifierPart(d)) break;
 				text.append((char) d);
-			else
-				break;
+			}
 		}
 		unread(d);
 		return _marked_token(IDENTIFIER, text.toString());
