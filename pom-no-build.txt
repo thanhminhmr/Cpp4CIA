@@ -20,7 +20,7 @@
 		<dependency>
 			<groupId>org.eclipse.cdt</groupId>
 			<artifactId>org.eclipse.cdt.core</artifactId>
-			<version>7.2.100-SNAPSHOT</version>
+			<version>7.3.0-SNAPSHOT</version>
 		</dependency>
 		<!-- endregion Eclipse CDT -->
 
