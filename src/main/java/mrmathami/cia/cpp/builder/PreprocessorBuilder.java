@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
-import org.anarres.cpp.Feature;
 import org.anarres.cpp.FileLexerSource;
 import org.anarres.cpp.LexerException;
 import org.anarres.cpp.Preprocessor;
@@ -9,7 +9,6 @@ import org.anarres.cpp.PreprocessorListener;
 import org.anarres.cpp.Source;
 import org.anarres.cpp.Token;
 
-import mrmathami.annotations.Nonnull;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -34,6 +33,12 @@ final class PreprocessorBuilder {
 		public void handleSourceChange(@Nonnull Source source, @Nonnull SourceChangeEvent event) {
 		}
 	};
+	@Nonnull private static final List<Preprocessor.Feature> FEATURE_LIST = List.of(
+			Preprocessor.Feature.DIGRAPHS,
+			Preprocessor.Feature.TRIGRAPHS,
+			Preprocessor.Feature.LINEMARKERS,
+			Preprocessor.Feature.PRAGMA_ONCE
+	);
 
 	private PreprocessorBuilder() {
 	}
@@ -99,11 +104,8 @@ final class PreprocessorBuilder {
 	public static char[] build(@Nonnull List<Path> projectFiles,
 			@Nonnull List<Path> includePaths, boolean isReadable) throws CppException {
 		try {
-			final Preprocessor preprocessor = new Preprocessor();
-			preprocessor.setListener(EMPTY_PREPROCESSOR_LISTENER);
-			preprocessor.addFeatures(Feature.DIGRAPHS, Feature.TRIGRAPHS, Feature.LINEMARKERS, Feature.PRAGMA_ONCE);
-
-			preprocessor.setQuoteIncludePath(includePaths);
+			final Preprocessor preprocessor = new Preprocessor(EMPTY_PREPROCESSOR_LISTENER);
+			preprocessor.addFeatures(FEATURE_LIST);
 			preprocessor.setSystemIncludePath(includePaths);
 
 			for (final Path sourceFile : includeList(projectFiles, includePaths)) {
@@ -135,7 +137,7 @@ final class PreprocessorBuilder {
 			final Token token = preprocessor.token();
 
 			switch (token.getType()) {
-				case Token.NL:
+				case Token.NEW_LINE:
 				case Token.WHITESPACE:
 				case Token.C_COMMENT:
 				case Token.CPP_COMMENT:

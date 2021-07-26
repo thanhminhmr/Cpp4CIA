@@ -35,14 +35,49 @@ import java.nio.file.Path;
  * BUG: Error messages are not handled properly.
  */
 public abstract class Source implements Closeable {
+	@Nonnull static final Source INTERNAL = new Source() {
+		@Nonnull
+		@Override
+		public Token token() throws LexerException {
+			throw new LexerException("Cannot read from internal source");
+		}
+
+		@Override
+		public Path getPath() {
+			return null;
+		}
+
+		@Override
+		public @Nonnull
+		String getName() {
+			return "<internal source>";
+		}
+	};
+
+	@Nonnull static final Source EXTERNAL = new Source() {
+		@Nonnull
+		@Override
+		public Token token() throws LexerException {
+			throw new LexerException("Cannot read from unknown external source");
+		}
+
+		@Override
+		public Path getPath() {
+			return null;
+		}
+
+		@Override
+		public @Nonnull
+		String getName() {
+			return "<unknown external source>";
+		}
+	};
 
 	private Source parent;
 	private boolean autoPop;
 	private PreprocessorListener listener;
 	private boolean active;
 	private boolean warningAsError;
-
-	/* LineNumberReader */
 
 	public Source() {
 		this.parent = null;
@@ -57,9 +92,9 @@ public abstract class Source implements Closeable {
 	 * <p>
 	 * Sources form a singly linked list.
 	 */
-	void setParent(Source parent, boolean autopop) {
+	void setParent(Source parent, boolean autoPop) {
 		this.parent = parent;
-		this.autoPop = autopop;
+		this.autoPop = autoPop;
 	}
 
 	/**
@@ -67,15 +102,15 @@ public abstract class Source implements Closeable {
 	 * <p>
 	 * Sources form a singly linked list.
 	 */
+	@Nullable
 	final Source getParent() {
 		return parent;
 	}
 
 
-	// @OverrideMustInvoke
 	void init(Preprocessor pp) {
 		setListener(pp.getListener());
-		this.warningAsError = pp.getWarnings().contains(Warning.ERROR);
+		this.warningAsError = pp.getWarnings().contains(Preprocessor.Warning.ERROR);
 	}
 
 	/**
@@ -99,20 +134,16 @@ public abstract class Source implements Closeable {
 	@Nullable
 	public Path getPath() {
 		Source parent = getParent();
-		if (parent != null)
-			return parent.getPath();
-		return null;
+		return parent != null ? parent.getPath() : null;
 	}
 
 	/**
 	 * Returns the human-readable name of the current Source.
 	 */
-	@Nullable
+	@Nonnull
 	public String getName() {
 		Source parent = getParent();
-		if (parent != null)
-			return parent.getName();
-		return null;
+		return parent != null ? parent.getName() : "<no file>";
 	}
 
 	/**
@@ -120,9 +151,7 @@ public abstract class Source implements Closeable {
 	 */
 	public int getLine() {
 		Source parent = getParent();
-		if (parent == null)
-			return 0;
-		return parent.getLine();
+		return parent != null ? parent.getLine() : 0;
 	}
 
 	/**
@@ -130,9 +159,7 @@ public abstract class Source implements Closeable {
 	 */
 	public int getColumn() {
 		Source parent = getParent();
-		if (parent == null)
-			return 0;
-		return parent.getColumn();
+		return parent != null ? parent.getColumn() : 0;
 	}
 
 	/**
@@ -140,11 +167,9 @@ public abstract class Source implements Closeable {
 	 * <p>
 	 * This is used to prevent macro recursion.
 	 */
-	boolean isExpanding(@Nonnull Macro m) {
+	boolean isMacroExpanding(@Nonnull Macro macro) {
 		Source parent = getParent();
-		if (parent != null)
-			return parent.isExpanding(m);
-		return false;
+		return parent != null && parent.isMacroExpanding(macro);
 	}
 
 	/**
@@ -182,8 +207,7 @@ public abstract class Source implements Closeable {
 	@Nonnull
 	public abstract Token token() throws IOException, LexerException;
 
-	protected final void error(int line, int column, String msg)
-			throws LexerException {
+	protected final void error(int line, int column, String msg) throws LexerException {
 		if (listener != null) {
 			listener.handleError(this, line, column, msg);
 		} else {
@@ -191,8 +215,7 @@ public abstract class Source implements Closeable {
 		}
 	}
 
-	protected final void warning(int line, int column, String msg)
-			throws LexerException {
+	protected final void warning(int line, int column, String msg) throws LexerException {
 		if (warningAsError) {
 			error(line, column, msg);
 		} else if (listener != null) {

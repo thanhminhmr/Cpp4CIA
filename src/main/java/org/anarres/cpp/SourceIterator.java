@@ -17,6 +17,7 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -44,9 +45,7 @@ public class SourceIterator implements Iterator<Token> {
 		try {
 			if (tok == null)
 				tok = source.token();
-		} catch (LexerException e) {
-			throw new IllegalStateException(e);
-		} catch (IOException e) {
+		} catch (LexerException | IOException e) {
 			throw new IllegalStateException(e);
 		}
 	}

@@ -22,44 +22,41 @@ import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.Reader;
 
-import static org.anarres.cpp.Token.AND_EQ;
+import static org.anarres.cpp.Token.ADD_ASSIGN;
+import static org.anarres.cpp.Token.AND_AND;
+import static org.anarres.cpp.Token.AND_ASSIGN;
 import static org.anarres.cpp.Token.ARROW;
 import static org.anarres.cpp.Token.CHARACTER;
 import static org.anarres.cpp.Token.CPP_COMMENT;
 import static org.anarres.cpp.Token.C_COMMENT;
-import static org.anarres.cpp.Token.DEC;
-import static org.anarres.cpp.Token.DIV_EQ;
+import static org.anarres.cpp.Token.DECREASE;
+import static org.anarres.cpp.Token.DIV_ASSIGN;
 import static org.anarres.cpp.Token.ELLIPSIS;
 import static org.anarres.cpp.Token.EOF;
-import static org.anarres.cpp.Token.EQ;
-import static org.anarres.cpp.Token.GE;
-import static org.anarres.cpp.Token.HASH;
+import static org.anarres.cpp.Token.EQUAL;
+import static org.anarres.cpp.Token.GREATER_EQUAL;
 import static org.anarres.cpp.Token.HEADER;
 import static org.anarres.cpp.Token.IDENTIFIER;
-import static org.anarres.cpp.Token.INC;
+import static org.anarres.cpp.Token.INCREASE;
 import static org.anarres.cpp.Token.INVALID;
-import static org.anarres.cpp.Token.LAND;
-import static org.anarres.cpp.Token.LAND_EQ;
-import static org.anarres.cpp.Token.LE;
-import static org.anarres.cpp.Token.LOR;
-import static org.anarres.cpp.Token.LOR_EQ;
-import static org.anarres.cpp.Token.LSH;
-import static org.anarres.cpp.Token.LSH_EQ;
-import static org.anarres.cpp.Token.MOD_EQ;
-import static org.anarres.cpp.Token.MULT_EQ;
-import static org.anarres.cpp.Token.NE;
-import static org.anarres.cpp.Token.NL;
+import static org.anarres.cpp.Token.LEFT_SHIFT;
+import static org.anarres.cpp.Token.LESS_EQUAL;
+import static org.anarres.cpp.Token.LSH_ASSIGN;
+import static org.anarres.cpp.Token.MOD_ASSIGN;
+import static org.anarres.cpp.Token.MUL_ASSIGN;
+import static org.anarres.cpp.Token.NEW_LINE;
+import static org.anarres.cpp.Token.NOT_EQUAL;
 import static org.anarres.cpp.Token.NUMBER;
-import static org.anarres.cpp.Token.OR_EQ;
-import static org.anarres.cpp.Token.PASTE;
-import static org.anarres.cpp.Token.PLUS_EQ;
-import static org.anarres.cpp.Token.RANGE;
-import static org.anarres.cpp.Token.RSH;
-import static org.anarres.cpp.Token.RSH_EQ;
+import static org.anarres.cpp.Token.OR_ASSIGN;
+import static org.anarres.cpp.Token.OR_OR;
+import static org.anarres.cpp.Token.P_HASH;
+import static org.anarres.cpp.Token.P_PASTE;
+import static org.anarres.cpp.Token.RIGHT_SHIFT;
+import static org.anarres.cpp.Token.RSH_ASSIGN;
 import static org.anarres.cpp.Token.STRING;
-import static org.anarres.cpp.Token.SUB_EQ;
+import static org.anarres.cpp.Token.SUB_ASSIGN;
 import static org.anarres.cpp.Token.WHITESPACE;
-import static org.anarres.cpp.Token.XOR_EQ;
+import static org.anarres.cpp.Token.XOR_ASSIGN;
 
 /**
  * Does not handle digraphs.
@@ -70,19 +67,19 @@ public class LexerSource extends Source {
 
 	private JoinReader reader;
 	private final boolean ppvalid;
-	private boolean isStartOfLine;
-	private boolean isInclude;
+	private boolean isStartOfLine = true;
+	private boolean isInclude = false;
 
-	private boolean digraphs;
+	private boolean digraphs = true;
 
 	/* Unread. */
-	private int u0, u1, u2, u3;
-	private int ucount;
+	private final int[] unGetBuffer = new int[8];
+	private int unGetIndex = 0;
 
-	private int line;
-	private int column;
-	private int lastColumn;
-	private boolean cr;
+	private int line = 1;
+	private int column = 0;
+	private int lastColumn = -1;
+	private boolean cr = false;
 
 
 	private int markLine;
@@ -94,23 +91,12 @@ public class LexerSource extends Source {
 	public LexerSource(Reader r, boolean ppvalid) {
 		this.reader = new JoinReader(r);
 		this.ppvalid = ppvalid;
-		this.isStartOfLine = true;
-		this.isInclude = false;
-
-		this.digraphs = true;
-
-		this.ucount = 0;
-
-		this.line = 1;
-		this.column = 0;
-		this.lastColumn = -1;
-		this.cr = false;
 	}
 
 	@Override
 	void init(Preprocessor pp) {
 		super.init(pp);
-		this.digraphs = pp.getFeature(Feature.DIGRAPHS);
+		this.digraphs = pp.getFeature(Preprocessor.Feature.DIGRAPHS);
 		this.reader.init(pp, this);
 	}
 
@@ -144,8 +130,7 @@ public class LexerSource extends Source {
 	}
 
 	/* Error handling. */
-	private void _error(String msg, boolean error)
-			throws LexerException {
+	private void _error(String msg, boolean error) throws LexerException {
 		int line = this.line;
 		int column = this.column;
 		if (column == 0) {
@@ -200,9 +185,7 @@ public class LexerSource extends Source {
 	}
 
 	private int _read() throws IOException, LexerException {
-		assert ucount >= 0 && ucount <= 4 : "Illegal ucount: " + ucount;
-		return ucount <= 0 ? reader != null ? reader.read() : -1
-				: ucount <= 2 ? ucount-- == 1 ? u0 : u1 : ucount-- == 3 ? u2 : u3;
+		return unGetIndex > 0 ? unGetBuffer[--unGetIndex] : reader.read();
 	}
 
 	private int read() throws IOException, LexerException {
@@ -236,20 +219,8 @@ public class LexerSource extends Source {
 	}
 
 	private void _unread(int c) {
-		if (ucount < 4) {
-			if (ucount == 0) {
-				u0 = c;
-			} else if (ucount == 1) {
-				u1 = c;
-			} else if (ucount == 2) {
-				u2 = c;
-			} else if (ucount == 3) {
-				u3 = c;
-			}
-			ucount++;
-		} else {
-			throw new IllegalStateException("Cannot unget another character!");
-		}
+		if (c != -1) unGetBuffer[unGetIndex++] = c;
+		assert unGetIndex <= unGetBuffer.length : "unread too many characters";
 	}
 
 	/* You can unget AT MOST one newline. */
@@ -589,21 +560,20 @@ public class LexerSource extends Source {
 	/* We know we have at least one valid digit, but empty is not
 	 * fine. */
 	@Nonnull
-	private Token number_decimal() throws IOException, LexerException {
+	private Token number_decimal(int c) throws IOException, LexerException {
 		StringBuilder text = new StringBuilder();
 		String integer = _number_part(text, 10, false);
 		String fraction = null;
 		String exponent = null;
-		int d = read();
-		if (d == '.') {
-			text.append((char) d);
+		if (c == '.') {
+			text.append((char) c);
 			fraction = _number_part(text, 10, false);
-			d = read();
+			c = read();
 		}
-		if (d == 'E' || d == 'e') {
-			text.append((char) d);
+		if (c == 'E' || c == 'e') {
+			text.append((char) c);
 			exponent = _number_part(text, 10, true);
-			d = read();
+			c = read();
 		}
 		int base = 10;
 		if (fraction == null && exponent == null && integer.startsWith("0")) {
@@ -617,7 +587,7 @@ public class LexerSource extends Source {
 		if (fraction != null) value.setFractionalPart(fraction);
 		if (exponent != null) value.setExponent(false, exponent);
 		// XXX Make sure it's got enough parts
-		return _number_suffix(text, value, d);
+		return _number_suffix(text, value, c);
 	}
 
 	/**
@@ -656,21 +626,18 @@ public class LexerSource extends Source {
 	 * correctly rounded.
 	 */
 	@Nonnull
-	private Token number() throws IOException, LexerException {
+	private Token number(int c) throws IOException, LexerException {
 		Token tok;
-		int c = read();
 		if (c == '0') {
 			int d = read();
 			if (d == 'x' || d == 'X' || d == 'b' || d == 'B') {
 				tok = number_hex_bin(d, d == 'x' || d == 'X');
 			} else {
 				unread(d);
-				unread(c);
-				tok = number_decimal();
+				tok = number_decimal(c);
 			}
-		} else if (Character.isDigit(c) || c == '.') {
-			unread(c);
-			tok = number_decimal();
+		} else if (c >= '1' && c <= '9' || c == '.') {
+			tok = number_decimal(c);
 		} else {
 			throw new LexerException("Asked to parse something as a number which isn't: " + (char) c);
 		}
@@ -765,141 +732,155 @@ public class LexerSource extends Source {
 
 	@Nullable
 	private Token _token(int c) throws IOException, LexerException {
-		if (c == '!') {
-			return cond('=', NE, '!');
-		} else if (c == '#') {
-			return isStartOfLine ? _marked_token(HASH) : cond('#', PASTE, '#');
-		} else if (c == '+') {
-			return cond2('+', INC, '=', PLUS_EQ, '+');
-		} else if (c == '-') {
-			return cond3('-', DEC, '=', SUB_EQ, '>', ARROW, '-');
-		} else if (c == '*') {
-			return cond('=', MULT_EQ, '*');
-		} else if (c == '/') {
-			int d = read();
-			if (d == '*') return cComment();
-			if (d == '/') return cppComment();
-			if (d == '=') return _marked_token(DIV_EQ);
-			unread(d);
-			return _marked_token('/');
-		} else if (c == '%') {
-			int d = read();
-			if (d == '=') return _marked_token(MOD_EQ);
-			if (digraphs) {
-				if (d == '>') return _marked_token('}');    // digraph
-				if (d == ':') {
+		switch (c) {
+			case '(':
+			case ')':
+			case ',':
+			case ';':
+			case '?':
+			case '[':
+			case ']':
+			case '{':
+			case '}':
+			case '~':
+				return _marked_token(c);
+			case '!':
+				return cond('=', NOT_EQUAL, '!');
+			case '#':
+				return cond('#', P_PASTE, isStartOfLine ? P_HASH : '#');
+			case '+':
+				return cond2('+', INCREASE, '=', ADD_ASSIGN, '+');
+			case '-':
+				return cond3('-', DECREASE, '=', SUB_ASSIGN, '>', ARROW, '-');
+			case '*':
+				return cond('=', MUL_ASSIGN, '*');
+			case '/': {
+				int d = read();
+				if (d == '*') return cComment();
+				if (d == '/') return cppComment();
+				if (d == '=') return _marked_token(DIV_ASSIGN);
+				unread(d);
+				return _marked_token('/');
+			}
+			case '%': {
+				int d = read();
+				if (d == '=') return _marked_token(MOD_ASSIGN);
+				if (digraphs) {
+					if (d == '>') return _marked_token('}');    // digraph
+					if (d == ':') {
+						int e = read();
+						if (e == '%') {
+							int f = read();
+							if (f == ':') return _marked_token(P_PASTE);    // digraph
+							unread(f);    // Unread 2 chars here.
+						}
+						unread(e);
+						return _marked_token('#');    // digraph
+					}
+				}
+				unread(d);
+				return _marked_token('%');
+			}
+			case ':':
+				return digraphs ? cond('>', ']', ':') : _marked_token(':');
+			case '<': {
+				if (isInclude) return header(false);
+				int d = read();
+				if (d == '=') return _marked_token(LESS_EQUAL);
+				if (d == '<') return cond('=', LSH_ASSIGN, LEFT_SHIFT);
+				if (digraphs) {
+					if (d == ':') return _marked_token('[');    // digraph
+					if (d == '%') return _marked_token('{');    // digraph
+				}
+				unread(d);
+				return _marked_token('<');
+			}
+			case '=':
+				return cond('=', EQUAL, '=');
+			case '>': {
+				int d = read();
+				if (d == '=') return _marked_token(GREATER_EQUAL);
+				if (d == '>') return cond('=', RSH_ASSIGN, RIGHT_SHIFT);
+				unread(d);
+				return _marked_token('>');
+			}
+			case '^':
+				return cond('=', XOR_ASSIGN, '^');
+			case '|':
+				return cond2('=', OR_ASSIGN, '|', OR_OR, '|');
+			case '&':
+				return cond2('=', AND_ASSIGN, '&', AND_AND, '&');
+			case '.': {
+				int d = read();
+				if (d == '.') {
 					int e = read();
-					if (e == '%') {
+					if (e == ',') return _marked_token(ELLIPSIS);
+					unread(e);
+				}
+				unread(d);
+				if (d >= '0' && d <= '9') return number(c);
+				return _marked_token('.');
+			}
+			case '\'':
+				return string("'", true);
+			case 'u': {
+				int d = read();
+				if (d == '\'') return string("u'", true);
+				if (d == '"') return string("u\"", false);
+				if (d == '8') {
+					int e = read();
+					if (e == '\'') string("u8'", true);
+					if (e == '"') return string("u8\"", false);
+					if (e == 'R') {
 						int f = read();
-						if (f == ':') return _marked_token(PASTE);    // digraph
-						unread(f);    // Unread 2 chars here.
+						if (f == '"') return raw_string("u8R\"");
+						unread(f);
 					}
 					unread(e);
-					return _marked_token('#');    // digraph
+				} else if (d == 'R') {
+					int e = read();
+					if (e == '"') return raw_string("uR\"");
+					unread(e);
 				}
+				unread(d);
+				// check for identifier is out of scope here
+				return null;
 			}
-			unread(d);
-			return _marked_token('%');
-		} else if (c == ':') {
-			return digraphs ? cond('>', ']', ':') : _marked_token(':');
-		} else if (c == '<') {
-			if (isInclude) return header(false);
-			int d = read();
-			if (d == '=') return _marked_token(LE);
-			if (d == '<') return cond('=', LSH_EQ, LSH);
-			if (digraphs) {
-				if (d == ':') return _marked_token('[');    // digraph
-				if (d == '%') return _marked_token('{');    // digraph
-			}
-			unread(d);
-			return _marked_token('<');
-		} else if (c == '=') {
-			return cond('=', EQ, '=');
-		} else if (c == '>') {
-			int d = read();
-			if (d == '=') return _marked_token(GE);
-			if (d == '>') return cond('=', RSH_EQ, RSH);
-			unread(d);
-			return _marked_token('>');
-		} else if (c == '^') {
-			return cond('=', XOR_EQ, '^');
-		} else if (c == '|') {
-			int d = read();
-			if (d == '=') return _marked_token(OR_EQ);
-			if (d == '|') return cond('=', LOR_EQ, LOR);
-			unread(d);
-			return _marked_token('|');
-		} else if (c == '&') {
-			int d = read();
-			if (d == '&') return cond('=', LAND_EQ, LAND);
-			if (d == '=') return _marked_token(AND_EQ);
-			unread(d);
-			return _marked_token('&');
-		} else if (c == '.') {
-			int d = read();
-			if (d == '.') return cond('.', ELLIPSIS, RANGE);
-			unread(d);
-			if (d >= '0' && d <= '9') {
-				unread('.');
-				return number();
-			}
-			return _marked_token('.');
-		} else if (c == '\'') {
-			return string("'", true);
-		} else if (c == 'u') {
-			int d = read();
-			if (d == '\'') return string("u'", true);
-			if (d == '"') return string("u\"", false);
-			if (d == '8') {
-				int e = read();
-				if (e == '\'') string("u8'", true);
-				if (e == '"') return string("u8\"", false);
-				if (e == 'R') {
-					int f = read();
-					if (f == '"') return raw_string("u8R\"");
-					unread(f);
+			case 'U': {
+				int d = read();
+				if (d == '\'') return string("U'", true);
+				if (d == '"') return string("U\"", false);
+				if (d == 'R') {
+					int e = read();
+					if (e == '"') return raw_string("UR\"");
+					unread(e);
 				}
-				unread(e);
-			} else if (d == 'R') {
-				int e = read();
-				if (e == '"') return raw_string("uR\"");
-				unread(e);
+				unread(d);
+				// check for identifier is out of scope here
+				return null;
 			}
-			unread(d);
-			// check for identifier is out of scope here
-			return null;
-		} else if (c == 'U') {
-			int d = read();
-			if (d == '\'') return string("U'", true);
-			if (d == '"') return string("U\"", false);
-			if (d == 'R') {
-				int e = read();
-				if (e == '"') return raw_string("UR\"");
-				unread(e);
+			case 'L': {
+				int d = read();
+				if (d == '\'') return string("L'", true);
+				if (d == '"') return string("L\"", false);
+				if (d == 'R') {
+					int e = read();
+					if (e == '"') return raw_string("LR\"");
+					unread(e);
+				}
+				unread(d);
+				// check for identifier is out of scope here
+				return null;
 			}
-			unread(d);
-			// check for identifier is out of scope here
-			return null;
-		} else if (c == 'L') {
-			int d = read();
-			if (d == '\'') return string("L'", true);
-			if (d == '"') return string("L\"", false);
-			if (d == 'R') {
-				int e = read();
-				if (e == '"') return raw_string("LR\"");
-				unread(e);
+			case 'R': {
+				int d = read();
+				if (d == '"') return raw_string("R\"");
+				unread(d);
+				// check for identifier is out of scope here
+				return null;
 			}
-			unread(d);
-			// check for identifier is out of scope here
-			return null;
-		} else if (c == 'R') {
-			int d = read();
-			if (d == '"') return raw_string("R\"");
-			unread(d);
-			// check for identifier is out of scope here
-			return null;
-		} else if (c == '"') {
-			return isInclude ? header(true) : string("\"", false);
+			case '"':
+				return isInclude ? header(true) : string("\"", false);
 		}
 		return null;
 	}
@@ -917,7 +898,7 @@ public class LexerSource extends Source {
 				return _marked_token(EOF);
 			} else if (isLineSeparator(c) && ppvalid) {
 				this.isStartOfLine = true;
-				if (isInclude) return _marked_token(NL, "\n");
+				if (isInclude) return _marked_token(NEW_LINE, "\n");
 				int count = 1;
 				while (true) {
 					int d = read();
@@ -925,25 +906,17 @@ public class LexerSource extends Source {
 						count += 1;
 					} else if (d == -1 || !(isLineSeparator(d) || Character.isWhitespace(d))) {
 						unread(d);
-						return _marked_token(NL, "\n".repeat(count));
+						return _marked_token(NEW_LINE, "\n".repeat(count));
 					}
 				}
 			} else if (Character.isWhitespace(c)) {
 				token = whitespace(c);
 			} else if (Character.isDigit(c)) {
-				unread(c);
-				token = number();
+				token = number(c);
 			} else if (Character.isJavaIdentifierStart(c)) {
 				token = identifier(c);
 			} else {
-				String text = TokenType.getTokenText(c);
-				if (text == null) {
-					if ((c >>> 16) == 0)    // Character.isBmpCodePoint() is new in 1.7
-						text = Character.toString((char) c);
-					else
-						text = new String(Character.toChars(c));
-				}
-				token = _marked_token(c, text);
+				token = _marked_token(INVALID, Character.toString(c));
 			}
 		}
 

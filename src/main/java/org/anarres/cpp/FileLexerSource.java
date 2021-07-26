@@ -17,6 +17,7 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -31,7 +32,7 @@ import java.nio.file.Path;
  */
 public class FileLexerSource extends InputLexerSource {
 
-	private final Path file;
+	@Nonnull private final Path file;
 
 	/**
 	 * Creates a new Source for lexing the given File.
@@ -51,18 +52,21 @@ public class FileLexerSource extends InputLexerSource {
 	/**
 	 * This is not necessarily the same as getFile().getPath() in case we are in a chroot.
 	 */
+	@Nonnull
 	@Override
 	public Path getPath() {
 		return file;
 	}
 
+	@Nonnull
 	@Override
 	public String getName() {
 		return file.getFileName().toString();
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
-		return "file " + getPath();
+		return file.toString();
 	}
 }

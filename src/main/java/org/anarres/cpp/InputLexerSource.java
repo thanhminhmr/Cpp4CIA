@@ -17,6 +17,8 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -44,16 +46,19 @@ public class InputLexerSource extends LexerSource {
 		super(input, true);
 	}
 
+	@Nullable
 	@Override
 	public Path getPath() {
 		return null;
 	}
 
+	@Nonnull
 	@Override
 	public String getName() {
-		return "standard input";
+		return "<standard input>";
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
 		return "standard input";
