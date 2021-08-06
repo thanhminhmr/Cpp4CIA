@@ -73,6 +73,7 @@ public abstract class Source implements Closeable {
 		}
 	};
 
+	private final Preprocessor preprocessor;
 	private Source parent;
 	private boolean autoPop;
 	private PreprocessorListener listener;

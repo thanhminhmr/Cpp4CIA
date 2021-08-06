@@ -228,6 +228,17 @@ public final class Preprocessor implements Closeable {
 		inputs.add(source);
 	}
 
+	/**
+	 * Adds input for the Preprocessor.
+	 * <p>
+	 * Inputs are processed in the order in which they are added.
+	 */
+	public void addInput(@Nonnull Path source) {
+		// TODO: change this
+		source.init(this);
+		inputs.add(source);
+	}
+
 
 	/**
 	 * Handles an error.
@@ -247,7 +258,7 @@ public final class Preprocessor implements Closeable {
 	 *
 	 * @see #error(int, int, String)
 	 */
-	protected void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		error(tok.getLine(), tok.getColumn(), msg);
 	}
 
@@ -257,7 +268,7 @@ public final class Preprocessor implements Closeable {
 	 * If a PreprocessorListener is installed, it receives the
 	 * warning. Otherwise, an exception is thrown.
 	 */
-	protected void warning(int line, int column, @Nonnull String msg) throws LexerException {
+	void warning(int line, int column, @Nonnull String msg) throws LexerException {
 		if (warnings.contains(Warning.ERROR)) {
 			error(line, column, msg);
 		} else {
@@ -273,7 +284,7 @@ public final class Preprocessor implements Closeable {
 	 *
 	 * @see #warning(int, int, String)
 	 */
-	protected void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		warning(tok.getLine(), tok.getColumn(), msg);
 	}
 
