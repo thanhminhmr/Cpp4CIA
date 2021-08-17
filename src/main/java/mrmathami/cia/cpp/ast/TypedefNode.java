@@ -20,12 +20,12 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 
 	@Nullable
 	@Override
-	public final CppNode getType() {
+	public CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable CppNode type) {
+	public boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
@@ -34,7 +34,7 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 
@@ -64,24 +64,24 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 //	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
-	protected final int similarHashcode(@Nonnull Matcher matcher) {
+	protected int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		return result;
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
-	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		return result;
@@ -89,7 +89,7 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;
@@ -97,7 +97,7 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 
 	@Nonnull
 	@Override
-	final String partialElementString() {
+	String partialElementString() {
 		return ", \"type\": " + type;
 	}
 

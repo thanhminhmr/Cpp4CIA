@@ -17,31 +17,31 @@ public final class NamespaceNode extends CppNode implements IClassContainer, IEn
 
 	@Nonnull
 	@Override
-	public final List<ClassNode> getClasses() {
+	public List<ClassNode> getClasses() {
 		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<EnumNode> getEnums() {
+	public List<EnumNode> getEnums() {
 		return getChildrenList(EnumNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<FunctionNode> getFunctions() {
+	public List<FunctionNode> getFunctions() {
 		return getChildrenList(FunctionNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<VariableNode> getVariables() {
+	public List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 

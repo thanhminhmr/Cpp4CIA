@@ -12,16 +12,16 @@ public final class RootNode extends CppNode implements IIntegralContainer, IClas
 		super("ROOT", "ROOT", "ROOT");
 	}
 
-	public final void lock() {
+	public void lock() {
 		if (isWritable()) internalLock();
 	}
 
-	public final int getNodeCount() {
+	public int getNodeCount() {
 		return nodeCount;
 	}
 
 	@Nonnull
-	public final RootNode setNodeCount(int nodeCount) {
+	public RootNode setNodeCount(int nodeCount) {
 		checkReadOnly();
 		this.nodeCount = nodeCount;
 		return this;
@@ -29,43 +29,43 @@ public final class RootNode extends CppNode implements IIntegralContainer, IClas
 
 	@Nonnull
 	@Override
-	public final List<IntegralNode> getIntegrals() {
+	public List<IntegralNode> getIntegrals() {
 		return getChildrenList(IntegralNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<ClassNode> getClasses() {
+	public List<ClassNode> getClasses() {
 		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<EnumNode> getEnums() {
+	public List<EnumNode> getEnums() {
 		return getChildrenList(EnumNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<FunctionNode> getFunctions() {
+	public List<FunctionNode> getFunctions() {
 		return getChildrenList(FunctionNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<VariableNode> getVariables() {
+	public List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 
 	@Nonnull
 	@Override
-	final String partialElementString() {
+	String partialElementString() {
 		return ", \"nodeCount\": " + nodeCount;
 	}
 }
