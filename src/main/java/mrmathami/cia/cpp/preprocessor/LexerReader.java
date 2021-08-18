@@ -13,16 +13,17 @@ import java.io.StringReader;
 
 /**
  * This convert a reader to a codepoint reader that support unread, convert all
- * line-separator to LF, do line splicing and line:column position tracker
- * (even when unread). The difference with normal pushback is that you cannot
- * change the content of the reader when unread.
+ * line-separator to LF, do line splicing, UCN translation and line:column
+ * position tracker (even when unread). The difference with normal pushback is
+ * that you cannot change the content of the reader when unread.
+ * Note: This reader does not support multi-threading use.
  */
 final class LexerReader implements Closeable {
 	LexerReader(@Nonnull InputStream inputStream) throws IOException {
 		this(new AutoEncodingReader(inputStream));
 	}
 
-	LexerReader(@Nonnull Reader reader) throws IOException {
+	LexerReader(@Nonnull Reader reader) {
 		this.reader = reader instanceof BufferedReader ? reader : new BufferedReader(reader);
 	}
 
@@ -160,7 +161,8 @@ final class LexerReader implements Closeable {
 		// skip LF after previous CR
 		if (previousCR && cp == '\n') cp = underlyingReadCodePoint();
 		// substitute CR with LF
-		cp = (this.previousCR = cp == '\r') ? '\n' : cp;
+		this.previousCR = cp == '\r';
+		cp = previousCR ? '\n' : cp;
 		// buffer add
 		bufferAdd(cp, nextLine, nextColumn);
 		// change nextLine and nextColumn
@@ -351,30 +353,5 @@ final class LexerReader implements Closeable {
 			reader.close();
 			this.reader = null;
 		}
-	}
-
-
-	public static void main(String[] strings) throws IOException, PreprocessorException {
-		final StringReader stringReader = new StringReader(
-				"hello \\u1234 hi\\\n" +
-						"\\\n" +
-						"\\\n" +
-						"\\\n" +
-						"\\\n" +
-						"\\u\\u0100\n" +
-						"\\\n" +
-						"\\\n" +
-						"\\\n" +
-						"what is this\n" +
-						"is this a joke"
-		);
-		final LexerReader reader = new LexerReader(stringReader);
-
-		while (true) {
-			final int cp = reader.read();
-			if (cp < 0) break;
-			System.out.print(Character.toChars(cp));
-		}
-		System.out.println();
 	}
 }

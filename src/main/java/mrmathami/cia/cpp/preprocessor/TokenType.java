@@ -6,10 +6,17 @@ public enum TokenType {
 	/* Simple token */
 	PAREN_OPEN(false, "("),
 	PAREN_CLOSE(false, ")"),
+
 	BRACKET_OPEN(false, "["),
 	BRACKET_CLOSE(false, "]"),
 	BRACE_OPEN(false, "{"),
 	BRACE_CLOSE(false, "}"),
+
+	BRACKET_OPEN_ALT(false, "<:"),
+	BRACKET_CLOSE_ALT(false, ":>"),
+	BRACE_OPEN_ALT(false, "<%"),
+	BRACE_CLOSE_ALT(false, "%>"),
+
 	SEMI(false, ";"),
 	COMMA(false, ","),
 	DOT(false, "."),
@@ -29,14 +36,36 @@ public enum TokenType {
 	COLON(false, ":"),
 	ASSIGN(false, "="),
 
+	NOT_ALT(false, "not"),
+	TILDE_ALT(false, "compl"),
+	AND_ALT(false, "bitand"),
+	OR_ALT(false, "bitor"),
+	XOR_ALT(false, "xor"),
+
+	DOT_STAR(false, ".*"),
+	COLON_COLON(false, "::"),
+
+	PLUS_PLUS(false, "++"),
+	MINUS_MINUS(false, "--"),
+
+	ARROW(false, "->"),
+	ARROW_STAR(false, "->*"),
+
 	LEFT_SHIFT(false, "<<"),
 	RIGHT_SHIFT(false, ">>"),
 	LESS_EQUAL(false, "<="),
 	GREATER_EQUAL(false, ">="),
 	EQUAL(false, "=="),
 	NOT_EQUAL(false, "!="),
+
+	NOT_EQUAL_ALT(false, "not_eq"),
+
 	AND_AND(false, "&&"),
 	OR_OR(false, "||"),
+
+	AND_AND_ALT(false, "and"),
+	OR_OR_ALT(false, "or"),
+
 	STAR_ASSIGN(false, "*="),
 	DIV_ASSIGN(false, "/="),
 	MOD_ASSIGN(false, "%="),
@@ -45,11 +74,20 @@ public enum TokenType {
 	AND_ASSIGN(false, "&="),
 	XOR_ASSIGN(false, "^="),
 	OR_ASSIGN(false, "|="),
+
+	AND_ASSIGN_ALT(false, "and_eq"),
+	XOR_ASSIGN_ALT(false, "xor_eq"),
+	OR_ASSIGN_ALT(false, "or_eq"),
+
 	LEFT_SHIFT_ASSIGN(false, "<<="),
 	RIGHT_SHIFT_ASSIGN(false, ">>="),
 
+	ELLIPSIS(false, "..."),
 	HASH(false, "#"),
 	PASTE(false, "##"),
+
+	HASH_ALT(false, "%:"),
+	PASTE_ALT(false, "%:%:"),
 
 	EOF(false, ""),
 

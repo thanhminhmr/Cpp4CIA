@@ -14,5 +14,5 @@ public interface TokenSource {
 	Path getPath();
 
 	@Nonnull
-	PreprocessingToken nextToken() throws IOException, PreprocessorException;
+	Token nextToken() throws IOException, PreprocessorException;
 }
