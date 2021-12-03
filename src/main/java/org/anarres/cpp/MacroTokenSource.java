@@ -17,81 +17,62 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
+
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
 import static org.anarres.cpp.Token.CPP_COMMENT;
 import static org.anarres.cpp.Token.C_COMMENT;
-import static org.anarres.cpp.Token.EOF;
+import static org.anarres.cpp.Token.IDENTIFIER;
 import static org.anarres.cpp.Token.M_ARG;
 import static org.anarres.cpp.Token.M_PASTE;
 import static org.anarres.cpp.Token.M_STRING;
-import static org.anarres.cpp.Token.STRING;
 
 /* This source should always be active, since we don't expand macros
  * in any inactive context. */
 class MacroTokenSource extends Source {
 
-	//private static final Logger LOG = LoggerFactory.getLogger(MacroTokenSource.class);
-	private final Macro macro;
-	private final Iterator<Token> tokens;    /* Pointer into the macro.  */
+	@Nonnull private final Preprocessor preprocessor;
+	@Nonnull private final Macro macro;
+	@Nonnull private final List<Tokens> arguments;    /* unexpanded arguments */
+	@Nonnull private final Iterator<Token> tokens;    /* Pointer into the macro.  */
 
-	private final List<Macro.Argument> args;    /* { unexpanded, expanded } */
+	@Nonnull private final List<Tokens> expandedArgs;
 
 	private Iterator<Token> arg;    /* "current expansion" */
 
-	MacroTokenSource(@Nonnull Macro m, @Nonnull List<Macro.Argument> args) {
-		this.macro = m;
-		this.tokens = m.getTokens().iterator();
-		this.args = args;
+	MacroTokenSource(@Nonnull Preprocessor preprocessor, @Nonnull Macro macro) {
+		this.preprocessor = preprocessor;
+		this.macro = macro;
+		this.arguments = List.of();
+		this.tokens = macro.iterator();
 		this.arg = null;
+
+		this.expandedArgs = List.of();
 	}
 
-	@Override
-	boolean isExpanding(@Nonnull Macro m) {
-		/* When we are expanding an arg, 'this' macro is not
-		 * being expanded, and thus we may re-expand it. */
-		if (/* XXX this.arg == null && */this.macro == m)
-			return true;
-		return super.isExpanding(m);
-	}
+	MacroTokenSource(@Nonnull Preprocessor preprocessor, @Nonnull Macro macro, @Nonnull List<Tokens> arguments) {
+		this.preprocessor = preprocessor;
+		this.macro = macro;
+		this.arguments = arguments;
+		this.tokens = macro.iterator();
+		this.arg = null;
 
-	/* XXX Called from Preprocessor [ugly]. */
-	static void escape(@Nonnull StringBuilder buf, @Nonnull CharSequence cs) {
-		for (int i = 0; i < cs.length(); i++) {
-			char c = cs.charAt(i);
-			switch (c) {
-				case '\\':
-					buf.append("\\\\");
-					break;
-				case '"':
-					buf.append("\\\"");
-					break;
-				case '\n':
-					buf.append("\\n");
-					break;
-				case '\r':
-					buf.append("\\r");
-					break;
-				default:
-					buf.append(c);
-			}
-		}
+		this.expandedArgs = new ArrayList<>(Collections.nCopies(arguments.size(), null));
 	}
 
 	@Nonnull
-	private Token stringify(@Nonnull Token pos, @Nonnull Macro.Argument arg) {
-		StringBuilder buf = new StringBuilder();
-		for (Token tok : arg) buf.append(tok.getText());
-		// System.out.println("Concat: " + arg + " -> " + buf);
-		StringBuilder str = new StringBuilder("\"");
-		escape(str, buf);
-		str.append("\"");
-		// System.out.println("Escape: " + buf + " -> " + str);
-		return new Token(STRING,
-				pos.getLine(), pos.getColumn(),
-				str.toString(), buf.toString());
+	public Macro getMacro() {
+		return macro;
+	}
+
+	@Override
+	boolean isMacroExpanding(@Nonnull Macro macro) {
+		if (this.macro == macro) return true;
+		return super.isMacroExpanding(macro);
 	}
 
 	/**
@@ -102,52 +83,70 @@ class MacroTokenSource extends Source {
 	 */
 	private boolean isVariadicArgument(int argumentIndex) {
 		assert argumentIndex >= 0;
-		return macro.isVariadic() && argumentIndex == args.size() - 1;
+		return macro.isVariadic() && argumentIndex == arguments.size() - 1;
 	}
 
-	/* At this point, we have consumed the first M_PASTE.
-	 * @see Macro#addPaste(Token) */
-	private void paste(@Nonnull Token ptok)
-			throws IOException,
-			LexerException {
+	@Nonnull
+	private Token stringify(@Nonnull Token stringifyToken) {
+		final Tokens argument = arguments.get(stringifyToken.getValue(Integer.class));
+		final StringBuilder builder = new StringBuilder();
+		for (final Token token : argument) builder.append(token.getText());
+		final String string = Token.escape(new StringBuilder("\""), builder).append('"').toString();
+		return new Token(Token.STRING,
+				stringifyToken.getLine(), stringifyToken.getColumn(),
+				string, builder.toString());
+	}
+
+	private void paste(@Nonnull Token pasteToken) throws LexerException {
 		// List<Token> out = new ArrayList<Token>();
-		StringBuilder buf = new StringBuilder();
+		final StringBuilder builder = new StringBuilder();
 		// Token err = null;
 		/* We know here that arg is null or expired,
 		 * since we cannot paste an expanded arg. */
+
+		final Tokens tokens = pasteToken.getValue(Tokens.class);
+		for (final Token token : tokens) {
+			final int type = token.getType();
+			if (type == M_STRING) {
+				final Token stringToken = stringify(token);
+				// ...
+			} else if (type == M_ARG) {
+				//TODO
+			}
+		}
 
 		int count = 2;
 		// While I hate auxiliary booleans, this does actually seem to be the simplest solution,
 		// as it avoids duplicating all the logic around hasNext() in case COMMA.
 		boolean comma = false;
 		for (int i = 0; i < count; i++) {
-			if (!tokens.hasNext()) {
+			if (!this.tokens.hasNext()) {
 				/* XXX This one really should throw. */
-				error(ptok.getLine(), ptok.getColumn(), "Paste at end of expansion");
-				buf.append(' ').append(ptok.getText());
+				error(pasteToken.getLine(), pasteToken.getColumn(), "Paste at end of expansion");
+				builder.append(' ').append(pasteToken.getText());
 				break;
 			}
-			Token tok = tokens.next();
+			Token tok = this.tokens.next();
 			// System.out.println("Paste " + tok);
 			if (tok.getType() == M_PASTE) {
 				count += 2;
-				ptok = tok;
+				pasteToken = tok;
 			} else if (tok.getType() == M_ARG) {
-				int idx = (Integer) tok.getValue();
-				Macro.Argument arg = args.get(idx);
+				int idx = tok.getValue(Integer.class);
+				Tokens arg = arguments.get(idx);
 				if (comma && isVariadicArgument(idx) && arg.isEmpty()) {
 					// Ugly way to strip the comma.
-					buf.setLength(buf.length() - 1);
+					builder.setLength(builder.length() - 1);
 				} else {
-					for (final Token t : arg) buf.append(t.getText());
+					for (final Token t : arg) builder.append(t.getText());
 				}
 				/* XXX Test this. */
 			} else if (tok.getType() == ',') {
 				comma = true;
-				buf.append(tok.getText());
+				builder.append(tok.getText());
 				continue;
 			} else if (tok.getType() != C_COMMENT && tok.getType() != CPP_COMMENT) {
-				buf.append(tok.getText());
+				builder.append(tok.getText());
 			}
 			comma = false;
 		}
@@ -155,56 +154,54 @@ class MacroTokenSource extends Source {
 		/* Push and re-lex. */
         /*
          StringBuilder		src = new StringBuilder();
-         escape(src, buf);
+         escape(src, builder);
          StringLexerSource	sl = new StringLexerSource(src.toString());
          */
-		StringLexerSource sl = new StringLexerSource(buf.toString());
+		StringLexerSource sl = new StringLexerSource(builder.toString());
 
 		/* XXX Check that concatenation produces a valid token. */
 		arg = new SourceIterator(sl);
 	}
 
+	private void variadicOptional(@Nonnull Token identifierToken) {
+
+	}
+
 	@Nonnull
 	@Override
-	public Token token()
-			throws IOException,
-			LexerException {
-		for (; ; ) {
-			/* Deal with lexed tokens first. */
-
+	public Token token() throws IOException, LexerException {
+		while (true) {
+			// Deal with lexed tokens first.
 			if (arg != null) {
-				if (arg.hasNext()) {
-					Token tok = arg.next();
-					/* XXX PASTE -> INVALID. */
-					assert tok.getType() != M_PASTE :
-							"Unexpected paste token";
-					return tok;
-				}
-				arg = null;
+				if (arg.hasNext()) return arg.next();
+				this.arg = null;
 			}
 
-			if (!tokens.hasNext()) return Token.eof;    /* End of macro. */
-			Token tok = tokens.next();
-			int idx;
-			switch (tok.getType()) {
-				case M_STRING:
-					/* Use the nonexpanded arg. */
-					idx = (Integer) tok.getValue();
-					return stringify(tok, args.get(idx));
-				case M_ARG:
-					/* Expand the arg. */
-					idx = (Integer) tok.getValue();
-					// System.out.println("Pushing arg " + args.get(idx));
-					arg = args.get(idx).expansion();
-					break;
-				case M_PASTE:
-					paste(tok);
-					break;
-				default:
-					return tok;
-			}
-		} /* for */
+			// End of macro
+			if (!tokens.hasNext()) return Token.eof;
 
+			final Token token = tokens.next();
+			final int type = token.getType();
+			if (type == M_STRING) {
+				// Use the non-expanded arg
+				return stringify(token);
+			} else if (type == M_ARG) {
+				// Expand the arg
+				final int index = token.getValue(Integer.class);
+				final Tokens currentExpanded = expandedArgs.get(index);
+				final Tokens expandedArg = currentExpanded != null
+						? currentExpanded
+						: preprocessor.macroExpandArguments(arguments.get(index));
+				if (currentExpanded == null) expandedArgs.set(index, expandedArg);
+				this.arg = expandedArg.iterator();
+			} else if (type == M_PASTE) {
+				paste(token);
+			} else if (macro.isVariadic() && type == IDENTIFIER && token.getText().equals("__VA_OPT__")) {
+				variadicOptional(token);
+			} else {
+				return token;
+			}
+		}
 	}
 
 	@Override

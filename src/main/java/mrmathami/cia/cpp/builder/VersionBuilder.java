@@ -1,5 +1,6 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.DependencyMap;
@@ -7,7 +8,8 @@ import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.RootNode;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 
-import mrmathami.annotations.Nonnull;
+import java.io.IOException;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -28,11 +30,11 @@ public final class VersionBuilder {
 	}
 
 	@Nonnull
-	private static List<Path> createPathList(@Nonnull List<Path> pathList) {
+	private static List<Path> createPathList(@Nonnull List<Path> pathList) throws IOException {
 		final List<Path> paths = new ArrayList<>();
 		final Set<Path> pathSet = new HashSet<>();
 		for (final Path path : pathList) {
-			final Path realPath = path.toAbsolutePath().normalize();
+			final Path realPath = path.toRealPath(LinkOption.NOFOLLOW_LINKS);
 			if (pathSet.add(realPath)) {
 				paths.add(realPath);
 			}
@@ -41,7 +43,7 @@ public final class VersionBuilder {
 	}
 
 	@Nonnull
-	private static List<String> createRelativePathStrings(@Nonnull List<Path> pathList, Path rootPath) {
+	private static List<String> createRelativePathStrings(@Nonnull List<Path> pathList, @Nonnull Path rootPath) {
 		final List<String> pathStrings = new ArrayList<>();
 		for (final Path path : pathList) {
 			pathStrings.add(rootPath.relativize(path).toString());
@@ -63,7 +65,7 @@ public final class VersionBuilder {
 	}
 
 	@Nonnull
-	private static List<Path> combinePathList(@Nonnull List<Path> pathListA, List<Path> pathListB) {
+	private static List<Path> combinePathList(@Nonnull List<Path> pathListA, @Nonnull List<Path> pathListB) {
 		final List<Path> newList = new ArrayList<>();
 		final Set<Path> newSet = new HashSet<>();
 		for (final Path path : pathListA) if (newSet.add(path)) newList.add(path);
@@ -91,25 +93,29 @@ public final class VersionBuilder {
 	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
 			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,
 			@Nonnull Map<DependencyType, Double> dependencyTypeWeightMap) throws CppException {
-		final List<Path> projectFileList = createPathList(projectFiles);
-		final List<Path> externalIncludePaths = createPathList(includePaths);
-		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
-		final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
+		try {
+			final List<Path> projectFileList = createPathList(projectFiles);
+			final List<Path> externalIncludePaths = createPathList(includePaths);
+			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
+			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
 
-		final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, false);
-		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
-		final RootNode root = AstBuilder.build(translationUnit);
+			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, false);
+			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
+			final RootNode root = AstBuilder.build(translationUnit);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
-		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
-		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
+			final Path projectRootPath = projectRoot.toRealPath(LinkOption.NOFOLLOW_LINKS);
+			final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
+			final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final DependencyType[] types = DependencyType.values();
-		final double[] typeWeights = new double[types.length];
-		for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
+			final DependencyType[] types = DependencyType.values();
+			final double[] typeWeights = new double[types.length];
+			for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
 
-		final double[] weights = calculateWeights(typeWeights, root);
-		return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
+			final double[] weights = calculateWeights(typeWeights, root);
+			return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
+		} catch (IOException e) {
+			throw new CppException("Error when trying to build project!", e);
+		}
 	}
 
 	//*
@@ -118,37 +124,41 @@ public final class VersionBuilder {
 			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,
 			@Nonnull Map<DependencyType, Double> dependencyTypeWeightMap, @Nonnull VersionBuilderDebugger debugger)
 			throws CppException {
-		final List<Path> projectFileList = createPathList(projectFiles);
-		final List<Path> externalIncludePaths = createPathList(includePaths);
-		final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
-		final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
+		try {
+			final List<Path> projectFileList = createPathList(projectFiles);
+			final List<Path> externalIncludePaths = createPathList(includePaths);
+			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
+			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
 
-		debugger.setVersionName(versionName);
+			debugger.setVersionName(versionName);
 
-		final char[] fileContentCharArray = debugger.loadFileContent()
-				? debugger.getFileContent()
-				: PreprocessorBuilder.build(projectFileList, includePathList, debugger.isReadableFileContent());
+			final char[] fileContentCharArray = debugger.loadFileContent()
+					? debugger.getFileContent()
+					: PreprocessorBuilder.build(projectFileList, includePathList, debugger.isReadableFileContent());
 
-		debugger.saveFileContent(fileContentCharArray);
+			debugger.saveFileContent(fileContentCharArray);
 
-		final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
+			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 
-		if (debugger.isSaveTranslationUnit()) debugger.saveTranslationUnit(translationUnit);
+			if (debugger.isSaveTranslationUnit()) debugger.saveTranslationUnit(translationUnit);
 
-		final RootNode root = AstBuilder.build(translationUnit);
+			final RootNode root = AstBuilder.build(translationUnit);
 
-		debugger.saveRoot(root);
+			debugger.saveRoot(root);
 
-		final Path projectRootPath = projectRoot.toAbsolutePath().normalize();
-		final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
-		final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
+			final Path projectRootPath = projectRoot.toRealPath(LinkOption.NOFOLLOW_LINKS);
+			final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
+			final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 
-		final DependencyType[] types = DependencyType.values();
-		final double[] typeWeights = new double[types.length];
-		for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
+			final DependencyType[] types = DependencyType.values();
+			final double[] typeWeights = new double[types.length];
+			for (final DependencyType type : types) typeWeights[type.ordinal()] = dependencyTypeWeightMap.get(type);
 
-		final double[] weights = calculateWeights(typeWeights, root);
-		return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
+			final double[] weights = calculateWeights(typeWeights, root);
+			return new ProjectVersion(versionName, projectFilePaths, projectIncludePaths, root, typeWeights, weights);
+		} catch (IOException e) {
+			throw new CppException("Error when trying to build project!", e);
+		}
 	}
 	//*/
 }

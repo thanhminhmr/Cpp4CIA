@@ -1,8 +1,8 @@
-package org.anarres.cpp;
-
-import org.mozilla.universalchardet.UniversalDetector;
+package mrmathami.utils;
 
 import mrmathami.annotations.Nonnull;
+import org.mozilla.universalchardet.UniversalDetector;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -15,7 +15,7 @@ import java.io.SequenceInputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-public final class Utils {
+public final class EncodingDetector {
 
 	private static final byte[][] BOM_LIST = new byte[][]{
 			new byte[]{(byte) 0xFF, (byte) 0xFE, 0x00, 0x00}, // UTF_32_LE
@@ -25,11 +25,11 @@ public final class Utils {
 			new byte[]{(byte) 0xFE, (byte) 0xFF} // UTF_16_BE
 	};
 
-	private Utils() {
+	private EncodingDetector() {
 	}
 
 	@Nonnull
-	public static Reader createAutoEncodingReader(@Nonnull InputStream inputStream) throws IOException {
+	public static Reader createReader(@Nonnull InputStream inputStream) throws IOException {
 		final UniversalDetector detector = new UniversalDetector(null);
 		final byte[] bytes = feedDetector(detector, inputStream);
 		final String encoding = detector.getDetectedCharset();

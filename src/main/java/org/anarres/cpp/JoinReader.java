@@ -25,37 +25,33 @@ class JoinReader implements Closeable {
 	private final Reader in;
 
 	private LexerSource source;
-	private boolean trigraphs;
+	private boolean triGraphs;
 	private boolean warnings;
 
-	private int newlines;
-	private boolean endOfLine;
-	private final int[] unGetBuffer;
-	private int unGetIndex;
+	private int newlines = 0;
+	private boolean endOfLine = false;
+	private final int[] unGetBuffer = new int[8];
+	private int unGetIndex = 0;
 
 	private boolean rawString;
 
-	public JoinReader(Reader in, boolean trigraphs) {
+	public JoinReader(Reader in, boolean triGraphs) {
 		this.in = in;
-		this.trigraphs = trigraphs;
-		this.newlines = 0;
-		this.endOfLine = false;
-		this.unGetBuffer = new int[8];
-		this.unGetIndex = 0;
+		this.triGraphs = triGraphs;
 	}
 
 	public JoinReader(Reader in) {
 		this(in, false);
 	}
 
-	public void setTrigraphs(boolean enable, boolean warnings) {
-		this.trigraphs = enable;
+	public void setTriGraphs(boolean enable, boolean warnings) {
+		this.triGraphs = enable;
 		this.warnings = warnings;
 	}
 
 	void init(Preprocessor pp, LexerSource s) {
 		this.source = s;
-		setTrigraphs(pp.getFeature(Feature.TRIGRAPHS), pp.getWarning(Warning.TRIGRAPHS));
+		setTriGraphs(pp.getFeature(Preprocessor.Feature.TRIGRAPHS), pp.getWarning(Preprocessor.Warning.TRIGRAPHS));
 	}
 
 	private int __read() throws IOException {
@@ -64,7 +60,7 @@ class JoinReader implements Closeable {
 
 	private void _unread(int c) {
 		if (c != -1) unGetBuffer[unGetIndex++] = c;
-		assert unGetIndex <= unGetBuffer.length : "JoinReader ungets too many characters";
+		assert unGetIndex <= unGetBuffer.length : "unread too many characters";
 	}
 
 	protected void warning(String msg)
@@ -74,7 +70,7 @@ class JoinReader implements Closeable {
 	}
 
 	private char trigraph(char raw, char repl) throws LexerException {
-		if (trigraphs) {
+		if (triGraphs) {
 			if (warnings) warning("trigraph ??" + raw + " converted to " + repl);
 			return repl;
 		} else {
@@ -87,7 +83,7 @@ class JoinReader implements Closeable {
 
 	private int _read() throws IOException, LexerException {
 		int c = __read();
-		if (c == '?' && (trigraphs || warnings)) {
+		if (c == '?' && (triGraphs || warnings)) {
 			int d = __read();
 			if (d == '?') {
 				int e = __read();

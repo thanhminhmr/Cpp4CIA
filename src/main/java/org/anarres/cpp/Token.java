@@ -19,6 +19,8 @@ package org.anarres.cpp;
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A Preprocessor token.
  *
@@ -39,12 +41,30 @@ public final class Token {
 		this.value = value;
 	}
 
-	public Token(int type, int line, int column, String text) {
+	public Token(int type, int line, int column, @Nonnull String text) {
 		this(type, line, column, text, null);
 	}
 
 	public Token(int type, int line, int column) {
-		this(type, line, column, TokenType.getTokenText(type));
+		this(type, line, column, Objects.requireNonNull(getDefaultString(type)), null);
+	}
+
+	@Nonnull
+	static StringBuilder escape(@Nonnull StringBuilder builder, @Nonnull CharSequence charSequence) {
+		for (final int codePoint : charSequence.codePoints().toArray()) {
+			if (codePoint == '\\') {
+				builder.append("\\\\");
+			} else if (codePoint == '"') {
+				builder.append("\\\"");
+			} else if (codePoint == '\n') {
+				builder.append("\\n");
+			} else if (codePoint == '\r') {
+				builder.append("\\r");
+			} else {
+				builder.appendCodePoint(codePoint);
+			}
+		}
+		return builder;
 	}
 
 	/**
@@ -64,7 +84,6 @@ public final class Token {
 	 * @return the line at which this token started.
 	 * @see LexerSource#getLine()
 	 */
-	// Not @Nonnegative - might not have been assigned?
 	public int getLine() {
 		return line;
 	}
@@ -77,7 +96,6 @@ public final class Token {
 	 * @return the column at which this token started.
 	 * @see LexerSource#getColumn()
 	 */
-	// Not @Nonnegative - might not have been assigned?
 	public int getColumn() {
 		return column;
 	}
@@ -111,75 +129,178 @@ public final class Token {
 	}
 
 	@Nonnull
-	String getValueAsString() {
-		assert type != HEADER && type != INVALID && value instanceof String;
-		return (String) value;
+	<E> E getValue(@Nonnull Class<E> valueClass) throws NullPointerException, ClassCastException {
+		assert valueClass.isInstance(value);
+		return valueClass.cast(value);
 	}
 
 	/**
 	 * Returns a description of this token, for debugging purposes.
 	 */
+	@Nonnull
 	@Override
 	public String toString() {
-		final StringBuilder builder = new StringBuilder();
-		builder.append('[').append(TokenType.getTokenName(type));
-		if (line >= 0) {
-			builder.append('@').append(line);
-			if (column >= 0) builder.append(',').append(column);
-		}
-		builder.append("]:\"").append(text).append('"');
-		if (value != null) builder.append('=').append(value);
-		return builder.toString();
+		return text;
 	}
 
-	public static final int AND_EQ = 257;
-	public static final int ARROW = 258;
-	public static final int CHARACTER = 259;
-	public static final int C_COMMENT = 260;
-	public static final int CPP_COMMENT = 261;
-	public static final int DEC = 262;
-	public static final int DIV_EQ = 263;
-	public static final int ELLIPSIS = 264;
-	public static final int EOF = 265;
-	public static final int EQ = 266;
-	public static final int GE = 267;
-	public static final int HASH = 268;
-	public static final int HEADER = 269;
-	public static final int IDENTIFIER = 270;
-	public static final int INC = 271;
-	public static final int NUMBER = 272;
-	public static final int LAND = 273;
-	public static final int LAND_EQ = 274;
-	public static final int LE = 275;
-	public static final int LITERAL = 276;
-	public static final int LOR = 277;
-	public static final int LOR_EQ = 278;
-	public static final int LSH = 279;
-	public static final int LSH_EQ = 280;
-	public static final int MOD_EQ = 281;
-	public static final int MULT_EQ = 282;
-	public static final int NE = 283;
-	public static final int NL = 284;
-	public static final int OR_EQ = 285;
-	public static final int PASTE = 286;
-	public static final int PLUS_EQ = 287;
-	public static final int RANGE = 288; // ??
-	public static final int RSH = 289;
-	public static final int RSH_EQ = 290;
-	public static final int SQSTRING = 291; // ??
-	public static final int STRING = 292;
-	public static final int SUB_EQ = 293;
-	public static final int WHITESPACE = 294;
-	public static final int XOR_EQ = 295;
-	public static final int M_ARG = 296;
-	public static final int M_PASTE = 297;
-	public static final int M_STRING = 298;
-	public static final int P_LINE = 299;
-	public static final int INVALID = 300;
+	public static final int PAREN_OPEN = '(';
+	public static final int PAREN_CLOSE = ')';
+	public static final int BRACKET_OPEN = '[';
+	public static final int BRACKET_CLOSE = ']';
+	public static final int BRACE_OPEN = '{';
+	public static final int BRACE_CLOSE = '}';
+	public static final int SEMI = ';';
+	public static final int COMMA = ',';
+	public static final int DOT = '.';
+	public static final int NOT = '!';
+	public static final int TILDE = '~';
+	public static final int PLUS = '+';
+	public static final int MINUS = '-';
+	public static final int STAR = '*';
+	public static final int DIV = '/';
+	public static final int MOD = '%';
+	public static final int AND = '&';
+	public static final int OR = '|';
+	public static final int XOR = '^';
+	public static final int LESS = '<';
+	public static final int GREATER = '>';
+	public static final int QUESTION = '?';
+	public static final int COLON = ':';
+	public static final int ASSIGN = '=';
+	public static final int HASH = '#';
+	public static final int ARROW = 0x10001; // ->
+	public static final int ELLIPSIS = 0x10002; // ...
+	public static final int INCREASE = 0x10003; // ++
+	public static final int DECREASE = 0x10004; // --
+	public static final int AND_AND = 0x10005; // &&
+	public static final int OR_OR = 0x10006; // ||
+	public static final int LEFT_SHIFT = 0x10007; // <<
+	public static final int RIGHT_SHIFT = 0x10008; // >>
+	public static final int ADD_ASSIGN = 0x10009; // +=
+	public static final int SUB_ASSIGN = 0x1000A; // -=
+	public static final int MUL_ASSIGN = 0x1000B; // *=
+	public static final int DIV_ASSIGN = 0x1000C; // /=
+	public static final int MOD_ASSIGN = 0x1000D; // %=
+	public static final int AND_ASSIGN = 0x1000E; // &=
+	public static final int XOR_ASSIGN = 0x1000F; // ^=
+	public static final int OR_ASSIGN = 0x10010; // |=
+	public static final int LSH_ASSIGN = 0x10011; // <<=
+	public static final int RSH_ASSIGN = 0x10012; // >>=
+	public static final int EQUAL = 0x10013; // ==
+	public static final int NOT_EQUAL = 0x10014; // !=
+	public static final int LESS_EQUAL = 0x10015; // <=
+	public static final int GREATER_EQUAL = 0x10016; // >=
+	public static final int IDENTIFIER = 0x10017;
+	public static final int CHARACTER = 0x10018;
+	public static final int NUMBER = 0x10019;
+	public static final int STRING = 0x1001A;
+	public static final int HEADER = 0x1001B;
+	public static final int NEW_LINE = 0x1001C;
+	public static final int WHITESPACE = 0x1001D;
+	public static final int C_COMMENT = 0x1001E;
+	public static final int CPP_COMMENT = 0x1001F;
+	public static final int EOF = 0x10020;
+	public static final int M_ARG = 0x10021;
+	public static final int M_OPT = 0x10022;
+	public static final int M_PASTE = 0x10023;
+	public static final int M_STRING = 0x10024;
+	public static final int P_LINE = 0x10025;
+	public static final int P_HASH = 0x10026; // #
+	public static final int P_PASTE = 0x10027; // ##
+	public static final int INVALID = 0x10028;
 
 	/**
 	 * The position-less space token.
 	 */
 	static final Token whitespace = new Token(WHITESPACE, -1, -1, " ");
-	static final Token eof = new Token(EOF, -1, -1);
+	static final Token eof = new Token(EOF, -1, -1, "");
+
+	@Nullable
+	private static String getDefaultString(int token) {
+		switch (token) {
+			case PAREN_OPEN:
+			case PAREN_CLOSE:
+			case BRACKET_OPEN:
+			case BRACKET_CLOSE:
+			case BRACE_OPEN:
+			case BRACE_CLOSE:
+			case SEMI:
+			case COMMA:
+			case DOT:
+			case NOT:
+			case TILDE:
+			case PLUS:
+			case MINUS:
+			case STAR:
+			case DIV:
+			case MOD:
+			case AND:
+			case OR:
+			case XOR:
+			case LESS:
+			case GREATER:
+			case QUESTION:
+			case COLON:
+			case ASSIGN:
+			case HASH:
+				return Character.toString(token);
+
+			case ARROW:
+				return "->";
+			case ELLIPSIS:
+				return "...";
+			case INCREASE:
+				return "++";
+			case DECREASE:
+				return "--";
+			case AND_AND:
+				return "&&";
+			case OR_OR:
+				return "||";
+			case LEFT_SHIFT:
+				return "<<";
+			case RIGHT_SHIFT:
+				return ">>";
+			case ADD_ASSIGN:
+				return "+=";
+			case SUB_ASSIGN:
+				return "-=";
+			case MUL_ASSIGN:
+				return "*=";
+			case DIV_ASSIGN:
+				return "/=";
+			case MOD_ASSIGN:
+				return "%=";
+			case AND_ASSIGN:
+				return "&=";
+			case XOR_ASSIGN:
+				return "^=";
+			case OR_ASSIGN:
+				return "|=";
+			case LSH_ASSIGN:
+				return "<<=";
+			case RSH_ASSIGN:
+				return ">>=";
+			case EQUAL:
+				return "==";
+			case NOT_EQUAL:
+				return "!=";
+			case LESS_EQUAL:
+				return "<=";
+			case GREATER_EQUAL:
+				return ">=";
+
+			case P_HASH:
+				return "#";
+			case P_PASTE:
+				return "##";
+
+			case EOF:
+				return "";
+
+			default:
+				return null;
+		}
+	}
+
 }

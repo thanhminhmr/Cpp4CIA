@@ -16,7 +16,9 @@
  */
 package org.anarres.cpp;
 
-class State {
+import mrmathami.annotations.Nonnull;
+
+final class State {
 
 	boolean parent;
 	boolean active;
@@ -28,15 +30,15 @@ class State {
 		this.sawElse = false;
 	}
 
-	State(State parent) {
+	State(@Nonnull State parent) {
 		this.parent = parent.isParentActive() && parent.isActive();
 		this.active = true;
 		this.sawElse = false;
 	}
 
 	/* Required for #elif */
-	void setParentActive(boolean b) {
-		this.parent = b;
+	void deactivateParent() {
+		this.parent = false;
 	}
 
 	boolean isParentActive() {
@@ -59,6 +61,7 @@ class State {
 		return sawElse;
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
 		return "parent=" + parent

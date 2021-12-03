@@ -57,9 +57,9 @@ final class NumberToken {
 	}
 
 	@Nonnull
-	public Value value() {
+	public NumberValue value() {
 		if ((fraction == null || fraction.isEmpty()) && exponent == null) {
-			return Value.of(Long.parseUnsignedLong(integer, base));
+			return NumberValue.of(Long.parseUnsignedLong(integer, base));
 		}
 		double value;
 		if (fraction != null && !fraction.isEmpty()) {
@@ -72,9 +72,9 @@ final class NumberToken {
 		}
 		if (exponent != null) {
 			final long exponentValue = Long.parseLong(exponent, 10);
-			return Value.of(value * Math.pow(binaryExponent ? 2 : 10, exponentValue));
+			return NumberValue.of(value * Math.pow(binaryExponent ? 2 : 10, exponentValue));
 		}
-		return Value.of(value);
+		return NumberValue.of(value);
 	}
 
 	private boolean appendFlags(StringBuilder buf, String suffix, int flag) {

@@ -17,6 +17,9 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
+import mrmathami.utils.EncodingDetector;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -37,23 +40,26 @@ public class InputLexerSource extends LexerSource {
 	 * Preprocessor directives are honoured within the file.
 	 */
 	public InputLexerSource(@Nonnull InputStream input) throws IOException {
-		this(Utils.createAutoEncodingReader(input));
+		this(EncodingDetector.createReader(input));
 	}
 
 	public InputLexerSource(@Nonnull Reader input) {
 		super(input, true);
 	}
 
+	@Nullable
 	@Override
 	public Path getPath() {
 		return null;
 	}
 
+	@Nonnull
 	@Override
 	public String getName() {
-		return "standard input";
+		return "<standard input>";
 	}
 
+	@Nonnull
 	@Override
 	public String toString() {
 		return "standard input";

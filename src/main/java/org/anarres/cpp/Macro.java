@@ -17,51 +17,53 @@
 package org.anarres.cpp;
 
 import mrmathami.annotations.Nonnull;
-import java.io.IOException;
+import mrmathami.annotations.Nullable;
+
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A macro object.
  * <p>
- * This encapsulates a name, an argument count, and a token stream
- * for replacement. The replacement token stream may contain the
- * extra tokens {@link Token#M_ARG} and {@link Token#M_STRING}.
+ * This encapsulates a name, an argument count, and a token stream for replacement. The replacement token stream may
+ * contain the extra tokens {@link Token#M_ARG} and {@link Token#M_STRING}.
  */
-public class Macro {
+public final class Macro extends ArrayList<Token> {
+	private static final long serialVersionUID = -1L;
 
-	private Source source;
-	private final String name;
+	// standard macro
+	@Nonnull static final Macro __LINE__ = new Macro(Source.INTERNAL, "__LINE__");
+	@Nonnull static final Macro __FILE__ = new Macro(Source.INTERNAL, "__FILE__");
+	@Nonnull static final Macro __COUNTER__ = new Macro(Source.INTERNAL, "__COUNTER__");
+
+	@Nonnull private final Source source;
+	@Nonnull private final String name;
+
 	/* It's an explicit decision to keep these around here. We don't
 	 * need to; the argument token type is M_ARG and the value
 	 * is the index. The strings themselves are only used in
 	 * stringification of the macro, for debugging. */
-	private List<String> args;
-	private boolean variadic;
-	private final List<Token> tokens;
+	@Nullable private final List<String> args;
 
-	public Macro(Source source, String name, List<String> args) {
+	private final boolean variadic;
+
+	public Macro(@Nonnull Source source, @Nonnull String name, @Nullable List<String> args, boolean variadic) {
+		if (name.equals("defined")) {
+			throw new IllegalArgumentException("Cannot redefine built-in macro 'defined'");
+		}
 		this.source = source;
 		this.name = name;
 		this.args = args;
-		this.variadic = false;
-		this.tokens = new ArrayList<>();
+		this.variadic = variadic;
 	}
 
-	public Macro(Source source, String name) {
-		this(source, name, null);
+	public Macro(@Nonnull Source source, @Nonnull String name, @Nullable List<String> args) {
+		this(source, name, args, false);
 	}
 
-	public Macro(String name) {
-		this(null, name);
-	}
-
-	/**
-	 * Sets the Source from which this macro was parsed.
-	 */
-	public void setSource(Source s) {
-		this.source = s;
+	public Macro(@Nonnull Source source, String name) {
+		this(source, name, null, false);
 	}
 
 	/**
@@ -70,6 +72,7 @@ public class Macro {
 	 * This method may return null if the macro was not parsed
 	 * from a regular file.
 	 */
+	@Nonnull
 	public Source getSource() {
 		return source;
 	}
@@ -77,15 +80,9 @@ public class Macro {
 	/**
 	 * Returns the name of this macro.
 	 */
+	@Nonnull
 	public String getName() {
 		return name;
-	}
-
-	/**
-	 * Sets the arguments to this macro.
-	 */
-	public void setArgs(List<String> args) {
-		this.args = List.copyOf(args);
 	}
 
 	/**
@@ -98,145 +95,32 @@ public class Macro {
 	/**
 	 * Returns the number of arguments to this macro.
 	 */
-	public int getArgs() {
-		return args.size();
-	}
-
-	/**
-	 * Sets the variadic flag on this Macro.
-	 */
-	public void setVariadic(boolean b) {
-		this.variadic = b;
+	public int getNumOfArgs() {
+		return args != null ? args.size() : -1;
 	}
 
 	/**
 	 * Returns true if this is a variadic function-like macro.
 	 */
 	public boolean isVariadic() {
-		return variadic;
-	}
-
-	/**
-	 * Adds a token to the expansion of this macro.
-	 */
-	public void addToken(Token tok) {
-		this.tokens.add(tok);
-	}
-
-	/**
-	 * Adds a "paste" operator to the expansion of this macro.
-	 * <p>
-	 * A paste operator causes the next token added to be pasted
-	 * to the previous token when the macro is expanded.
-	 * It is an error for a macro to end with a paste token.
-	 */
-	public void addPaste(Token tok) {
-		/*
-		 * Given: tok0 ## tok1
-		 * We generate: M_PASTE, tok0, tok1
-		 * This extends as per a stack language:
-		 * tok0 ## tok1 ## tok2 ->
-		 *   M_PASTE, tok0, M_PASTE, tok1, tok2
-		 */
-		this.tokens.add(tokens.size() - 1, tok);
-	}
-
-	List<Token> getTokens() {
-		return tokens;
-	}
-
-	/* Paste tokens are inserted before the first of the two pasted
-	 * tokens, so it's a kind of bytecode notation. This method
-	 * swaps them around again. We know that there will never be two
-	 * sequential paste tokens, so a boolean is sufficient. */
-	public String getText() {
-		StringBuilder buf = new StringBuilder();
-		boolean paste = false;
-		for (Token tok : tokens) {
-			if (tok.getType() == Token.M_PASTE) {
-				assert !paste : "Two sequential pastes.";
-				paste = true;
-				continue;
-			} else {
-				buf.append(tok.getText());
-			}
-			if (paste) {
-				buf.append(" ## ");
-				paste = false;
-			}
-			// buf.append(tokens.get(i));
-		}
-		return buf.toString();
+		return args != null && variadic;
 	}
 
 	@Override
 	public String toString() {
-		StringBuilder buf = new StringBuilder(name);
-		if (args != null) {
-			buf.append('(');
-			Iterator<String> it = args.iterator();
-			while (it.hasNext()) {
-				buf.append(it.next());
-				if (it.hasNext())
-					buf.append(", ");
-				else if (isVariadic())
-					buf.append("...");
-			}
-			buf.append(')');
-		}
-		if (!tokens.isEmpty()) {
-			buf.append(" => ").append(getText());
-		}
-		return buf.toString();
-	}
-
-	/**
-	 * A macro argument.
-	 * <p>
-	 * This encapsulates a raw and preprocessed token stream.
-	 */
-	static final class Argument extends ArrayList<Token> {
-		private static final long serialVersionUID = 2579190568088152392L;
-		private List<Token> expansion;
-
-		public Argument() {
-			this.expansion = null;
-		}
-
-		public void addToken(@Nonnull Token tok) {
-			add(tok);
-		}
-
-		void expand(@Nonnull Preprocessor p)
-				throws IOException,
-				LexerException {
-			/* Cache expansion. */
-			if (expansion == null) {
-				this.expansion = p.expand(this);
-				// System.out.println("Expanded arg " + this);
+		final StringBuilder builder = new StringBuilder(name);
+		if (args != null) builder.append('(').append(String.join(", ", args)).append(variadic ? "...)" : ")");
+		if (!isEmpty()) {
+			builder.append(" => ");
+			for (final Token token : this) {
+				if (token.getType() == Token.M_PASTE) {
+					builder.append(token.getValue(Tokens.class).stream()
+							.map(Token::getText).collect(Collectors.joining(" ## ")));
+				} else {
+					builder.append(token.getText());
+				}
 			}
 		}
-
-		@Nonnull
-		public Iterator<Token> expansion() {
-			return expansion.iterator();
-		}
-
-		@Override
-		public String toString() {
-			StringBuilder buf = new StringBuilder();
-			buf.append("Argument(");
-			// buf.append(super.toString());
-			buf.append("raw=[ ");
-			for (Token value : this) buf.append(value.getText());
-			buf.append(" ];expansion=[ ");
-			if (expansion == null)
-				buf.append("null");
-			else
-				for (Token token : expansion)
-					buf.append(token.getText());
-			buf.append(" ])");
-			return buf.toString();
-		}
+		return builder.toString();
 	}
 }

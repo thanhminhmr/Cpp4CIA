@@ -22,51 +22,11 @@ import org.anarres.cpp.PreprocessorListener.SourceChangeEvent;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Queue;
-import java.util.Set;
-import java.util.Stack;
-import java.util.TreeMap;
+import java.util.*;
 
-import static org.anarres.cpp.Token.CHARACTER;
-import static org.anarres.cpp.Token.CPP_COMMENT;
-import static org.anarres.cpp.Token.C_COMMENT;
-import static org.anarres.cpp.Token.ELLIPSIS;
-import static org.anarres.cpp.Token.EOF;
-import static org.anarres.cpp.Token.EQ;
-import static org.anarres.cpp.Token.GE;
-import static org.anarres.cpp.Token.HASH;
-import static org.anarres.cpp.Token.HEADER;
-import static org.anarres.cpp.Token.IDENTIFIER;
-import static org.anarres.cpp.Token.INVALID;
-import static org.anarres.cpp.Token.LAND;
-import static org.anarres.cpp.Token.LE;
-import static org.anarres.cpp.Token.LOR;
-import static org.anarres.cpp.Token.LSH;
-import static org.anarres.cpp.Token.M_ARG;
-import static org.anarres.cpp.Token.M_PASTE;
-import static org.anarres.cpp.Token.M_STRING;
-import static org.anarres.cpp.Token.NE;
-import static org.anarres.cpp.Token.NL;
-import static org.anarres.cpp.Token.NUMBER;
-import static org.anarres.cpp.Token.PASTE;
-import static org.anarres.cpp.Token.P_LINE;
-import static org.anarres.cpp.Token.RSH;
-import static org.anarres.cpp.Token.STRING;
-import static org.anarres.cpp.Token.WHITESPACE;
+import static org.anarres.cpp.Token.*;
 
 /**
  * A C Preprocessor.
@@ -102,108 +62,49 @@ import static org.anarres.cpp.Token.WHITESPACE;
  * This indicates that the following text should be treated as being
  * wrapped in an implicit extern "C" block.
  */
-public class Preprocessor implements Closeable {
-
-	private static final Source INTERNAL = new Source() {
-		@Nonnull
-		@Override
-		public Token token() throws LexerException {
-			throw new LexerException("Cannot read from internal source");
-		}
-
-		@Override
-		public Path getPath() {
-			return null;
-		}
-
-		@Override
-		public String getName() {
-			return "internal source";
-		}
-	};
-	// standard macro
-	private static final Macro __LINE__ = new Macro(INTERNAL, "__LINE__");
-	private static final Macro __FILE__ = new Macro(INTERNAL, "__FILE__");
-	private static final Macro __COUNTER__ = new Macro(INTERNAL, "__COUNTER__");
-	private static final Map<String, Macro> DEFAULT_MACRO = Map.ofEntries(
-			Map.entry("__LINE__", __LINE__),
-			Map.entry("__FILE__", __FILE__),
-			Map.entry("__COUNTER__", __COUNTER__),
+public final class Preprocessor implements Closeable {
+	@Nonnull private static final Map<String, Macro> DEFAULT_MACRO = Map.ofEntries(
+			Map.entry("__LINE__", Macro.__LINE__),
+			Map.entry("__FILE__", Macro.__FILE__),
+			Map.entry("__COUNTER__", Macro.__COUNTER__),
 			// gcc specific
-			Map.entry("__attribute__", new Macro(INTERNAL, "__attribute__", List.of("unused"))),
+			Map.entry("__attribute__", new Macro(Source.INTERNAL, "__attribute__", List.of(""), true)),
 			// msvc specific
-			Map.entry("__cdecl", new Macro(INTERNAL, "__cdecl")),
-			Map.entry("__clrcall", new Macro(INTERNAL, "__clrcall")),
-			Map.entry("__stdcall", new Macro(INTERNAL, "__stdcall")),
-			Map.entry("__fastcall", new Macro(INTERNAL, "__fastcall")),
-			Map.entry("__thiscall", new Macro(INTERNAL, "__thiscall")),
-			Map.entry("__vectorcall", new Macro(INTERNAL, "__vectorcall")),
-			Map.entry("__declspec", new Macro(INTERNAL, "__declspec", List.of("unused")))
+			Map.entry("__cdecl", new Macro(Source.INTERNAL, "__cdecl")),
+			Map.entry("__clrcall", new Macro(Source.INTERNAL, "__clrcall")),
+			Map.entry("__stdcall", new Macro(Source.INTERNAL, "__stdcall")),
+			Map.entry("__fastcall", new Macro(Source.INTERNAL, "__fastcall")),
+			Map.entry("__thiscall", new Macro(Source.INTERNAL, "__thiscall")),
+			Map.entry("__vectorcall", new Macro(Source.INTERNAL, "__vectorcall")),
+			Map.entry("__declspec", new Macro(Source.INTERNAL, "__declspec", List.of(""), true))
 	);
 
 	private final Queue<Source> inputs = new LinkedList<>();
+	private final Map<String, Macro> globalMacros = new HashMap<>(DEFAULT_MACRO);
+	private final Map<String, Macro> localMacros = new HashMap<>();
 
-	/* The fundamental engine. */
-	private final Map<String, Macro> macros = new HashMap<>(DEFAULT_MACRO);
 	private final Stack<State> states = new Stack<>();
 	private Source source = null;
 
 	/* Miscellaneous support. */
 	private int counter = 0;
-	private final Set<Path> pragmaOnceFiles = new HashSet<>();
-	private final Set<Path> includes = new HashSet<>();
-	private final Set<Path> notExists = new HashSet<>();
+	@Nonnull private final Set<Path> pragmaOnceFiles = new HashSet<>();
+	@Nonnull private final Set<Path> existFiles = new HashSet<>();
+	@Nonnull private final Set<Path> notExists = new HashSet<>();
 
 	/* Support junk to make it work like cpp */
-	private List<Path> quoteIncludePath = new ArrayList<>();    /* -iquote */
-	private List<Path> sysIncludePath = new ArrayList<>();        /* -I */
-	private List<Path> frameworksPath = new ArrayList<>();
+	@Nonnull private List<Path> quoteIncludePath = List.of(); /* -iquote */
+	@Nonnull private List<Path> systemIncludePaths = List.of(); /* -I */
 
 	private final Set<Feature> features = EnumSet.noneOf(Feature.class);
 	private final Set<Warning> warnings = EnumSet.noneOf(Warning.class);
-	private FileSystem filesystem = FileSystems.getDefault();
-	private PreprocessorListener listener = null;
+	@Nonnull private final PreprocessorListener listener;
 
-	public Preprocessor() {
+	public Preprocessor(@Nonnull PreprocessorListener listener) {
+		this.listener = listener;
 		states.push(new State());
 	}
 
-	public Preprocessor(@Nonnull Source initial) {
-		this();
-		addInput(initial);
-	}
-
-	/**
-	 * Sets the FileSystem used by this Preprocessor.
-	 */
-	public void setFileSystem(@Nonnull FileSystem filesystem) {
-		this.filesystem = filesystem;
-	}
-
-	/**
-	 * Returns the FileSystem used by this Preprocessor.
-	 */
-	@Nonnull
-	public FileSystem getFileSystem() {
-		return filesystem;
-	}
-
-	/**
-	 * Sets the PreprocessorListener which handles events for
-	 * this Preprocessor.
-	 * <p>
-	 * The listener is notified of warnings, errors and source
-	 * changes, amongst other things.
-	 */
-	public void setListener(@Nonnull PreprocessorListener listener) {
-		this.listener = listener;
-		Source s = source;
-		while (s != null) {
-			// s.setListener(listener);
-			s.init(this);
-			s = s.getParent();
-		}
-	}
 
 	/**
 	 * Returns the PreprocessorListener which handles events for
@@ -227,30 +128,23 @@ public class Preprocessor implements Closeable {
 	/**
 	 * Adds a feature to the feature-set of this Preprocessor.
 	 */
-	public void addFeature(@Nonnull Feature f) {
-		features.add(f);
+	public void addFeature(@Nonnull Feature feature) {
+		features.add(feature);
 	}
 
 	/**
 	 * Adds features to the feature-set of this Preprocessor.
 	 */
-	public void addFeatures(@Nonnull Collection<Feature> f) {
-		features.addAll(f);
-	}
-
-	/**
-	 * Adds features to the feature-set of this Preprocessor.
-	 */
-	public void addFeatures(Feature... f) {
-		addFeatures(Arrays.asList(f));
+	public void addFeatures(@Nonnull Collection<Feature> features) {
+		this.features.addAll(features);
 	}
 
 	/**
 	 * Returns true if the given feature is in
 	 * the feature-set of this Preprocessor.
 	 */
-	public boolean getFeature(@Nonnull Feature f) {
-		return features.contains(f);
+	public boolean getFeature(@Nonnull Feature feature) {
+		return features.contains(feature);
 	}
 
 	/**
@@ -266,23 +160,23 @@ public class Preprocessor implements Closeable {
 	/**
 	 * Adds a warning to the warning-set of this Preprocessor.
 	 */
-	public void addWarning(@Nonnull Warning w) {
-		warnings.add(w);
+	public void addWarning(@Nonnull Warning warning) {
+		warnings.add(warning);
 	}
 
 	/**
 	 * Adds warnings to the warning-set of this Preprocessor.
 	 */
-	public void addWarnings(@Nonnull Collection<Warning> w) {
-		warnings.addAll(w);
+	public void addWarnings(@Nonnull Collection<Warning> warnings) {
+		this.warnings.addAll(warnings);
 	}
 
 	/**
 	 * Returns true if the given warning is in
 	 * the warning-set of this Preprocessor.
 	 */
-	public boolean getWarning(@Nonnull Warning w) {
-		return warnings.contains(w);
+	public boolean getWarning(@Nonnull Warning warning) {
+		return warnings.contains(warning);
 	}
 
 	/**
@@ -291,6 +185,7 @@ public class Preprocessor implements Closeable {
 	 * Inputs are processed in the order in which they are added.
 	 */
 	public void addInput(@Nonnull Source source) {
+		// TODO: change this
 		source.init(this);
 		inputs.add(source);
 	}
@@ -298,114 +193,53 @@ public class Preprocessor implements Closeable {
 	/**
 	 * Handles an error.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * error. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the error. Otherwise, an exception is thrown.
 	 */
-	protected void error(int line, int column, @Nonnull String msg) throws LexerException {
-		if (listener != null)
-			listener.handleError(source, line, column, msg);
-		else
-			throw new LexerException("Error at " + line + ":" + column + ": " + msg);
+	private void error(int line, int column, @Nonnull String msg) throws LexerException {
+		listener.handleError(source, line, column, msg);
 	}
 
 	/**
 	 * Handles an error.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * error. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the error. Otherwise, an exception is thrown.
 	 *
 	 * @see #error(int, int, String)
 	 */
-	protected void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	private void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		error(tok.getLine(), tok.getColumn(), msg);
 	}
 
 	/**
 	 * Handles a warning.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * warning. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the warning. Otherwise, an exception is thrown.
 	 */
-	protected void warning(int line, int column, @Nonnull String msg) throws LexerException {
-		if (warnings.contains(Warning.ERROR))
+	private void warning(int line, int column, @Nonnull String msg) throws LexerException {
+		if (warnings.contains(Warning.ERROR)) {
 			error(line, column, msg);
-		else if (listener != null)
+		} else {
 			listener.handleWarning(source, line, column, msg);
-		else
-			throw new LexerException("Warning at " + line + ":" + column + ": " + msg);
+		}
 	}
 
 	/**
 	 * Handles a warning.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * warning. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the warning. Otherwise, an exception is thrown.
 	 *
 	 * @see #warning(int, int, String)
 	 */
-	protected void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	private void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		warning(tok.getLine(), tok.getColumn(), msg);
 	}
 
-	/**
-	 * Adds a Macro to this Preprocessor.
-	 * <p>
-	 * The given {@link Macro} object encapsulates both the name
-	 * and the expansion.
-	 *
-	 * @throws LexerException if the definition fails or is otherwise illegal.
-	 */
-	public void addMacro(@Nonnull Macro m) throws LexerException {
-		// System.out.println("Macro " + m);
-		String name = m.getName();
-		/* Already handled as a source error in macro(). */
-		if ("defined".equals(name))
-			throw new LexerException("Cannot redefine name 'defined'");
-		macros.put(m.getName(), m);
-	}
 
 	/**
-	 * Defines the given name as a macro.
-	 * <p>
-	 * The String value is lexed into a token stream, which is
-	 * used as the macro expansion.
-	 *
-	 * @throws LexerException if the definition fails or is otherwise illegal.
+	 * Sets the user include paths used by this Preprocessor.
 	 */
-	public void addMacro(@Nonnull String name, @Nonnull String value) throws LexerException {
-		try {
-			Macro m = new Macro(name);
-			StringLexerSource s = new StringLexerSource(value);
-			for (; ; ) {
-				Token tok = s.token();
-				if (tok.getType() == EOF)
-					break;
-				m.addToken(tok);
-			}
-			addMacro(m);
-		} catch (IOException e) {
-			throw new LexerException(e);
-		}
-	}
-
-	/**
-	 * Defines the given name as a macro, with the value <code>1</code>.
-	 * <p>
-	 * This is a convnience method, and is equivalent to
-	 * <code>addMacro(name, "1")</code>.
-	 *
-	 * @throws LexerException if the definition fails or is otherwise illegal.
-	 */
-	public void addMacro(@Nonnull String name) throws LexerException {
-		addMacro(name, "1");
-	}
-
-	/**
-	 * Sets the user include path used by this Preprocessor.
-	 */
-	/* Note for future: Create an IncludeHandler? */
-	public void setQuoteIncludePath(@Nonnull List<Path> path) {
-		this.quoteIncludePath = new ArrayList<>(path);
+	public void setQuoteIncludePaths(@Nonnull List<Path> paths) {
+		this.quoteIncludePath = List.copyOf(paths);
 	}
 
 	/**
@@ -414,16 +248,15 @@ public class Preprocessor implements Closeable {
 	 * This list may be freely modified by user code.
 	 */
 	@Nonnull
-	public List<Path> getQuoteIncludePath() {
-		return quoteIncludePath;
+	public List<Path> getQuoteIncludePaths() {
+		return Collections.unmodifiableList(quoteIncludePath);
 	}
 
 	/**
-	 * Sets the system include path used by this Preprocessor.
+	 * Sets the system include paths used by this Preprocessor.
 	 */
-	/* Note for future: Create an IncludeHandler? */
-	public void setSystemIncludePath(@Nonnull List<Path> path) {
-		this.sysIncludePath = new ArrayList<>(path);
+	public void setSystemIncludePath(@Nonnull List<Path> paths) {
+		this.systemIncludePaths = List.copyOf(paths);
 	}
 
 	/**
@@ -432,27 +265,18 @@ public class Preprocessor implements Closeable {
 	 * This list may be freely modified by user code.
 	 */
 	@Nonnull
-	public List<Path> getSystemIncludePath() {
-		return sysIncludePath;
+	public List<Path> getSystemIncludePaths() {
+		return Collections.unmodifiableList(systemIncludePaths);
 	}
 
 	/**
-	 * Sets the Objective-C frameworks path used by this Preprocessor.
-	 */
-	/* Note for future: Create an IncludeHandler? */
-	public void setFrameworksPath(@Nonnull List<Path> path) {
-		this.frameworksPath = new ArrayList<>(path);
-	}
-
-	/**
-	 * Returns the Objective-C frameworks path used by this
-	 * Preprocessor.
+	 * Adds a Macro to this Preprocessor.
 	 * <p>
-	 * This list may be freely modified by user code.
+	 * The given {@link Macro} object encapsulates both the name
+	 * and the expansion.
 	 */
-	@Nonnull
-	public List<Path> getFrameworksPath() {
-		return frameworksPath;
+	public void addGlobalMacro(@Nonnull Macro macro) {
+		globalMacros.put(macro.getName(), macro);
 	}
 
 	/**
@@ -462,8 +286,8 @@ public class Preprocessor implements Closeable {
 	 * @return The {@link Map} of macros currently defined.
 	 */
 	@Nonnull
-	public Map<String, Macro> getMacros() {
-		return macros;
+	public Map<String, Macro> getGlobalMacros() {
+		return Collections.unmodifiableMap(globalMacros);
 	}
 
 	/**
@@ -476,156 +300,117 @@ public class Preprocessor implements Closeable {
 	 */
 	@Nullable
 	public Macro getMacro(@Nonnull String name) {
-		return macros.get(name);
+		return globalMacros.get(name);
 	}
 
-	/**
-	 * Returns the list of {@link Path files} which have been
-	 * included by this Preprocessor.
-	 * <p>
-	 * This does not include any {@link Source} provided to {@link #addInput(Source)}.
-	 */
-	@Nonnull
-	public Set<Path> getIncludes() {
-		return includes;
+
+	/* States (for #if #elif #else #endif) */
+	private void statePush() {
+		final State state = states.peek();
+		states.push(new State(state));
 	}
 
-	/* States */
-	private void push_state() {
-		State top = states.peek();
-		states.push(new State(top));
-	}
-
-	private void pop_state() throws LexerException {
-		State s = states.pop();
+	private void statePop() throws LexerException {
+		final State state = states.pop();
 		if (states.isEmpty()) {
 			error(0, 0, "#endif without #if");
-			states.push(s);
+			states.push(state);
 		}
 	}
 
-	private boolean isActive() {
-		State state = states.peek();
+	private boolean stateIsActive() {
+		final State state = states.peek();
 		return state.isParentActive() && state.isActive();
 	}
 
 
 	/* Sources */
 
-	/**
-	 * Returns the top Source on the input stack.
-	 *
-	 * @return the top Source on the input stack.
-	 * @see Source
-	 * @see #push_source(Source, boolean)
-	 * @see #pop_source()
-	 */
-	// @CheckForNull
-	protected Source getSource() {
-		return source;
-	}
-
-	/**
-	 * Pushes a Source onto the input stack.
-	 *
-	 * @param source  the new Source to push onto the top of the input stack.
-	 * @param autoPop if true, the Source is automatically removed from the input stack at EOF.
-	 * @see #getSource()
-	 * @see #pop_source()
-	 */
-	protected void push_source(@Nonnull Source source, boolean autoPop) {
-		source.init(this);
-		source.setParent(this.source, autoPop);
-		// source.setListener(listener);
-		if (listener != null && this.source != null) {
-			listener.handleSourceChange(this.source, SourceChangeEvent.SUSPEND);
-		}
-		this.source = source;
-		if (listener != null) {
-			listener.handleSourceChange(this.source, SourceChangeEvent.PUSH);
-		}
-	}
-
-	/**
-	 * Pops a Source from the input stack.
-	 *
-	 * @throws IOException if an I/O error occurs.
-	 * @see #getSource()
-	 * @see #push_source(Source, boolean)
-	 */
-	@Nullable
-	protected Token pop_source() throws IOException {
-		if (listener != null) {
-			listener.handleSourceChange(this.source, SourceChangeEvent.POP);
-		}
-		Source oldSource = this.source;
-		this.source = oldSource.getParent();
-		/* Always a noop unless called externally. */
-		oldSource.close();
-		if (source == null) return next_source();
-		if (listener != null) {
-			listener.handleSourceChange(source, SourceChangeEvent.RESUME);
-		}
-		if (getFeature(Feature.LINEMARKERS) && oldSource.isNumbered()) {
-			/* We actually want 'did the nested source
-			 * contain a newline token', which isNumbered()
-			 * approximates. This is not perfect, but works. */
-			return line_token(source.getLine(), source.getName(), " 2");
-		}
-		return null;
+	/* XXX Make this include the NL, and make all cpp directives eat
+	 * their own NL. */
+	@Nonnull
+	private Token createLineToken(int line, @Nonnull String name, @Nonnull String extra) {
+		return new Token(P_LINE, line, 0,
+				Token.escape(new StringBuilder("#line ").append(line).append(" \""), name)
+						.append('"').append(extra).append('\n').toString());
 	}
 
 	/**
 	 * Get the next source from the input queue
 	 */
 	@Nonnull
-	private Token next_source() {
-		if (inputs.isEmpty()) return Token.eof;
-		final Source source = inputs.remove();
-		final Path path = source.getPath();
-		if (path != null) includes.add(path);
-		push_source(source, true);
-		return line_token(source.getLine(), source.getName(), " 1");
+	private Token nextInputSource() {
+		final Source source = inputs.poll();
+		if (source == null) return Token.eof;
+		// TODO: reset local macro
+		sourcePush(source, true);
+		return createLineToken(source.getLine(), source.getName(), " 1");
 	}
 
-	/* XXX Make this include the NL, and make all cpp directives eat
-	 * their own NL. */
-	@Nonnull
-	private Token line_token(int line, @Nullable String name, @Nonnull String extra) {
-		StringBuilder buf = new StringBuilder();
-		buf.append("#line ").append(line).append(" \"");
-		/* XXX This call to escape(name) is correct but ugly. */
-		if (name == null) {
-			buf.append("<no file>");
-		} else {
-			MacroTokenSource.escape(buf, name);
+
+	/**
+	 * Pushes a Source onto the input stack.
+	 *
+	 * @param source  the new Source to push onto the top of the input stack.
+	 * @param autoPop if true, the Source is automatically removed from the input stack at EOF.
+	 * @see #sourcePop()
+	 */
+	private void sourcePush(@Nonnull Source source, boolean autoPop) {
+		source.init(this);
+		source.setParent(this.source, autoPop);
+		if (this.source != null) listener.handleSourceChange(this.source, SourceChangeEvent.SUSPEND);
+		this.source = source;
+		listener.handleSourceChange(this.source, SourceChangeEvent.PUSH);
+	}
+
+	/**
+	 * Pops a Source from the input stack.
+	 *
+	 * @throws IOException if an I/O error occurs.
+	 * @see #sourcePush(Source, boolean)
+	 */
+	@Nullable
+	private Token sourcePop() throws IOException {
+		listener.handleSourceChange(this.source, SourceChangeEvent.POP);
+		Source oldSource = this.source;
+		this.source = oldSource.getParent();
+		/* Always a noop unless called externally. */
+		oldSource.close();
+		if (source == null) return nextInputSource();
+		listener.handleSourceChange(source, SourceChangeEvent.RESUME);
+		if (getFeature(Feature.LINEMARKERS) && oldSource.isNumbered()) {
+			/* We actually want 'did the nested source
+			 * contain a newline token', which isNumbered()
+			 * approximates. This is not perfect, but works. */
+			return createLineToken(source.getLine(), source.getName(), " 2");
 		}
-		buf.append("\"").append(extra).append("\n");
-		return new Token(P_LINE, line, 0, buf.toString(), null);
+		return null;
 	}
 
 	/* Source tokens */
-	private Token source_pushback_token;
+	@Nonnull private final Stack<Token> sourcePushbackTokens = new Stack<>();
 
-	private Token nextSourceTokenCheckPushback() throws IOException, LexerException {
-		if (source_pushback_token != null) {
-			final Token token = source_pushback_token;
-			this.source_pushback_token = null;
-			return token;
+	@Nonnull
+	private Token sourceGetTokenCheckNextAndPushback() throws IOException, LexerException {
+		if (sourcePushbackTokens.isEmpty()) {
+			if (source == null) {
+				final Token token = nextInputSource();
+				if (token.getType() != P_LINE || getFeature(Feature.LINEMARKERS)) {
+					return token;
+				}
+			}
+			return source != null ? source.token() : Token.eof;
+		} else {
+			return sourcePushbackTokens.pop();
 		}
-		if (source == null) {
-			final Token token = next_source();
-			if (token.getType() != P_LINE || getFeature(Feature.LINEMARKERS)) return token;
-		}
-		return source != null ? source.token() : Token.eof;
 	}
 
 	@Nonnull
-	private Token source_token() throws IOException, LexerException {
+	private Token sourceGetToken() throws IOException, LexerException {
 		while (true) {
-			final Token token = nextSourceTokenCheckPushback();
+			final Token token = sourceGetTokenCheckNextAndPushback();
 			if (token.getType() == EOF && source != null && source.isAutoPop()) {
-				final Token lineMark = pop_source();
+				final Token lineMark = sourcePop();
 				if (lineMark != null) return lineMark;
 				continue;
 			}
@@ -633,16 +418,17 @@ public class Preprocessor implements Closeable {
 		}
 	}
 
-	private void source_untoken(Token tok) {
-		if (this.source_pushback_token != null) {
-			throw new IllegalStateException("Cannot return two tokens");
-		}
-		this.source_pushback_token = tok;
+	private void sourceUndoGetToken(@Nonnull Token token) {
+		sourcePushbackTokens.push(token);
 	}
 
-	private boolean isWhite(Token tok) {
-		int type = tok.getType();
-		return (type == WHITESPACE) || (type == C_COMMENT) || (type == CPP_COMMENT);
+	@Nonnull
+	private Token sourceGetTokenSkipWS() throws IOException, LexerException {
+		while (true) {
+			final Token token = sourceGetToken();
+			final int type = token.getType();
+			if (type != WHITESPACE && type != C_COMMENT && type != CPP_COMMENT) return token;
+		}
 	}
 
 	/**
@@ -653,220 +439,117 @@ public class Preprocessor implements Closeable {
 	 * <p>
 	 * This method can, as of recent patches, return a P_LINE token.
 	 */
-	private Token source_skipLine(boolean white) throws IOException, LexerException {
+	@Nonnull
+	private Token sourceSkipLine(boolean whitespaceExpected) throws IOException, LexerException {
 		while (true) {
-			final Token token = nextSourceTokenCheckPushback();
+			final Token token = sourceGetTokenCheckNextAndPushback();
 			final int type = token.getType();
 			if (type == EOF) {
 				warning(token, "No newline before end of file");
-				if (source.isAutoPop()) {
-					final Token lineMark = pop_source();
-					if (lineMark != null) return lineMark;
-				}
+				// insert a virtual new line here
+				return new Token(NEW_LINE, token.getLine(), token.getColumn(), "\n");
+			} else if (type == NEW_LINE) {
 				return token;
-			} else if (type == NL) {
-				return token;
-			} else if (white && type != C_COMMENT && type != CPP_COMMENT && type != WHITESPACE) {
+			} else if (whitespaceExpected && type != C_COMMENT && type != CPP_COMMENT && type != WHITESPACE) {
 				warning(token, "Unexpected nonwhite token");
 			}
 		}
 	}
 
-	/* processes and expands a macro. */
-	private boolean macro(Macro m, Token orig) throws IOException, LexerException {
-		Token tok;
-		List<Macro.Argument> args;
 
-		// System.out.println("pp: expanding " + m);
-		if (m.isFunctionLike()) {
-			OPEN:
-			for (; ; ) {
-				tok = source_token();
-				// System.out.println("pp: open: token is " + tok);
-				switch (tok.getType()) {
-					case WHITESPACE:    /* XXX Really? */
-
-					case C_COMMENT:
-					case CPP_COMMENT:
-					case NL:
-						break;    /* continue */
-
-					case '(':
-						break OPEN;
-					default:
-						source_untoken(tok);
-						return false;
-				}
-			}
-
-			// tok = expanded_token_nonwhite();
-			tok = source_token_nonwhite();
-
-			/* We either have, or we should have args.
-			 * This deals elegantly with the case that we have
-			 * one empty arg. */
-			if (tok.getType() != ')' || m.getArgs() > 0) {
-				args = new ArrayList<Macro.Argument>();
-
-				Macro.Argument arg = new Macro.Argument();
-				int depth = 0;
-				boolean space = false;
-
-				ARGS:
-				for (; ; ) {
-					// System.out.println("pp: arg: token is " + tok);
-					switch (tok.getType()) {
-						case EOF:
-							error(tok, "EOF in macro args");
-							return false;
-
-						case ',':
-							if (depth == 0) {
-								if (m.isVariadic()
-										&& /* We are building the last arg. */ args.size() == m.getArgs() - 1) {
-									/* Just add the comma. */
-									arg.addToken(tok);
-								} else {
-									args.add(arg);
-									arg = new Macro.Argument();
-								}
-							} else {
-								arg.addToken(tok);
-							}
-							space = false;
-							break;
-						case ')':
-							if (depth == 0) {
-								args.add(arg);
-								break ARGS;
-							} else {
-								depth--;
-								arg.addToken(tok);
-							}
-							space = false;
-							break;
-						case '(':
-							depth++;
-							arg.addToken(tok);
-							space = false;
-							break;
-
-						case WHITESPACE:
-						case C_COMMENT:
-						case CPP_COMMENT:
-						case NL:
-							/* Avoid duplicating spaces. */
-							space = true;
-							break;
-
-						default:
-							/* Do not put space on the beginning of
-							 * an argument token. */
-							if (space && !arg.isEmpty())
-								arg.addToken(Token.whitespace);
-							arg.addToken(tok);
-							space = false;
-							break;
-
-					}
-					// tok = expanded_token();
-					tok = source_token();
-				}
-				/* space may still be true here, thus trailing space
-				 * is stripped from arguments. */
-
-				if (args.size() != m.getArgs()) {
-					if (m.isVariadic()) {
-						if (args.size() == m.getArgs() - 1) {
-							args.add(new Macro.Argument());
-						} else {
-							error(tok,
-									"variadic macro " + m.getName()
-											+ " has at least " + (m.getArgs() - 1) + " parameters "
-											+ "but given " + args.size() + " args");
-							return false;
-						}
-					} else {
-						error(tok,
-								"macro " + m.getName()
-										+ " has " + m.getArgs() + " parameters "
-										+ "but given " + args.size() + " args");
-						/* We could replay the arg tokens, but I
-						 * note that GNU cpp does exactly what we do,
-						 * i.e. output the macro name and chew the args.
-						 */
-						return false;
-					}
-				}
-
-				for (Macro.Argument a : args) {
-					a.expand(this);
-				}
-
-				// System.out.println("Macro " + m + " args " + args);
+	private boolean lookAheadForOpenBraceAndConsumeSkipWS() throws IOException, LexerException {
+		// looking for the open brace token
+		// keep all lookAhead WS/comment tokens
+		// if found open brace, consume it
+		// if not, un-get all look-ahead tokens
+		final Stack<Token> lookAhead = new Stack<>();
+		while (true) {
+			final Token token = sourceGetToken();
+			final int type = token.getType();
+			if (type == '(') {
+				break;
+			} else if (type == WHITESPACE || type == C_COMMENT || type == CPP_COMMENT || type == NEW_LINE) {
+				lookAhead.push(token);
 			} else {
-				/* nargs == 0 and we (correctly) got () */
-				args = null;
-			}
-
-		} else {
-			/* Macro without args. */
-			args = null;
-		}
-
-		if (m == __LINE__) {
-			push_source(new FixedTokenSource(
-					new Token(NUMBER,
-							orig.getLine(), orig.getColumn(),
-							Integer.toString(orig.getLine()),
-							new NumberToken(10, Integer.toString(orig.getLine())))), true);
-		} else if (m == __FILE__) {
-			StringBuilder buf = new StringBuilder("\"");
-			String name = getSource().getName();
-			if (name == null)
-				name = "<no file>";
-			for (int i = 0; i < name.length(); i++) {
-				char c = name.charAt(i);
-				switch (c) {
-					case '\\':
-						buf.append("\\\\");
-						break;
-					case '"':
-						buf.append("\\\"");
-						break;
-					default:
-						buf.append(c);
-						break;
+				sourceUndoGetToken(token);
+				while (!lookAhead.isEmpty()) {
+					sourceUndoGetToken(lookAhead.pop());
 				}
+				return false;
 			}
-			buf.append("\"");
-			String text = buf.toString();
-			push_source(new FixedTokenSource(
-					new Token(STRING,
-							orig.getLine(), orig.getColumn(),
-							text, text)), true);
-		} else if (m == __COUNTER__) {
-			/* This could equivalently have been done by adding
-			 * a special Macro subclass which overrides getTokens(). */
-			int value = this.counter++;
-			push_source(new FixedTokenSource(
-					new Token(NUMBER,
-							orig.getLine(), orig.getColumn(),
-							Integer.toString(value),
-							new NumberToken(10, Integer.toString(value)))), true);
-		} else {
-			push_source(new MacroTokenSource(m, args), true);
 		}
-
 		return true;
 	}
 
-	private Token source_token_nonwhite() throws IOException, LexerException {
-		while (true) {
-			final Token token = source_token();
-			final int type = token.getType();
-			if (type != WHITESPACE && type != C_COMMENT && type != CPP_COMMENT) return token;
+	/* parse and expand a macro in use */
+	boolean parseMacroInUse(@Nonnull Macro macro, @Nonnull Token macroName)
+			throws IOException, LexerException {
+		if (macro == Macro.__LINE__) {
+			final String string = Integer.toString(macroName.getLine());
+			sourcePush(new FixedTokenSource(
+					new Token(NUMBER, macroName.getLine(), macroName.getColumn(),
+							string, new NumberToken(10, string))), true);
+		} else if (macro == Macro.__FILE__) {
+			final String sourceName = source.getName();
+			final String string = Token.escape(new StringBuilder("\""), sourceName).append('"').toString();
+			sourcePush(new FixedTokenSource(
+					new Token(STRING, macroName.getLine(), macroName.getColumn(),
+							string, sourceName)), true);
+		} else if (macro == Macro.__COUNTER__) {
+			final int value = this.counter++;
+			final String string = Integer.toString(value);
+			sourcePush(new FixedTokenSource(
+					new Token(NUMBER, macroName.getLine(), macroName.getColumn(),
+							string, new NumberToken(10, string))), true);
+		} else if (macro.isFunctionLike()) {
+			if (!lookAheadForOpenBraceAndConsumeSkipWS()) return false;
+			final boolean isMacroVariadic = macro.isVariadic(); // short-hand
+			final int macroNumOfArgs = macro.getNumOfArgs(); // short-hand
+
+			final List<Tokens> arguments = new ArrayList<>(macroNumOfArgs);
+			int depth = 0;
+			boolean spaced = false;
+			Tokens argument = null;
+			while (true) {
+				// parse arguments...
+				final int currentSize = arguments.size();
+				final Token token = sourceGetTokenSkipWS();
+				final int type = token.getType();
+				if (type == EOF) {
+					error(token, "EOF in macro args");
+					return false;
+				} else if (type == WHITESPACE || type == C_COMMENT || type == CPP_COMMENT || type == NEW_LINE) {
+					spaced = true;
+				} else if (type == ',' && depth == 0 && (!isMacroVariadic || currentSize < macroNumOfArgs)) {
+					arguments.add(argument != null ? argument : Tokens.EMPTY);
+					argument = null;
+					spaced = false;
+				} else if (type == ')' && depth == 0) {
+					// check if argument are valid
+					if (argument != null) arguments.add(argument);
+					// check and add empty VA_ARGS if needed
+					if (isMacroVariadic && currentSize == macroNumOfArgs - 1) arguments.add(Tokens.EMPTY);
+					// check argument size
+					if (currentSize == macroNumOfArgs) {
+						sourcePush(new MacroTokenSource(this, macro, arguments), true);
+						return true;
+					}
+					// failed
+					error(macroName, "Macro \"" + macro.getName() + "\" passed " + currentSize
+							+ " arguments(s) but needs " + (isMacroVariadic ? macroNumOfArgs - 1 : macroNumOfArgs)
+							+ (isMacroVariadic ? " or more arguments" : "arguments"));
+					return false;
+				} else {
+					depth += type == '(' ? 1 : type == ')' ? -1 : 0;
+					argument = argument != null ? argument : new Tokens();
+					if (spaced && argument.isEmpty()) argument.add(Token.whitespace);
+					argument.add(token);
+				}
+			}
+		} else {
+			sourcePush(new MacroTokenSource(this, macro), true);
 		}
+		return true;
 	}
 
 	/**
@@ -874,11 +557,11 @@ public class Preprocessor implements Closeable {
 	 */
 	/* I'd rather this were done lazily, but doing so breaks spec. */
 	@Nonnull
-	List<Token> expand(@Nonnull List<Token> arg) throws IOException, LexerException {
-		List<Token> expansion = new ArrayList<>();
+	Tokens macroExpandArguments(@Nonnull Tokens arg) throws IOException, LexerException {
+		Tokens expansion = new Tokens();
 		boolean space = false;
 
-		push_source(new FixedTokenSource(arg), false);
+		sourcePush(new FixedTokenSource(arg), false);
 
 		while (true) {
 			final Token tok = expanded_token();
@@ -895,240 +578,300 @@ public class Preprocessor implements Closeable {
 		}
 
 		// Always returns null.
-		pop_source();
+		sourcePop();
 
 		return expansion;
 	}
 
-	/* processes a #define directive */
-	private Token parseDefineDirective() throws IOException, LexerException {
-		final Token token = source_token_nonwhite();
-		if (token.getType() != IDENTIFIER) {
-			error(token, "Expected identifier instead of " + token);
-			return source_skipLine(false);
+	/**
+	 * Return null if parse argument names success.
+	 * Return a token when parse argument when wrong.
+	 */
+	@Nullable
+	private Token parseMacroArgumentNames(@Nonnull List<String> argumentNames) throws IOException, LexerException {
+		{
+			final Token openToken = sourceGetToken();
+			if (openToken.getType() != '(') {
+				// not an function-like macro
+				sourceUndoGetToken(openToken);
+				return null;
+			}
+		}
+		{
+			final Token closeToken = sourceGetTokenSkipWS();
+			if (closeToken.getType() == ')') {
+				// function-like macro without parameters
+				argumentNames.add(null);
+				return null;
+			} else {
+				sourceUndoGetToken(closeToken);
+			}
 		}
 
-		/* if predefined */
-		final String name = token.getText();
-		if ("defined".equals(name)) {
-			error(token, "Cannot redefine name 'defined'");
-			return source_skipLine(false);
-		}
-
-		final Macro macro = new Macro(getSource(), name);
-		final List<String> args = new ArrayList<>();
-
-		Token openToken = source_token();
-		if (openToken.getType() == '(') {
-			Token nextToken = source_token_nonwhite();
-			if (nextToken.getType() != ')') {
-				ARGS:
-				for (; ; ) {
-					switch (nextToken.getType()) {
-						case IDENTIFIER:
-							args.add(nextToken.getText());
-							break;
-						case ELLIPSIS:
-							// Unnamed Variadic macro
-							args.add("__VA_ARGS__");
-							// We just named the ellipsis, but we unget the token
-							// to allow the ELLIPSIS handling below to process it.
-							source_untoken(nextToken);
-							break;
-						case NL:
-						case EOF:
-							error(nextToken,
-									"Unterminated macro parameter list");
-							return nextToken;
-						default:
-							error(nextToken,
-									"error in macro parameters: "
-											+ nextToken.getText());
-							return source_skipLine(false);
-					}
-					nextToken = source_token_nonwhite();
-					switch (nextToken.getType()) {
-						case ',':
-							break;
-						case ELLIPSIS:
-							nextToken = source_token_nonwhite();
-							if (nextToken.getType() != ')')
-								error(nextToken,
-										"ellipsis must be on last argument");
-							macro.setVariadic(true);
-							break ARGS;
-						case ')':
-							break ARGS;
-
-						case NL:
-						case EOF:
-							/* Do not skip line. */
-							error(nextToken,
-									"Unterminated macro parameters");
-							return nextToken;
-						default:
-							error(nextToken,
-									"Bad token in macro parameters: "
-											+ nextToken.getText());
-							return source_skipLine(false);
-					}
-					nextToken = source_token_nonwhite();
+		while (true) {
+			{
+				final Token identifierToken = sourceGetTokenSkipWS();
+				switch (identifierToken.getType()) {
+					case IDENTIFIER:
+						argumentNames.add(identifierToken.getText());
+						break;
+					case ELLIPSIS:
+						// Unnamed Variadic macro
+						argumentNames.add("__VA_ARGS__");
+						// We just named the ellipsis, but we unget the token
+						// to allow the ELLIPSIS handling below to process it.
+						sourceUndoGetToken(identifierToken);
+						break;
+					case NEW_LINE:
+					case EOF:
+						error(identifierToken, "Unterminated macro parameter list");
+						return identifierToken;
+					default:
+						error(identifierToken, "error in macro parameters: " + identifierToken.getText());
+						return sourceSkipLine(false);
 				}
 			}
+			{
+				final Token separateToken = sourceGetTokenSkipWS();
+				switch (separateToken.getType()) {
+					case ',':
+						continue;
+					case ELLIPSIS: {
+						// Variadic macro, add null to the end to mark that
+						argumentNames.add(null);
+						final Token closeToken = sourceGetTokenSkipWS();
+						final int type = closeToken.getType();
+						if (type != ')') {
+							error(separateToken, "Ellipsis must be on last argument");
+							return type == NEW_LINE || type == EOF ? closeToken : sourceSkipLine(false);
+						}
+					}
+					case ')':
+						// skip all whitespace
+						sourceUndoGetToken(sourceGetTokenSkipWS());
+						return null;
 
-			macro.setArgs(args);
-		} else {
-			/* For searching. */
-			source_untoken(openToken);
+					case NEW_LINE:
+					case EOF:
+						error(separateToken, "Unterminated macro parameters");
+						return separateToken;
+					default:
+						error(separateToken, "Bad token in macro parameters: " + separateToken.getText());
+						return sourceSkipLine(false);
+				}
+			}
 		}
+	}
 
-		/* Get an expansion for the macro, using indexOf. */
-		boolean space = false;
-		boolean paste = false;
-		int idx;
-
-		/* Ensure no space at start. */
-		openToken = source_token_nonwhite();
-		EXPANSION:
-		for (; ; ) {
-			switch (openToken.getType()) {
-				case EOF:
-					break EXPANSION;
-				case NL:
-					break EXPANSION;
-
+	@Nullable
+	private Token parseMacroTokens(@Nonnull Macro macro, @Nullable List<String> argumentNames)
+			throws IOException, LexerException {
+		boolean spaced = false;
+		Tokens pasted = null;
+		while (true) {
+			final Token token;
+			final Token macroToken = sourceGetToken();
+			final int type = macroToken.getType();
+			switch (type) {
 				case C_COMMENT:
 				case CPP_COMMENT:
-					/* XXX This is where we implement GNU's cpp -CC. */
-					// break;
 				case WHITESPACE:
-					if (!paste)
-						space = true;
-					break;
+					// GNU's cpp -CC keep the comment (and convert line to block comment)
+					// then expand it with the macro.
+					// Instead we just throw all comment out.
+					spaced = true;
+					continue;
 
-				/* Paste. */
-				case PASTE:
-					space = false;
-					paste = true;
-					macro.addPaste(new Token(M_PASTE,
-							openToken.getLine(), openToken.getColumn(),
-							"#" + "#", null));
-					break;
-
-				/* Stringify. */
-				case '#':
-					if (space)
-						macro.addToken(Token.whitespace);
-					space = false;
-					Token la = source_token_nonwhite();
-					if (la.getType() == IDENTIFIER
-							&& ((idx = args.indexOf(la.getText())) != -1)) {
-						macro.addToken(new Token(M_STRING,
-								la.getLine(), la.getColumn(),
-								"#" + la.getText(),
-								idx));
-					} else {
-						macro.addToken(openToken);
-						/* Allow for special processing. */
-						source_untoken(la);
+				case P_PASTE: {
+					spaced = false;
+					// if pasted != null then multiple consecutive paste are met. Simply skip them.
+					if (pasted != null) continue;
+					final int index = macro.size() - 1;
+					if (index < 0) {
+						// check empty macro
+						error(macroToken, "Macro cannot start with paste token: " + macroToken.getText());
+						return sourceSkipLine(false);
 					}
-					break;
+					// paste with previous token
+					final Token previousToken = macro.get(index);
+					if (previousToken.getType() != M_PASTE) {
+						macro.set(index, new Token(M_PASTE, previousToken.getLine(), previousToken.getColumn(),
+								"##", pasted = new Tokens(previousToken)));
+					} else {
+						pasted = previousToken.getValue(Tokens.class);
+					}
+					continue;
+				}
 
-				case IDENTIFIER:
-					if (space)
-						macro.addToken(Token.whitespace);
-					space = false;
-					paste = false;
-					idx = args.indexOf(openToken.getText());
-					if (idx == -1)
-						macro.addToken(openToken);
-					else
-						macro.addToken(new Token(M_ARG,
-								openToken.getLine(), openToken.getColumn(),
-								openToken.getText(),
-								idx));
-					break;
+				case EOF:
+				case NEW_LINE:
+					// finish parsing
+					if (pasted != null) {
+						error(macroToken, "Macro cannot end with paste token: " + macroToken.getText());
+						return macroToken;
+					}
+					// undo the end of line
+					sourceUndoGetToken(macroToken);
+					return null;
 
+				case '#': {
+					final Token nextToken = sourceGetTokenSkipWS();
+					final int tokenType = nextToken.getType();
+					if (tokenType == IDENTIFIER && argumentNames != null) {
+						final int index = argumentNames.indexOf(nextToken.getText());
+						if (index >= 0) {
+							token = new Token(M_STRING,
+									nextToken.getLine(), nextToken.getColumn(),
+									"#" + nextToken.getText(), index);
+							break;
+						}
+					}
+					error(nextToken, "Stringify must be followed by a macro parameter: " + nextToken.getText());
+					return tokenType == NEW_LINE || tokenType == EOF ? nextToken : sourceSkipLine(false);
+				}
+				case IDENTIFIER: {
+					final int index = argumentNames != null
+							? argumentNames.indexOf(macroToken.getText())
+							: -1;
+					token = index >= 0 ? new Token(M_ARG,
+							macroToken.getLine(), macroToken.getColumn(),
+							macroToken.getText(), index) : macroToken;
+					break;
+				}
 				default:
-					if (space)
-						macro.addToken(Token.whitespace);
-					space = false;
-					paste = false;
-					macro.addToken(openToken);
-					break;
+					token = macroToken;
 			}
-			openToken = source_token();
+			if (pasted != null) {
+				pasted.add(token);
+				pasted = null;
+			} else {
+				if (spaced && !macro.isEmpty()) macro.add(Token.whitespace);
+				macro.add(token);
+				spaced = false;
+			}
+		}
+	}
+
+	/* processes a #define directive */
+	@Nonnull
+	private Token parseDefineDirective() throws IOException, LexerException {
+		/* parse macro name */
+
+		final Token identifierToken = sourceGetTokenSkipWS();
+		{
+			final int tokenType = identifierToken.getType();
+			if (tokenType != IDENTIFIER) {
+				error(identifierToken, "Expected identifier instead of " + identifierToken);
+				return tokenType == NEW_LINE || tokenType == EOF ? identifierToken : sourceSkipLine(false);
+			}
+		}
+		final String macroName = identifierToken.getText();
+		if ("defined".equals(macroName)) {
+			error(identifierToken, "Cannot redefine name 'defined'");
+			return sourceSkipLine(false);
 		}
 
-//        if (getFeature(Feature.DEBUG))
-//            LOG.debug("Defined macro " + m);
-		addMacro(macro);
+		/* parse macro argument names */
+		final boolean macroVariadic;
+		final List<String> macroArgNames;
+		{
+			final List<String> parseArgNames = new ArrayList<>();
+			final Token token = parseMacroArgumentNames(parseArgNames);
+			if (token != null) return token;
+			if (parseArgNames.isEmpty()) {
+				macroVariadic = false;
+				macroArgNames = null;
+			} else {
+				macroVariadic = parseArgNames.remove(null) && !parseArgNames.isEmpty();
+				macroArgNames = parseArgNames;
+			}
+		}
 
-		return openToken;    /* NL or EOF. */
+		/* parse macro tokens */
+		final Macro macro = new Macro(source, macroName, macroArgNames, macroVariadic);
+		{
+			final Token token = parseMacroTokens(macro, macroArgNames);
+			if (token != null) return token;
+		}
+		addGlobalMacro(macro);
 
+		return sourceGetToken(); /* NL or EOF. */
 	}
 
 	@Nonnull
 	private Token parseUndefDirective() throws IOException, LexerException {
-		final Token token = source_token_nonwhite();
+		final Token token = sourceGetTokenSkipWS();
 		if (token.getType() != IDENTIFIER) {
 			error(token, "Expected identifier, not " + token);
-			if (token.getType() == NL || token.getType() == EOF) return token;
+			if (token.getType() == NEW_LINE || token.getType() == EOF) return token;
 		} else {
 			final Macro macro = getMacro(token.getText());
 			if (macro != null) {
 				/* XXX error if predefined */
-				macros.remove(macro.getName());
+				globalMacros.remove(macro.getName());
 			}
 		}
-		return source_skipLine(true);
+		return sourceSkipLine(true);
 	}
 
 	/**
 	 * Attempts to include the given file.
-	 * <p>
-	 * User code may override this method to implement a virtual
-	 * file system.
 	 *
 	 * @param file The Path to file to attempt to include.
 	 * @return true if the file was successfully included, false otherwise.
 	 * @throws IOException if an I/O error occurs.
 	 */
-	protected boolean include(@Nonnull Path file) throws IOException {
-		final Path normalizedFile = file.normalize();
-		if (pragmaOnceFiles.contains(normalizedFile)) return true;
-		if (!notExists.contains(normalizedFile)) {
-			if (includes.contains(normalizedFile)) {
-				push_source(new FileLexerSource(normalizedFile), true);
-				return true;
-			} else if (Files.isRegularFile(normalizedFile)) {
-				includes.add(normalizedFile);
-				push_source(new FileLexerSource(normalizedFile), true);
-				return true;
-			} else {
-				notExists.add(normalizedFile);
+	private boolean include(@Nonnull Path file) throws IOException {
+		final Path realFile = file.normalize().toAbsolutePath();
+		if (notExists.contains(realFile)) return false;
+		if (existFiles.contains(realFile)) {
+			if (!pragmaOnceFiles.contains(realFile)) {
+				sourcePush(new FileLexerSource(realFile), true);
 			}
+			return true;
+		} else if (Files.isRegularFile(realFile)) {
+			existFiles.add(realFile);
+			sourcePush(new FileLexerSource(realFile), true);
+			return true;
+		} else {
+			notExists.add(realFile);
 		}
 		return false;
+	}
+
+	private boolean isPathExists(@Nonnull Path file) {
+		final Path realFile = file.normalize().toAbsolutePath();
+		if (notExists.contains(realFile)) return false;
+		if (existFiles.contains(realFile)) return true;
+		if (Files.isRegularFile(realFile)) {
+			existFiles.add(realFile);
+			return true;
+		} else {
+			notExists.add(realFile);
+			return false;
+		}
 	}
 
 	/**
 	 * Attempts to include a file from an include paths, by name.
 	 *
-	 * @param paths The list of virtual directories to search for the given name.
-	 * @param name  The name of the file to attempt to include.
+	 * @param includePaths The list of virtual directories to search for the given name.
+	 * @param name         The name of the file to attempt to include.
 	 * @return true if the file was successfully included, false otherwise.
 	 * @throws IOException if an I/O error occurs.
 	 */
-	protected boolean include(@Nonnull Iterable<Path> paths, @Nonnull String name, boolean next) throws IOException {
-		for (final Path path : paths) {
-			// Implement the next functionality here. This is actually
-			// not exactly right because it should be based on the include
-			// we are currently parsing, but it works _almost_ the same given
-			// how limited the usage of #include_next is.
-			if (includes.contains(path) && next) continue;
+	private boolean include(@Nonnull List<Path> includePaths, @Nonnull String name, boolean next) throws IOException {
+		// if include_next then we have to find the include path first
+		boolean nextScan = next;
+		for (final Path path : includePaths) {
+			final Path currentFile = path.resolve(name);
+			if (nextScan) {
 
-			if (include(path.resolve(name))) return true;
+				if (isPathExists(currentFile)) nextScan = false;
+				continue;
+			}
+
+			if (include(currentFile)) return true;
 		}
 		return false;
 	}
@@ -1141,24 +884,12 @@ public class Preprocessor implements Closeable {
 	 */
 	private void include(@Nullable Path parent, int line, @Nonnull String name, boolean quoted, boolean next)
 			throws IOException, LexerException {
-		// heuristic for absolute path
-		if (name.startsWith("/") || name.startsWith("\\") || name.startsWith(":", 1)) {
-			if (include(Path.of(name))) return;
-		} else {
-			if (!quoted) {
-				int idx = name.indexOf('/');
-				if (idx != -1) {
-					String frameworkName = name.substring(0, idx);
-					String headerName = name.substring(idx + 1);
-					if (include(frameworksPath, frameworkName + ".framework/Headers/" + headerName, next)) return;
-				}
-			} else if (parent != null && include(parent.resolveSibling(name))
-					|| include(quoteIncludePath, name, next)) {
-				return;
-			}
-			if (include(sysIncludePath, name, next)) return;
+		// if path is absolute, skip it. We don't have file system model here
+		if (Path.of(name).isAbsolute()
+				|| quoted && parent != null && include(parent.resolveSibling(name))
+				|| (next || !quoted) && include(systemIncludePaths, name, next)) {
+			error(line, 0, "Include file not found: " + (quoted ? '\"' : '<') + name + (quoted ? '\"' : '>'));
 		}
-		error(line, 0, "File not found: " + name);
 	}
 
 	@Nonnull
@@ -1172,30 +903,30 @@ public class Preprocessor implements Closeable {
 
 			if (type != HEADER) {
 				error(token, "Expected header name, found " + token.getText());
-				return type != NL && type != EOF ? source_skipLine(false) : token;
+				return type != NEW_LINE && type != EOF ? sourceSkipLine(false) : token;
 			}
 
-			String name = token.getValueAsString();
-			final Token newlineToken = source_skipLine(true);
+			final String name = token.getValue(String.class);
+			final Token newlineToken = sourceSkipLine(true);
 
 			/* Do the inclusion. */
 			include(source.getPath(), token.getLine(), name, token.getText().startsWith("\""), next);
 
-			return getFeature(Feature.LINEMARKERS) ? line_token(1, source.getName(), " 1") : newlineToken;
+			return getFeature(Feature.LINEMARKERS) ? createLineToken(1, source.getName(), " 1") : newlineToken;
 		} finally {
 			lexer.setInclude(false);
 		}
 	}
 
-	protected void pragma_once() throws IOException {
+	private void pragma_once() throws IOException {
 		if (!pragmaOnceFiles.add(source.getPath())) {
-			final Token lineMarker = pop_source();
-			// FixedTokenSource should never generate a linemarker on exit.
-			if (lineMarker != null) push_source(new FixedTokenSource(lineMarker), true);
+			final Token lineMarker = sourcePop();
+			// FixedTokenSource should never generate a line-marker on exit.
+			if (lineMarker != null) sourcePush(new FixedTokenSource(lineMarker), true);
 		}
 	}
 
-	protected void pragma(@Nonnull Token name, @Nonnull List<Token> value) throws IOException, LexerException {
+	private void pragma(@Nonnull Token name, @Nonnull List<Token> value) throws IOException, LexerException {
 		if (getFeature(Feature.PRAGMA_ONCE)) {
 			if ("once".equals(name.getText())) {
 				pragma_once();
@@ -1207,28 +938,28 @@ public class Preprocessor implements Closeable {
 
 	@Nonnull
 	private Token parsePragmaDirective() throws IOException, LexerException {
-		final Token name = source_token_nonwhite();
+		final Token name = sourceGetTokenSkipWS();
 		{
 			final int type = name.getType();
 			if (type == EOF) {
 				warning(name, "End of file in #pragma");
 				return name;
-			} else if (type == NL) {
+			} else if (type == NEW_LINE) {
 				warning(name, "Empty #pragma");
 				return name;
 			} else if (type != IDENTIFIER) {
 				warning(name, "Illegal #pragma " + name.getText());
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			}
 		}
 		final List<Token> value = new ArrayList<>();
 		boolean whitespace = false;
 		while (true) {
-			final Token token = source_token(); // cannot skip whitespace here, might be needed
+			final Token token = sourceGetToken(); // cannot skip whitespace here, might be needed
 			final int type = token.getType();
 			if (type == C_COMMENT || type == CPP_COMMENT || type == WHITESPACE) {
 				whitespace = true;
-			} else if (type != EOF && type != NL) {
+			} else if (type != EOF && type != NEW_LINE) {
 				if (whitespace) value.add(Token.whitespace);
 				value.add(token);
 			} else {
@@ -1245,15 +976,15 @@ public class Preprocessor implements Closeable {
 		final StringBuilder builder = new StringBuilder();
 		builder.append('#').append(name).append(' ');
 		/* Peculiar construction to ditch first whitespace. */
-		Token tok = source_token_nonwhite();
+		Token tok = sourceGetTokenSkipWS();
 		while (true) {
 			final int type = tok.getType();
-			if (type == NL || type == EOF) {
+			if (type == NEW_LINE || type == EOF) {
 				break;
 			} else {
 				builder.append(tok.getText());
 			}
-			tok = source_token();
+			tok = sourceGetToken();
 		}
 		if (name.equals("error")) {
 			error(directiveName, builder.toString());
@@ -1267,19 +998,14 @@ public class Preprocessor implements Closeable {
 	 * causes token() to simply chew the entire input line. */
 	@Nonnull
 	private Token expanded_token() throws IOException, LexerException {
-		for (; ; ) {
-			Token tok = source_token();
-			// System.out.println("Source token is " + tok);
-			if (tok.getType() == IDENTIFIER) {
-				Macro m = getMacro(tok.getText());
-				if (m == null)
-					return tok;
-				if (source.isExpanding(m))
-					return tok;
-				if (macro(m, tok))
-					continue;
+		while (true) {
+			final Token token = sourceGetToken();
+			if (token.getType() == IDENTIFIER) {
+				final Macro macro = getMacro(token.getText());
+				if (macro == null || source.isMacroExpanding(macro)) return token;
+				if (parseMacroInUse(macro, token)) continue;
 			}
-			return tok;
+			return token;
 		}
 	}
 
@@ -1307,18 +1033,18 @@ public class Preprocessor implements Closeable {
 			// System.out.println("expt is " + tok);
 
 			if (tok.getType() == IDENTIFIER && tok.getText().equals("defined")) {
-				Token la = source_token_nonwhite();
+				Token la = sourceGetTokenSkipWS();
 				boolean paren = false;
 				if (la.getType() == '(') {
 					paren = true;
-					la = source_token_nonwhite();
+					la = sourceGetTokenSkipWS();
 				}
 
 				// System.out.println("Core token is " + la);
 				if (la.getType() != IDENTIFIER) {
 					error(la, "defined() needs identifier, not " + la.getText());
 					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "0", new NumberToken(10, "0"));
-				} else if (macros.containsKey(la.getText())) {
+				} else if (globalMacros.containsKey(la.getText())) {
 					// System.out.println("Found macro");
 					tok = new Token(NUMBER, la.getLine(), la.getColumn(), "1", new NumberToken(10, "1"));
 				} else {
@@ -1327,7 +1053,7 @@ public class Preprocessor implements Closeable {
 				}
 
 				if (paren) {
-					la = source_token_nonwhite();
+					la = sourceGetTokenSkipWS();
 					if (la.getType() != ')') {
 						expr_untoken(la);
 						error(la, "Missing ) in defined(). Got " + la.getText());
@@ -1357,21 +1083,21 @@ public class Preprocessor implements Closeable {
 				return 10;
 			case '-':
 				return 10;
-			case LSH:
+			case LEFT_SHIFT:
 				return 9;
-			case RSH:
+			case RIGHT_SHIFT:
 				return 9;
 			case '<':
 				return 8;
 			case '>':
 				return 8;
-			case LE:
+			case LESS_EQUAL:
 				return 8;
-			case GE:
+			case GREATER_EQUAL:
 				return 8;
-			case EQ:
+			case EQUAL:
 				return 7;
-			case NE:
+			case NOT_EQUAL:
 				return 7;
 			case '&':
 				return 6;
@@ -1379,9 +1105,9 @@ public class Preprocessor implements Closeable {
 				return 5;
 			case '|':
 				return 4;
-			case LAND:
+			case AND_AND:
 				return 3;
-			case LOR:
+			case OR_OR:
 				return 2;
 			case '?':
 				return 1;
@@ -1393,22 +1119,20 @@ public class Preprocessor implements Closeable {
 
 	private int expr_char(Token token) {
 		Object value = token.getValue();
-		if (value instanceof Character)
-			return (Character) value;
+		if (value instanceof Character) return (Character) value;
 		String text = String.valueOf(value);
 		if (text.length() == 0) return 0;
 		return text.charAt(0);
 	}
 
-	// TODO This long return needs to be replaced with an object
 	@Nonnull
-	private Value expr(int priority) throws IOException, LexerException {
+	private NumberValue expr(int priority) throws IOException, LexerException {
 		/*
 		 * (new Exception("expr(" + priority + ") called")).printStackTrace();
 		 */
 
 		Token tok = expr_token();
-		Value lhs, rhs;
+		NumberValue lhs, rhs;
 
 		// System.out.println("Expr lhs token is " + tok);
 		switch (tok.getType()) {
@@ -1418,7 +1142,7 @@ public class Preprocessor implements Closeable {
 				if (tok.getType() != ')') {
 					expr_untoken(tok);
 					error(tok, "Missing ) in expression. Got " + tok.getText());
-					return Value.INTEGER_ZERO;
+					return NumberValue.INTEGER_ZERO;
 				}
 				break;
 
@@ -1426,27 +1150,28 @@ public class Preprocessor implements Closeable {
 				lhs = expr(11).not();
 				break;
 			case '!':
-				lhs = expr(11).equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				lhs = expr(11).equals(0) ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 				break;
 			case '-':
 				lhs = expr(11).negate();
 				break;
-			case NUMBER:
-				lhs = ((NumberToken) Objects.requireNonNull(tok.getValue())).value();
+			case NUMBER: {
+				lhs = tok.getValue(NumberToken.class).value();
 				break;
+			}
 			case CHARACTER:
-				lhs = Value.of(expr_char(tok));
+				lhs = NumberValue.of(expr_char(tok));
 				break;
 			case IDENTIFIER:
 				if (warnings.contains(Warning.UNDEF))
 					warning(tok, "Undefined token '" + tok.getText() + "' encountered in conditional.");
-				lhs = Value.INTEGER_ZERO;
+				lhs = NumberValue.INTEGER_ZERO;
 				break;
 
 			default:
 				expr_untoken(tok);
 				error(tok, "Bad token in expression: " + tok.getText());
-				return Value.INTEGER_ZERO;
+				return NumberValue.INTEGER_ZERO;
 		}
 
 		while (true) {
@@ -1464,7 +1189,7 @@ public class Preprocessor implements Closeable {
 				case '/':
 					if (rhs.equals(0)) {
 						error(op, "Division by zero");
-						lhs = Value.INTEGER_ZERO;
+						lhs = NumberValue.INTEGER_ZERO;
 					} else {
 						lhs = lhs.divide(rhs);
 					}
@@ -1472,7 +1197,7 @@ public class Preprocessor implements Closeable {
 				case '%':
 					if (rhs.equals(0)) {
 						error(op, "Modulus by zero");
-						lhs = Value.INTEGER_ZERO;
+						lhs = NumberValue.INTEGER_ZERO;
 					} else {
 						lhs = lhs.remainder(rhs);
 					}
@@ -1487,10 +1212,10 @@ public class Preprocessor implements Closeable {
 					lhs = lhs.subtract(rhs);
 					break;
 				case '<':
-					lhs = lhs.compareTo(rhs) < 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+					lhs = lhs.compareTo(rhs) < 0 ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
 				case '>':
-					lhs = lhs.compareTo(rhs) > 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+					lhs = lhs.compareTo(rhs) > 0 ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
 				case '&':
 					lhs = lhs.and(rhs);
@@ -1502,29 +1227,29 @@ public class Preprocessor implements Closeable {
 					lhs = lhs.or(rhs);
 					break;
 
-				case LSH:
+				case LEFT_SHIFT:
 					lhs = lhs.shiftLeft(rhs);
 					break;
-				case RSH:
+				case RIGHT_SHIFT:
 					lhs = lhs.shiftRight(rhs);
 					break;
-				case LE:
-					lhs = lhs.compareTo(rhs) <= 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case LESS_EQUAL:
+					lhs = lhs.compareTo(rhs) <= 0 ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
-				case GE:
-					lhs = lhs.compareTo(rhs) >= 0 ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case GREATER_EQUAL:
+					lhs = lhs.compareTo(rhs) >= 0 ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
-				case EQ:
-					lhs = lhs.equals(rhs) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case EQUAL:
+					lhs = lhs.equals(rhs) ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
-				case NE:
-					lhs = !lhs.equals(rhs) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case NOT_EQUAL:
+					lhs = !lhs.equals(rhs) ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
-				case LAND:
-					lhs = !lhs.equals(0) && !rhs.equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case AND_AND:
+					lhs = !lhs.equals(0) && !rhs.equals(0) ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
-				case LOR:
-					lhs = !lhs.equals(0) || !rhs.equals(0) ? Value.INTEGER_POSITIVE_ONE : Value.INTEGER_ZERO;
+				case OR_OR:
+					lhs = !lhs.equals(0) || !rhs.equals(0) ? NumberValue.INTEGER_POSITIVE_ONE : NumberValue.INTEGER_ZERO;
 					break;
 
 				case '?': {
@@ -1532,17 +1257,17 @@ public class Preprocessor implements Closeable {
 					if (tok.getType() != ':') {
 						expr_untoken(tok);
 						error(tok, "Missing : in conditional expression. Got " + tok.getText());
-						return Value.INTEGER_ZERO;
+						return NumberValue.INTEGER_ZERO;
 					}
 					// do not simplify this! always need to consume the token!
-					final Value falseResult = expr(0);
+					final NumberValue falseResult = expr(0);
 					lhs = !lhs.equals(0) ? rhs : falseResult;
 					break;
 				}
 
 				default:
 					error(op, "Unexpected operator " + op.getText());
-					return Value.INTEGER_ZERO;
+					return NumberValue.INTEGER_ZERO;
 
 			}
 		}
@@ -1571,7 +1296,7 @@ public class Preprocessor implements Closeable {
 					cr = false;
 					continue;
 				}
-				cr = false;
+				//cr = false;
 				nls++;
 			} else if (c == '\u2028' || c == '\u2029' || c == '\u000B' || c == '\u000C' || c == '\u0085') {
 				cr = false;
@@ -1588,61 +1313,61 @@ public class Preprocessor implements Closeable {
 
 	@Nullable
 	private Token parseDirective() throws IOException, LexerException {
-		final Token token = source_token_nonwhite();
+		final Token token = sourceGetTokenSkipWS();
 		// (new Exception("here")).printStackTrace();
-		if (token.getType() == NL) {
+		if (token.getType() == NEW_LINE) {
 			return null;
 		} else if (token.getType() != IDENTIFIER) {
 			error(token, "Preprocessor directive command is not a identifier " + token);
-			return source_skipLine(false);
+			return sourceSkipLine(false);
 		}
 		switch (token.getText()) {
 			case "define":
-				return isActive() ? parseDefineDirective() : source_skipLine(false);
+				return stateIsActive() ? parseDefineDirective() : sourceSkipLine(false);
 			case "undef":
-				return isActive() ? parseUndefDirective() : source_skipLine(false);
+				return stateIsActive() ? parseUndefDirective() : sourceSkipLine(false);
 			case "include":
-				return isActive() ? parseIncludeDirective(false) : source_skipLine(false);
+				return stateIsActive() ? parseIncludeDirective(false) : sourceSkipLine(false);
 			case "include_next":
-				if (isActive()) {
+				if (stateIsActive()) {
 					if (getFeature(Feature.INCLUDENEXT)) return parseIncludeDirective(true);
 					error(token, "Directive include_next not enabled");
 				}
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			case "warning":
 			case "error":
-				if (!isActive()) return source_skipLine(false);
+				if (!stateIsActive()) return sourceSkipLine(false);
 				parseErrorDirective(token);
 				return null;
 			case "if":
-				push_state();
-				if (isActive()) {
+				statePush();
+				if (stateIsActive()) {
 					this.expr_token = null;
 					states.peek().setActive(!expr(0).equals(0));
 					final Token expressionToken = expr_token();    /* unget */
-					return expressionToken.getType() == NL ? expressionToken : source_skipLine(true);
+					return expressionToken.getType() == NEW_LINE ? expressionToken : sourceSkipLine(true);
 				}
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			case "elif": {
-				State state = states.peek();
+				@Nonnull State state = states.peek();
 				if (state.sawElse()) {
 					error(token, "#elif after #else");
-					return source_skipLine(false);
+					return sourceSkipLine(false);
 				} else if (!state.isParentActive()) {
 					/* Nested in skipped 'if' */
-					return source_skipLine(false);
+					return sourceSkipLine(false);
 				} else if (state.isActive()) {
 					/* The 'if' part got executed. */
-					state.setParentActive(false);
+					state.deactivateParent();
 					/* This is like # else # if but with
 					 * only one # end. */
 					state.setActive(false);
-					return source_skipLine(false);
+					return sourceSkipLine(false);
 				} else {
 					this.expr_token = null;
 					state.setActive(!expr(0).equals(0));
 					final Token expressionToken = expr_token();    /* unget */
-					return expressionToken.getType() == NL ? expressionToken : source_skipLine(true);
+					return expressionToken.getType() == NEW_LINE ? expressionToken : sourceSkipLine(true);
 				}
 				// break;
 			}
@@ -1650,45 +1375,45 @@ public class Preprocessor implements Closeable {
 				final State state = states.peek();
 				if (state.sawElse()) {
 					error(token, "#else after #else");
-					return source_skipLine(false);
+					return sourceSkipLine(false);
 				} else {
 					state.setSawElse();
 					state.setActive(!state.isActive());
-					return source_skipLine(warnings.contains(Warning.ENDIF_LABELS));
+					return sourceSkipLine(warnings.contains(Warning.ENDIF_LABELS));
 				}
 			}
 			case "ifdef":
-				push_state();
-				if (isActive()) {
-					final Token macroName = source_token_nonwhite();
+				statePush();
+				if (stateIsActive()) {
+					final Token macroName = sourceGetTokenSkipWS();
 					if (macroName.getType() == IDENTIFIER) {
-						states.peek().setActive(macros.containsKey(macroName.getText()));
-						return source_skipLine(true);
+						states.peek().setActive(globalMacros.containsKey(macroName.getText()));
+						return sourceSkipLine(true);
 					}
 					error(macroName, "Expected identifier, not " + macroName);
 				}
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			case "ifndef":
-				push_state();
-				if (isActive()) {
-					final Token macroName = source_token_nonwhite();
+				statePush();
+				if (stateIsActive()) {
+					final Token macroName = sourceGetTokenSkipWS();
 					if (macroName.getType() == IDENTIFIER) {
-						states.peek().setActive(!macros.containsKey(macroName.getText()));
-						return source_skipLine(true);
+						states.peek().setActive(!globalMacros.containsKey(macroName.getText()));
+						return sourceSkipLine(true);
 					}
 					error(macroName, "Expected identifier, not " + macroName);
 				}
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			case "endif":
-				pop_state();
-				return source_skipLine(warnings.contains(Warning.ENDIF_LABELS));
+				statePop();
+				return sourceSkipLine(warnings.contains(Warning.ENDIF_LABELS));
 			case "line":
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 			case "pragma":
-				return isActive() ? parsePragmaDirective() : source_skipLine(false);
+				return stateIsActive() ? parsePragmaDirective() : sourceSkipLine(false);
 			default:
 				error(token, "Unknown preprocessor directive " + token);
-				return source_skipLine(false);
+				return sourceSkipLine(false);
 		}
 	}
 
@@ -1703,91 +1428,89 @@ public class Preprocessor implements Closeable {
 	@Nonnull
 	public Token token() throws IOException, LexerException {
 		while (true) {
-			Token tok;
-			if (!isActive()) {
-				Source s = getSource();
-				if (s == null) {
-					Token t = next_source();
-					if (t.getType() == P_LINE && !getFeature(Feature.LINEMARKERS))
-						continue;
-					return t;
+			final Token token;
+			if (!stateIsActive()) {
+				final Source source = this.source;
+				if (source == null) {
+					final Token nextToken = nextInputSource();
+					if (nextToken.getType() == P_LINE && !getFeature(Feature.LINEMARKERS)) continue;
+					return nextToken;
 				}
 
 				try {
 					/* XXX Tell lexer to ignore warnings. */
-					s.setActive(false);
-					tok = source_token();
+					source.setActive(false);
+					token = sourceGetToken();
 				} finally {
 					/* XXX Tell lexer to stop ignoring warnings. */
-					s.setActive(true);
+					source.setActive(true);
 				}
-				switch (tok.getType()) {
-					case HASH:
-					case NL:
+				switch (token.getType()) {
+					case P_HASH:
+					case NEW_LINE:
 					case EOF:
 						/* The preprocessor has to take action here. */
 						break;
 					case WHITESPACE:
-						return tok;
+						return token;
 					case C_COMMENT:
 					case CPP_COMMENT:
 						// Patch up to preserve whitespace.
-						if (getFeature(Feature.KEEPALLCOMMENTS))
-							return tok;
-						if (!isActive())
-							return toWhitespace(tok);
-						if (getFeature(Feature.KEEPCOMMENTS))
-							return tok;
-						return toWhitespace(tok);
+						if (getFeature(Feature.KEEPALLCOMMENTS)) return token;
+						if (!stateIsActive()) return toWhitespace(token);
+						if (getFeature(Feature.KEEPCOMMENTS)) return token;
+						return toWhitespace(token);
 					default:
 						// Return NL to preserve whitespace.
 						/* XXX This might lose a comment. */
-						return source_skipLine(false);
+						return sourceSkipLine(false);
 				}
 			} else {
-				tok = source_token();
+				token = sourceGetToken();
 			}
 
-			int type = tok.getType();
+			int type = token.getType();
 			if (type == IDENTIFIER) {
-				final Macro macro = getMacro(tok.getText());
-				if (macro == null || source.isExpanding(macro)) return tok;
-				if (macro(macro, tok)) continue;
-				return tok;
+				final Macro macro = getMacro(token.getText());
+				if (macro == null || source.isMacroExpanding(macro)) return token;
+				if (parseMacroInUse(macro, token)) continue;
+				return token;
 			} else if (type == P_LINE) {
-				if (getFeature(Feature.LINEMARKERS)) return tok;
+				if (getFeature(Feature.LINEMARKERS)) return token;
 			} else if (type == INVALID) {
-				error(tok, String.valueOf(tok.getValue()));
-				return tok;
-			} else if (type == HASH) {
+				error(token, String.valueOf(token.getValue()));
+				return token;
+			} else if (type == P_HASH) {
 				final Token nextToken = parseDirective();
 				if (nextToken != null) return nextToken;
 			} else {
-				return tok;
+				return token;
 			}
 		}
 	}
 
 	@Nonnull
 	private Token token_nonwhite() throws IOException, LexerException {
-		Token tok;
-		do {
-			tok = token();
-		} while (isWhite(tok));
-		return tok;
+		while (true) {
+			final Token token = token();
+			final int type = token.getType();
+			if (type != C_COMMENT && type != CPP_COMMENT && type != WHITESPACE) {
+				return token;
+			}
+		}
 	}
 
 	@Override
 	public String toString() {
 		StringBuilder buf = new StringBuilder();
 
-		Source s = getSource();
-		while (s != null) {
-			buf.append(" -> ").append(s).append("\n");
-			s = s.getParent();
+		Source source = this.source;
+		while (source != null) {
+			buf.append(" -> ").append(source).append("\n");
+			source = source.getParent();
 		}
 
-		Map<String, Macro> macros = new TreeMap<>(getMacros());
+		Map<String, Macro> macros = new TreeMap<>(getGlobalMacros());
 		for (Macro macro : macros.values()) {
 			buf.append("#").append("macro ").append(macro).append("\n");
 		}
@@ -1809,4 +1532,58 @@ public class Preprocessor implements Closeable {
 		}
 	}
 
+	/**
+	 * Features of the Preprocessor, which may be enabled or disabled.
+	 */
+	public enum Feature {
+
+		/**
+		 * Supports ANSI digraphs.
+		 */
+		DIGRAPHS,
+		/**
+		 * Supports ANSI trigraphs.
+		 */
+		TRIGRAPHS,
+		/**
+		 * Outputs linemarker tokens.
+		 */
+		LINEMARKERS,
+		/**
+		 * Reports tokens of type INVALID as errors.
+		 */
+		CSYNTAX,
+		/**
+		 * Preserves comments in the lexed output. Like cpp -C
+		 */
+		KEEPCOMMENTS,
+		/**
+		 * Preserves comments in the lexed output, even when inactive.
+		 */
+		KEEPALLCOMMENTS,
+		DEBUG,
+		/**
+		 * Supports lexing of objective-C.
+		 */
+		OBJCSYNTAX,
+		INCLUDENEXT,
+		/**
+		 * Random extensions.
+		 */
+		PRAGMA_ONCE
+	}
+
+	/**
+	 * Warning classes which may optionally be emitted by the Preprocessor.
+	 */
+	public enum Warning {
+		TRIGRAPHS,
+		// TRADITIONAL,
+		IMPORT,
+		UNDEF,
+		UNUSED_MACROS,
+		ENDIF_LABELS,
+		ERROR,
+		// SYSTEM_HEADERS
+	}
 }
