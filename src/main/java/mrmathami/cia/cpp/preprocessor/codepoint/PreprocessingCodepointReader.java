@@ -1,38 +1,27 @@
-package mrmathami.cia.cpp.preprocessor;
+package mrmathami.cia.cpp.preprocessor.codepoint;
 
 import mrmathami.annotations.Nonnull;
-import mrmathami.annotations.Nullable;
-import mrmathami.utils.AutoEncodingReader;
+import mrmathami.cia.cpp.preprocessor.PreprocessorException;
 
 import java.io.BufferedReader;
-import java.io.Closeable;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
-import java.io.StringReader;
 
 /**
- * This convert a reader to a codepoint reader that support unread, convert all
- * line-separator to LF, do line splicing, UCN translation and line:column
- * position tracker (even when unread). The difference with normal pushback is
- * that you cannot change the content of the reader when unread.
+ * This convert a reader to a codepoint reader that support unread, convert all line-separator to LF, do line splicing,
+ * UCN translation and line:column position tracker (even when unread). The difference with normal pushback is that you
+ * cannot change the content of the reader when unread.
+ * <p>
  * Note: This reader does not support multi-threading use.
  */
-final class LexerReader implements Closeable {
-	LexerReader(@Nonnull InputStream inputStream) throws IOException {
-		this(new AutoEncodingReader(inputStream));
-	}
+final class PreprocessingCodepointReader extends CodepointReader {
+	@Nonnull private final Reader reader;
 
-	LexerReader(@Nonnull Reader reader) {
+	PreprocessingCodepointReader(@Nonnull Reader reader) {
 		this.reader = reader instanceof BufferedReader ? reader : new BufferedReader(reader);
 	}
 
-	// ====
-
-	@Nullable private Reader reader;
-
-	private int underlyingReadCodePoint() throws IOException, PreprocessorException {
-		assert reader != null;
+	private int readCodepoint() throws IOException {
 		int u0 = reader.read();
 		if (u0 < 0 || !Character.isHighSurrogate((char) u0)) {
 			// eof or normal character
@@ -152,14 +141,17 @@ final class LexerReader implements Closeable {
 
 	private boolean previousCR = false;
 	private int nextLine = 1;
-	private int nextColumn = 0;
+	private int nextColumn = 1;
 
-	private int readNewRaw() throws IOException, PreprocessorException {
+	private int readNewRaw() throws IOException {
 		// read next cp, return if EOF
-		int cp = underlyingReadCodePoint();
+		int cp = readCodepoint();
 		if (cp < 0) return -1;
 		// skip LF after previous CR
-		if (previousCR && cp == '\n') cp = underlyingReadCodePoint();
+		if (previousCR && cp == '\n') {
+			cp = readCodepoint();
+			if (cp < 0) return -1;
+		}
 		// substitute CR with LF
 		this.previousCR = cp == '\r';
 		cp = previousCR ? '\n' : cp;
@@ -175,7 +167,7 @@ final class LexerReader implements Closeable {
 
 	private int repeatNewLine = 0;
 
-	private int readWithRepeatNewLine() throws PreprocessorException, IOException {
+	private int readWithRepeatNewLine() throws IOException {
 		// check if current character is a new line
 		if (bufferGetCodepoint() == '\n') {
 			// check if any repeat new line is necessary
@@ -194,10 +186,9 @@ final class LexerReader implements Closeable {
 	// ====
 
 	/**
-	 * Return negative when it detect a UCN starting sequence
-	 * Return positive when it doesn't detect that
+	 * Return negative when it detect a UCN starting sequence Return positive when it doesn't detect that
 	 */
-	private int processUniversalCharacterName() throws PreprocessorException, IOException {
+	private int processUniversalCharacterName() throws IOException {
 		// is this an universal character name
 		final int currentLine = bufferGetLine(), currentColumn = bufferGetColumn();
 		final int nextCP = readNewRaw();
@@ -232,9 +223,9 @@ final class LexerReader implements Closeable {
 		return nextCP;
 	}
 
-	private int readNewProcessed() throws IOException, PreprocessorException {
+	private int readNewProcessed() throws IOException {
 		// start reading
-		int cp =  readWithRepeatNewLine();
+		int cp = readWithRepeatNewLine();
 		while (true) {
 			if (cp != '\\') return cp;
 			// check if the backslash form universal character name
@@ -273,8 +264,8 @@ final class LexerReader implements Closeable {
 	}
 
 	/**
-	 * Read back from buffer (redo read).
-	 * Note that previousCR never change from unread/reread, it should be unchanged from a readNew to next readNew.
+	 * Read back from buffer (redo read). Note that previousCR never change from unread/reread, it should be unchanged
+	 * from a readNew to next readNew.
 	 */
 	private int reread() {
 		return bufferReread();
@@ -287,8 +278,8 @@ final class LexerReader implements Closeable {
 	/**
 	 * Read a codepoint, throw IOException if underlying reader throw.
 	 */
-	int read() throws IOException, PreprocessorException {
-		if (reader == null) throw new IOException("Already closed.");
+	@Override
+	public int read() throws IOException {
 		return bufferRereadAvailable() == 0
 				? rawStringMode ? readNewRaw() : readNewProcessed()
 				: bufferReread();
@@ -297,8 +288,8 @@ final class LexerReader implements Closeable {
 	/**
 	 * Unread previous codepoint, throw IOException when unread too many codepoints.
 	 */
-	void unread() throws IOException {
-		if (reader == null) throw new IOException("Already closed.");
+	@Override
+	public void unread() throws IOException {
 		// is buffer still has room to unread?
 		if (bufferUnreadAvailable() == 0) throw new IOException("Unread too many!");
 		// do the unread
@@ -308,8 +299,8 @@ final class LexerReader implements Closeable {
 	/**
 	 * Unread previous codepoint, throw IOException when unread too many codepoints.
 	 */
-	void unreadMany(int count) throws IOException {
-		if (reader == null) throw new IOException("Already closed.");
+	@Override
+	public void unreadMany(int count) throws IOException {
 		// is buffer still has room to unread?
 		if (bufferUnreadAvailable() < count) throw new IOException("Unread too many!");
 		// do the unread
@@ -319,7 +310,8 @@ final class LexerReader implements Closeable {
 	/**
 	 * Line number start from 1
 	 */
-	int getLine() {
+	@Override
+	public int getLine() {
 		if (bufferIsValid()) return bufferGetLine();
 		throw new IllegalStateException("Buffer currently empty!");
 	}
@@ -327,31 +319,25 @@ final class LexerReader implements Closeable {
 	/**
 	 * Column number start from 1
 	 */
-	int getColumn() {
+	@Override
+	public int getColumn() {
 		if (bufferIsValid()) return bufferGetColumn();
 		throw new IllegalStateException("Buffer currently empty!");
 	}
 
 	/**
-	 * Check if raw string mode is currently on
-	 * Raw string mode disable line splicing and universal character name
+	 * Check if raw string mode is currently on. Raw string mode disable line splicing and universal character name.
 	 */
-	boolean isRawStringMode() {
+	@Override
+	public boolean isRawStringMode() {
 		return rawStringMode;
 	}
 
 	/**
-	 * Turn raw string mode on or off
+	 * Turn raw string mode on or off.
 	 */
-	void setRawStringMode(boolean rawStringMode) {
-		this.rawStringMode = rawStringMode;
-	}
-
 	@Override
-	public synchronized void close() throws IOException {
-		if (reader != null) {
-			reader.close();
-			this.reader = null;
-		}
+	public void setRawStringMode(boolean rawStringMode) {
+		this.rawStringMode = rawStringMode;
 	}
 }

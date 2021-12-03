@@ -17,42 +17,32 @@
 package mrmathami.cia.cpp.preprocessor;
 
 import mrmathami.annotations.Nonnull;
+import mrmathami.cia.cpp.preprocessor.source.TokenSource;
 
 /**
  * A handler for preprocessor events, primarily errors and warnings.
  * <p>
- * If no PreprocessorListener is installed in a Preprocessor, all
- * error and warning events will throw an exception. Installing a
- * listener allows more intelligent handling of these events.
+ * If no PreprocessorListener is installed in a Preprocessor, all error and warning events will throw an exception.
+ * Installing a listener allows more intelligent handling of these events.
  */
 public interface EventListener {
 
 	/**
-	 * Handles a warning.
-	 * A warning is triggered when something correct but misleading happened.
+	 * Handles a warning. A warning is triggered when something correct but misleading happened.
 	 */
 	void handleWarning(@Nonnull TokenSource source, int line, int column, @Nonnull String msg)
 			throws PreprocessorException;
 
 	/**
-	 * Handles an error.
-	 * An error is triggered when something clearly wrong happened, but could be ignored to continue lexing/parsing
-	 * (keep in mind that the end result is not correct).
+	 * Handles an error. An error is triggered when something bad happened, but could be ignored to continue
+	 * lexing/parsing. Keep in mind that the end result is not correct.
 	 */
 	void handleError(@Nonnull TokenSource source, int line, int column, @Nonnull String msg)
 			throws PreprocessorException;
 
 	/**
-	 * Handles a critical error.
-	 * An error is triggered when something clearly wrong happened and cannot be ignored.
+	 * Handles a critical error. An error is triggered when something bad happened and cannot be ignored.
 	 */
 	void handleCritical(@Nonnull TokenSource source, int line, int column, @Nonnull String msg)
 			throws PreprocessorException;
-
-	enum SourceChangeEvent {
-		SUSPEND, PUSH, POP, RESUME
-	}
-
-	void handleSourceChange(@Nonnull TokenSource source, @Nonnull SourceChangeEvent event);
-
 }

@@ -1,37 +1,53 @@
-package mrmathami.cia.cpp.preprocessor;
+package mrmathami.cia.cpp.preprocessor.source;
 
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+import mrmathami.cia.cpp.preprocessor.EventListener;
+import mrmathami.cia.cpp.preprocessor.PreprocessorException;
+import mrmathami.cia.cpp.preprocessor.codepoint.CodepointReader;
+import mrmathami.cia.cpp.preprocessor.token.Token;
+import mrmathami.cia.cpp.preprocessor.token.TokenType;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
-abstract class AbstractLexerSource implements TokenSource {
-	@Nonnull private final LexerReader reader;
+final class SourceLexer {
+	private static final boolean MSVC_DOLLAR_IDENTIFIER_ENABLED = true;
+	private static final boolean DIGRAPHS_ENABLED = true;
+
+	@Nonnull private final CodepointReader reader;
 	@Nonnull private final EventListener listener;
-	private final boolean digraphs = true;
-	private boolean isNewline = true;
-	private boolean isInclude = false;
+	@Nonnull private final TokenSource tokenSource;
 
-	AbstractLexerSource(@Nonnull LexerReader reader, @Nonnull EventListener listener) {
+	@Nonnull private final Map<String, String> stringInternMap = new HashMap<>();
+
+	private boolean expectHeaderName = false;
+	private boolean isError = false;
+
+	SourceLexer(@Nonnull CodepointReader reader, @Nonnull EventListener listener, @Nonnull TokenSource tokenSource) {
 		this.reader = reader;
 		this.listener = listener;
+		this.tokenSource = tokenSource;
 	}
 
 	// ====
 
 	private void postWarning(@Nonnull String message) throws PreprocessorException {
-		listener.handleWarning(this, reader.getLine(), reader.getColumn(), message);
+		listener.handleWarning(tokenSource, reader.getLine(), reader.getColumn(), message);
 	}
 
 	private void postError(@Nonnull String message) throws PreprocessorException {
-		listener.handleError(this, reader.getLine(), reader.getColumn(), message);
+		this.isError = true;
+		listener.handleError(tokenSource, reader.getLine(), reader.getColumn(), message);
 	}
 
 	private void postCritical(@Nonnull String message) throws PreprocessorException {
+		this.isError = true;
 		final int line = reader.getLine();
 		final int column = reader.getColumn();
-		listener.handleCritical(this, line, column, message);
-		throw new PreprocessorException("Critical error at " + getName() + '[' + line + ':' + column + "]: " + message);
+		listener.handleCritical(tokenSource, line, column, message);
+		throw new PreprocessorException("Critical error at " + tokenSource + '[' + line + ':' + column + "]: " + message); // TODO
 	}
 
 	// ====
@@ -69,7 +85,8 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	private static boolean isIdentifierNonDigit(int cp) {
-		return cp >= 'A' && cp <= 'Z' || cp == '_' || cp >= 'a' && cp <= 'z';
+		return cp >= 'A' && cp <= 'Z' || cp == '_' || cp >= 'a' && cp <= 'z'
+				|| cp == '$' && MSVC_DOLLAR_IDENTIFIER_ENABLED; // MSVC specific
 	}
 
 	private static boolean isDigit(int cp) {
@@ -87,13 +104,14 @@ abstract class AbstractLexerSource implements TokenSource {
 	// ====
 
 	@Nonnull
-	private Token parseHeaderName(boolean isQuote) throws IOException, PreprocessorException {
+	private Token parseHeaderName(boolean isQuote) throws IOException {
 		// Note: the open quote/bracket are already consumed
 		final StringBuilder text = new StringBuilder(isQuote ? "\"" : "<");
 		final int close = isQuote ? '\"' : '>';
 		while (true) {
 			final int c = reader.read();
 			if (c == -1 || c == '\n') {
+				if (c == '\n') reader.unread();
 				postError("Unterminated header string literal");
 				break;
 			}
@@ -104,7 +122,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseNumber(@Nonnull String open) throws IOException, PreprocessorException {
+	private Token parseNumber(@Nonnull String open) throws IOException {
 		// Note: the open digit (or dot digit) are already consumed
 		final StringBuilder text = new StringBuilder(open);
 		while (true) {
@@ -127,8 +145,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseIdentifierOrKeyword(@Nonnull String open)
-			throws IOException, PreprocessorException {
+	private Token parseIdentifierOrKeyword(@Nonnull String open) throws IOException {
 		// open codepoint is already checked for digits or non identifier start UCN
 		final StringBuilder text = new StringBuilder(open);
 		while (true) {
@@ -137,35 +154,37 @@ abstract class AbstractLexerSource implements TokenSource {
 				text.appendCodePoint(c);
 			} else {
 				if (c >= 0) reader.unread();
-				// NOTE: alternative token
-				// NOTE: in C this is a macro, not a internal token
+				// NOTE: alternative token (digraph)
+				// NOTE: in C this is a macro, not an internal token
 				final String string = text.toString();
-				switch (string) {
-					case "and":
-						return createToken(TokenType.AND_AND_ALT);
-					case "and_eq":
-						return createToken(TokenType.AND_ASSIGN_ALT);
-					//noinspection SpellCheckingInspection
-					case "bitand":
-						return createToken(TokenType.AND_ALT);
-					//noinspection SpellCheckingInspection
-					case "bitor":
-						return createToken(TokenType.OR_ALT);
-					//noinspection SpellCheckingInspection
-					case "compl":
-						return createToken(TokenType.TILDE_ALT);
-					case "not":
-						return createToken(TokenType.NOT_ALT);
-					case "not_eq":
-						return createToken(TokenType.NOT_EQUAL_ALT);
-					case "or":
-						return createToken(TokenType.OR_OR_ALT);
-					case "or_eq":
-						return createToken(TokenType.OR_ASSIGN_ALT);
-					case "xor":
-						return createToken(TokenType.XOR_ALT);
-					case "xor_eq":
-						return createToken(TokenType.XOR_ASSIGN_ALT);
+				if (DIGRAPHS_ENABLED) {
+					switch (string) {
+						case "and":
+							return createToken(TokenType.AND_AND_ALT);
+						case "and_eq":
+							return createToken(TokenType.AND_ASSIGN_ALT);
+						//noinspection SpellCheckingInspection
+						case "bitand":
+							return createToken(TokenType.AND_ALT);
+						//noinspection SpellCheckingInspection
+						case "bitor":
+							return createToken(TokenType.OR_ALT);
+						//noinspection SpellCheckingInspection
+						case "compl":
+							return createToken(TokenType.TILDE_ALT);
+						case "not":
+							return createToken(TokenType.NOT_ALT);
+						case "not_eq":
+							return createToken(TokenType.NOT_EQUAL_ALT);
+						case "or":
+							return createToken(TokenType.OR_OR_ALT);
+						case "or_eq":
+							return createToken(TokenType.OR_ASSIGN_ALT);
+						case "xor":
+							return createToken(TokenType.XOR_ALT);
+						case "xor_eq":
+							return createToken(TokenType.XOR_ASSIGN_ALT);
+					}
 				}
 				return createToken(TokenType.IDENTIFIER, string);
 			}
@@ -173,7 +192,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseBlockComment() throws IOException, PreprocessorException {
+	private Token parseBlockComment() throws IOException {
 		// Note: the forward slash '/' and the star '*' are already consumed
 		final StringBuilder text = new StringBuilder("/*");
 		boolean matchingStar = false;
@@ -191,7 +210,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseLineComment() throws IOException, PreprocessorException {
+	private Token parseLineComment() throws IOException {
 		// Note: both the forward slash "//" are already consumed
 		final StringBuilder text = new StringBuilder("//");
 		while (true) {
@@ -202,8 +221,7 @@ abstract class AbstractLexerSource implements TokenSource {
 		return createToken(TokenType.LINE_COMMENT, text.toString());
 	}
 
-	private Token parseCharacterOrString(@Nonnull String open, boolean isChar)
-			throws PreprocessorException, IOException {
+	private Token parseCharacterOrString(@Nonnull String open, boolean isChar) throws IOException {
 		// Note: the open quote are already consumed
 		final int close = isChar ? '\'' : '"';
 		final StringBuilder text = new StringBuilder(open);
@@ -232,7 +250,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseRawString(@Nonnull String open) throws IOException, PreprocessorException {
+	private Token parseRawString(@Nonnull String open) throws IOException {
 		try {
 			reader.setRawStringMode(true);
 			// Note: the open quote are already consumed, but not the delimiter part
@@ -292,7 +310,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token parseWhitespaceOrNewline(int openCP) throws PreprocessorException, IOException {
+	private Token parseWhitespaceOrNewline(int openCP) throws IOException {
 		final StringBuilder text = new StringBuilder().appendCodePoint(openCP);
 		boolean isNewline = openCP == '\r' || openCP == '\n';
 		while (true) {
@@ -312,28 +330,29 @@ abstract class AbstractLexerSource implements TokenSource {
 	private int line;
 	private int column;
 
-	private int readAndSaveLineColumn() throws IOException, PreprocessorException {
+	private int readAndSaveLineColumn() throws IOException {
 		final int cp = reader.read();
 		this.line = reader.getLine();
-		this.column = reader.getLine();
+		this.column = reader.getColumn();
 		return cp;
 	}
 
 	@Nonnull
 	private Token createToken(@Nonnull TokenType type) {
-		return new Token(type, line, column);
+		return new Token(type, tokenSource, line, column, reader.getLine(), reader.getColumn());
 	}
 
 	@Nonnull
 	private Token createToken(@Nonnull TokenType type, @Nonnull String text) {
-		return new Token(type, line, column, text);
+		final String internedText = stringInternMap.putIfAbsent(text, text);
+		assert internedText != null;
+		return new Token(type, internedText, tokenSource, line, column, reader.getLine(), reader.getColumn());
 	}
 
 	// ====
 
 	@Nonnull
-	private Token condition(int c, @Nonnull TokenType yes, @Nonnull TokenType no)
-			throws PreprocessorException, IOException {
+	private Token condition(int c, @Nonnull TokenType yes, @Nonnull TokenType no) throws IOException {
 		// should not save line & column here, we are in the middle of a new token
 		final int d = reader.read();
 		if (c == d) return createToken(yes);
@@ -342,9 +361,8 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	private Token conditionDual(int c1, @Nonnull TokenType y1,
-			int c2, @Nonnull TokenType y2, @Nonnull TokenType no)
-			throws PreprocessorException, IOException {
+	private Token conditionDual(int c1, @Nonnull TokenType y1, int c2, @Nonnull TokenType y2, @Nonnull TokenType no)
+			throws IOException {
 		// should not save line & column here, we are in the middle of a new token
 		final int d = reader.read();
 		if (c1 == d) return createToken(y1);
@@ -354,8 +372,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nullable
-	private Token prefixCharacterOrString(@Nonnull String open)
-			throws IOException, PreprocessorException {
+	private Token prefixCharacterOrString(@Nonnull String open) throws IOException {
 		switch (reader.read()) {
 			case '\'':
 				return parseCharacterOrString(open + '\'', true);
@@ -370,8 +387,7 @@ abstract class AbstractLexerSource implements TokenSource {
 	}
 
 	@Nonnull
-	@Override
-	public Token nextToken() throws IOException, PreprocessorException {
+	public Token nextToken() throws IOException {
 		final int c = readAndSaveLineColumn();
 		switch (c) {
 			case -1:
@@ -432,9 +448,11 @@ abstract class AbstractLexerSource implements TokenSource {
 						return createToken(TokenType.MOD_ASSIGN);
 					case '>':
 						// NOTE: digraph
+						if (!DIGRAPHS_ENABLED) break;
 						return createToken(TokenType.BRACE_CLOSE_ALT);
 					case ':':
 						// NOTE: digraph
+						if (!DIGRAPHS_ENABLED) break;
 						if (reader.read() == '%') {
 							if (reader.read() == ':') return createToken(TokenType.PASTE_ALT);
 							reader.unread();
@@ -446,9 +464,17 @@ abstract class AbstractLexerSource implements TokenSource {
 				return createToken(TokenType.MOD);
 			case ':':
 				// NOTE: digraph
-				return conditionDual('>', TokenType.BRACKET_CLOSE_ALT, ':', TokenType.COLON_COLON, TokenType.COLON);
+				switch (reader.read()) {
+					case '>':
+						if (!DIGRAPHS_ENABLED) break;
+						return createToken(TokenType.BRACKET_CLOSE_ALT);
+					case ':':
+						return createToken(TokenType.COLON_COLON);
+				}
+				reader.unread();
+				return createToken(TokenType.COLON);
 			case '<':
-				if (isInclude) return parseHeaderName(false);
+				if (expectHeaderName) return parseHeaderName(false);
 				switch (reader.read()) {
 					case '=':
 						return createToken(TokenType.LESS_EQUAL);
@@ -456,9 +482,11 @@ abstract class AbstractLexerSource implements TokenSource {
 						return condition('=', TokenType.LEFT_SHIFT_ASSIGN, TokenType.LEFT_SHIFT);
 					case '%':
 						// NOTE: digraph
+						if (!DIGRAPHS_ENABLED) break;
 						return createToken(TokenType.BRACE_OPEN_ALT);
 					case ':':
 						// NOTE: digraph
+						if (!DIGRAPHS_ENABLED) break;
 						if (reader.read() == ':') {
 							final int d = reader.read();
 							if (d != ':' && d != '>') {
@@ -528,18 +556,28 @@ abstract class AbstractLexerSource implements TokenSource {
 				reader.unread();
 				return parseIdentifierOrKeyword("R");
 			case '"':
-				return isInclude ? parseHeaderName(true) : parseCharacterOrString("\"", false);
+				return expectHeaderName
+						? parseHeaderName(true)
+						: parseCharacterOrString("\"", false);
 		}
 		if (isDigit(c)) {
 			return parseNumber(Character.toString(c));
 		} else if (isIdentifierNonDigit(c) || isIdentifierInitialUCN(c)) {
 			return parseIdentifierOrKeyword(Character.toString(c));
 		} else if (isWhitespace(c)) {
-			final Token token = parseWhitespaceOrNewline(c);
-			this.isNewline = token.getType() == TokenType.NEW_LINE;
-			return token;
+			return parseWhitespaceOrNewline(c);
 		}
-		postError("Unknown character");
+		postError("Unknown character: " + Character.toString(c));
 		return createToken(TokenType.UNKNOWN, Character.toString(c));
+	}
+
+	public void expectHeaderName(boolean expectHeaderName) {
+		this.expectHeaderName = expectHeaderName;
+	}
+
+	// ====
+
+	public boolean isError() {
+		return isError;
 	}
 }

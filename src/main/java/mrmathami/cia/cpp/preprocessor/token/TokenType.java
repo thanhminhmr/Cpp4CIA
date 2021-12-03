@@ -1,4 +1,4 @@
-package mrmathami.cia.cpp.preprocessor;
+package mrmathami.cia.cpp.preprocessor.token;
 
 import mrmathami.annotations.Nonnull;
 

@@ -1,7 +1,7 @@
 package mrmathami.cia.cpp.preprocessor;
 
 import mrmathami.annotations.Nonnull;
-import mrmathami.annotations.Nullable;
+import mrmathami.cia.cpp.preprocessor.source.TokenSource;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,7 +12,7 @@ public final class Test {
 	private Test() {
 	}
 
-	public static void main(String[] strings) throws IOException, PreprocessorException {
+	public static void main(String[] strings) throws IOException {
 		/*
 		final BufferedReader bufferedReader = Files.newBufferedReader(
 				Path.of("test/gcc-7.5.0/gcc/testsuite/c-c++-common/cpp/normalize-3.c")
@@ -26,11 +26,7 @@ public final class Test {
 		}
 		System.out.println();
 		/*/
-		final BufferedReader bufferedReader = Files.newBufferedReader(
-				Path.of("test/gcc-7.5.0/gcc/testsuite/c-c++-common/cpp/pr58844-1.c")
-		);
-		final LexerReader reader = new LexerReader(bufferedReader);
-		final AbstractLexerSource source = new AbstractLexerSource(reader, new EventListener() {
+		final EventListener eventListener = new EventListener() {
 			@Override
 			public void handleWarning(@Nonnull TokenSource source, int line, int column, @Nonnull String msg) throws PreprocessorException {
 			}
@@ -42,28 +38,10 @@ public final class Test {
 			@Override
 			public void handleCritical(@Nonnull TokenSource source, int line, int column, @Nonnull String msg) throws PreprocessorException {
 			}
-
-			@Override
-			public void handleSourceChange(@Nonnull TokenSource source, @Nonnull SourceChangeEvent event) {
-			}
-		}) {
-			@Nonnull
-			@Override
-			public String getName() {
-				return "null";
-			}
-
-			@Nullable
-			@Override
-			public Path getPath() {
-				return null;
-			}
 		};
-
-		while (true) {
-			final Token token = source.nextToken();
-			if (token.getType() == TokenType.EOF) break;
-			System.out.println(token.getText());
+		try (final BufferedReader reader = Files.newBufferedReader(Path.of("./build/sr2/sr2.cpp"))) {
+			final TokenSource tokens = TokenSource.fromReader(reader, eventListener);
+			System.out.println(tokens);
 		}
 		//*/
 	}
