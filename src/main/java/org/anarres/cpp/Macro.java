@@ -26,11 +26,12 @@ import java.util.stream.Collectors;
 /**
  * A macro object.
  * <p>
- * This encapsulates a name, an argument count, and a token stream
- * for replacement. The replacement token stream may contain the
- * extra tokens {@link Token#M_ARG} and {@link Token#M_STRING}.
+ * This encapsulates a name, an argument count, and a token stream for replacement. The replacement token stream may
+ * contain the extra tokens {@link Token#M_ARG} and {@link Token#M_STRING}.
  */
 public final class Macro extends ArrayList<Token> {
+	private static final long serialVersionUID = -1L;
+
 	// standard macro
 	@Nonnull static final Macro __LINE__ = new Macro(Source.INTERNAL, "__LINE__");
 	@Nonnull static final Macro __FILE__ = new Macro(Source.INTERNAL, "__FILE__");

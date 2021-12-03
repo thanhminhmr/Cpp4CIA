@@ -24,47 +24,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Queue;
-import java.util.Set;
-import java.util.Stack;
-import java.util.TreeMap;
+import java.util.*;
 
-import static org.anarres.cpp.Token.AND_AND;
-import static org.anarres.cpp.Token.CHARACTER;
-import static org.anarres.cpp.Token.CPP_COMMENT;
-import static org.anarres.cpp.Token.C_COMMENT;
-import static org.anarres.cpp.Token.ELLIPSIS;
-import static org.anarres.cpp.Token.EOF;
-import static org.anarres.cpp.Token.EQUAL;
-import static org.anarres.cpp.Token.GREATER_EQUAL;
-import static org.anarres.cpp.Token.HEADER;
-import static org.anarres.cpp.Token.IDENTIFIER;
-import static org.anarres.cpp.Token.INVALID;
-import static org.anarres.cpp.Token.LEFT_SHIFT;
-import static org.anarres.cpp.Token.LESS_EQUAL;
-import static org.anarres.cpp.Token.M_ARG;
-import static org.anarres.cpp.Token.M_PASTE;
-import static org.anarres.cpp.Token.M_STRING;
-import static org.anarres.cpp.Token.NEW_LINE;
-import static org.anarres.cpp.Token.NOT_EQUAL;
-import static org.anarres.cpp.Token.NUMBER;
-import static org.anarres.cpp.Token.OR_OR;
-import static org.anarres.cpp.Token.P_HASH;
-import static org.anarres.cpp.Token.P_LINE;
-import static org.anarres.cpp.Token.P_PASTE;
-import static org.anarres.cpp.Token.RIGHT_SHIFT;
-import static org.anarres.cpp.Token.STRING;
-import static org.anarres.cpp.Token.WHITESPACE;
+import static org.anarres.cpp.Token.*;
 
 /**
  * A C Preprocessor.
@@ -229,46 +191,31 @@ public final class Preprocessor implements Closeable {
 	}
 
 	/**
-	 * Adds input for the Preprocessor.
-	 * <p>
-	 * Inputs are processed in the order in which they are added.
-	 */
-	public void addInput(@Nonnull Path source) {
-		// TODO: change this
-		source.init(this);
-		inputs.add(source);
-	}
-
-
-	/**
 	 * Handles an error.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * error. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the error. Otherwise, an exception is thrown.
 	 */
-	protected void error(int line, int column, @Nonnull String msg) throws LexerException {
+	private void error(int line, int column, @Nonnull String msg) throws LexerException {
 		listener.handleError(source, line, column, msg);
 	}
 
 	/**
 	 * Handles an error.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * error. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the error. Otherwise, an exception is thrown.
 	 *
 	 * @see #error(int, int, String)
 	 */
-	void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	private void error(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		error(tok.getLine(), tok.getColumn(), msg);
 	}
 
 	/**
 	 * Handles a warning.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * warning. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the warning. Otherwise, an exception is thrown.
 	 */
-	void warning(int line, int column, @Nonnull String msg) throws LexerException {
+	private void warning(int line, int column, @Nonnull String msg) throws LexerException {
 		if (warnings.contains(Warning.ERROR)) {
 			error(line, column, msg);
 		} else {
@@ -279,12 +226,11 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Handles a warning.
 	 * <p>
-	 * If a PreprocessorListener is installed, it receives the
-	 * warning. Otherwise, an exception is thrown.
+	 * If a PreprocessorListener is installed, it receives the warning. Otherwise, an exception is thrown.
 	 *
 	 * @see #warning(int, int, String)
 	 */
-	void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
+	private void warning(@Nonnull Token tok, @Nonnull String msg) throws LexerException {
 		warning(tok.getLine(), tok.getColumn(), msg);
 	}
 
@@ -309,7 +255,6 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Sets the system include paths used by this Preprocessor.
 	 */
-	/* Note for future: Create an IncludeHandler? */
 	public void setSystemIncludePath(@Nonnull List<Path> paths) {
 		this.systemIncludePaths = List.copyOf(paths);
 	}
@@ -973,7 +918,7 @@ public final class Preprocessor implements Closeable {
 		}
 	}
 
-	protected void pragma_once() throws IOException {
+	private void pragma_once() throws IOException {
 		if (!pragmaOnceFiles.add(source.getPath())) {
 			final Token lineMarker = sourcePop();
 			// FixedTokenSource should never generate a line-marker on exit.
@@ -981,7 +926,7 @@ public final class Preprocessor implements Closeable {
 		}
 	}
 
-	protected void pragma(@Nonnull Token name, @Nonnull List<Token> value) throws IOException, LexerException {
+	private void pragma(@Nonnull Token name, @Nonnull List<Token> value) throws IOException, LexerException {
 		if (getFeature(Feature.PRAGMA_ONCE)) {
 			if ("once".equals(name.getText())) {
 				pragma_once();
@@ -1351,7 +1296,7 @@ public final class Preprocessor implements Closeable {
 					cr = false;
 					continue;
 				}
-				cr = false;
+				//cr = false;
 				nls++;
 			} else if (c == '\u2028' || c == '\u2029' || c == '\u000B' || c == '\u000C' || c == '\u0085') {
 				cr = false;

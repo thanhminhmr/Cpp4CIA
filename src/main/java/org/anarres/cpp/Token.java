@@ -295,6 +295,9 @@ public final class Token {
 			case P_PASTE:
 				return "##";
 
+			case EOF:
+				return "";
+
 			default:
 				return null;
 		}

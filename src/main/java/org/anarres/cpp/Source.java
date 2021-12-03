@@ -54,26 +54,6 @@ public abstract class Source implements Closeable {
 		}
 	};
 
-	@Nonnull static final Source EXTERNAL = new Source() {
-		@Nonnull
-		@Override
-		public Token token() throws LexerException {
-			throw new LexerException("Cannot read from unknown external source");
-		}
-
-		@Override
-		public Path getPath() {
-			return null;
-		}
-
-		@Override
-		public @Nonnull
-		String getName() {
-			return "<unknown external source>";
-		}
-	};
-
-	private final Preprocessor preprocessor;
 	private Source parent;
 	private boolean autoPop;
 	private PreprocessorListener listener;
