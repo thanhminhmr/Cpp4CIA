@@ -1,6 +1,9 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
+import mrmathami.utils.EncodingDetector;
+import mrmathami.utils.Pair;
 import org.eclipse.cdt.core.dom.ast.IASTPreprocessorIncludeStatement;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
@@ -12,14 +15,13 @@ import org.eclipse.cdt.core.parser.IScannerInfo;
 import org.eclipse.cdt.core.parser.IncludeFileContentProvider;
 import org.eclipse.cdt.core.parser.ScannerInfo;
 import org.eclipse.core.runtime.CoreException;
-import org.mozilla.universalchardet.ReaderFactory;
 
-import mrmathami.annotations.Nonnull;
 import java.io.CharArrayWriter;
 import java.io.IOException;
 import java.io.Reader;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,57 +40,53 @@ final class TranslationUnitBuilder {
 	}
 
 	@Nonnull
-	private static Set<Path> createFileIncludes(@Nonnull IASTTranslationUnit translationUnit,
-			@Nonnull Set<Path> projectFileSet, @Nonnull List<Path> internalIncludePaths, @Nonnull Path currentFolder) {
-		final Set<Path> includeSet = new HashSet<>();
-		for (final IASTPreprocessorIncludeStatement includeDirective : translationUnit.getIncludeDirectives()) {
-			if (includeDirective.isActive()) {
-				final String includeFileName = includeDirective.getName().toString();
-				if (!includeDirective.isSystemInclude()) {
-					final Path includeFile = currentFolder.resolve(includeFileName).toAbsolutePath();
-					if (projectFileSet.contains(includeFile) && includeSet.add(includeFile)) {
-						continue;
-					}
-				}
-				for (final Path includePath : internalIncludePaths) {
-					final Path includeFile = includePath.resolve(includeFileName).toAbsolutePath();
-					if (projectFileSet.contains(includeFile) && includeSet.add(includeFile)) {
-						break;
-					}
-				}
-			}
-		}
-		return includeSet;
-	}
-
-	@Nonnull
-	static Map<Path, Set<Path>> createIncludeMap(@Nonnull List<Path> projectFiles,
-			@Nonnull List<Path> internalIncludePaths) throws CppException {
-		final Map<Path, Set<Path>> includeMap = new HashMap<>();
-		final Set<Path> projectFileSet = Set.copyOf(projectFiles);
-		for (final Path currentFile : projectFiles) {
+	static List<Pair<Path, Set<Path>>> createFileIncludesList(@Nonnull List<Path> projectFiles,
+			@Nonnull List<Path> includePaths) throws CppException {
+		final List<Pair<Path, Set<Path>>> includeList = new ArrayList<>(projectFiles.size());
+		final Map<Path, Path> projectFileMap = new HashMap<>(projectFiles.size());
+		for (final Path projectFile : projectFiles) projectFileMap.put(projectFile, projectFile);
+		for (final Path projectFile : projectFiles) {
 			try (final CharArrayWriter writer = new CharArrayWriter()) {
-				try (final Reader reader
-						= ReaderFactory.createBufferedReader(currentFile.toFile(), StandardCharsets.UTF_8)) {
+				try (final Reader reader = EncodingDetector.createReader(Files.newInputStream(projectFile))) {
 					reader.transferTo(writer);
 				}
 				final IASTTranslationUnit translationUnit = GPP_LANGUAGE.getASTTranslationUnit(
-						FileContent.create(currentFile.toString(), writer.toCharArray()),
+						FileContent.create(projectFile.toString(), writer.toCharArray()),
 						SCANNER_INFO, EMPTY_PROVIDER, null,
 						ILanguage.OPTION_NO_IMAGE_LOCATIONS
 								| ILanguage.OPTION_SKIP_FUNCTION_BODIES
 								| ILanguage.OPTION_SKIP_TRIVIAL_EXPRESSIONS_IN_AGGREGATE_INITIALIZERS,
 						LOG_SERVICE);
 
-				includeMap.put(currentFile, createFileIncludes(translationUnit, projectFileSet, internalIncludePaths,
-						currentFile.getParent()));
+				final Path currentFolder = projectFile.getParent();
+				final Set<Path> includeSet = new HashSet<>();
+				for (final IASTPreprocessorIncludeStatement includeDirective : translationUnit.getIncludeDirectives()) {
+					final String includeFileName = includeDirective.getName().toString();
+					if (!includeDirective.isSystemInclude()) {
+						final Path includeFile = currentFolder.resolve(includeFileName).normalize();
+						final Path normalizedIncludeFile = projectFileMap.get(includeFile);
+						if (normalizedIncludeFile != null) {
+							includeSet.add(normalizedIncludeFile);
+							continue;
+						}
+					}
+					for (final Path includePath : includePaths) {
+						final Path includeFile = includePath.resolve(includeFileName).normalize();
+						final Path normalizedIncludeFile = projectFileMap.get(includeFile);
+						if (normalizedIncludeFile != null) {
+							includeSet.add(normalizedIncludeFile);
+							break;
+						}
+					}
+				}
+				includeList.add(Pair.immutableOf(projectFile, includeSet));
 			} catch (CoreException e) {
 				throw new CppException("Cannot create TranslationUnit!", e);
 			} catch (IOException e) {
 				throw new CppException("Cannot read project file!", e);
 			}
 		}
-		return includeMap;
+		return includeList;
 	}
 
 	@Nonnull

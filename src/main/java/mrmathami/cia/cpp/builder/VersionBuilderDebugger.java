@@ -46,8 +46,8 @@ public final class VersionBuilderDebugger {
 					iBinding != null ? Arrays.toString(Arrays.stream(names).map(name -> {
 						if (name == null) return "{ null } ";
 						IASTImageLocation location = name.getImageLocation();
-						if (location == null) return "{ " + name.toString() + " } ";
-						return "{ " + name.toString() + ", " + location.getFileName() + "["
+						if (location == null) return "{ " + name + " } ";
+						return "{ " + name + ", " + location.getFileName() + "["
 								+ location.getNodeOffset() + ", " + (location.getNodeOffset()
 								+ location.getNodeLength()) + "] } ";
 					}).toArray()) : null
@@ -67,44 +67,44 @@ public final class VersionBuilderDebugger {
 		}
 	}
 
-	public final boolean isReadableFileContent() {
+	public boolean isReadableFileContent() {
 		return readableFileContent;
 	}
 
-	public final void setReadableFileContent(boolean readableFileContent) {
+	public void setReadableFileContent(boolean readableFileContent) {
 		this.readableFileContent = readableFileContent;
 	}
 
-	public final boolean isLoadFileContent() {
+	public boolean isLoadFileContent() {
 		return loadFileContent;
 	}
 
-	public final void setLoadFileContent(boolean loadFileContent) {
+	public void setLoadFileContent(boolean loadFileContent) {
 		this.loadFileContent = loadFileContent;
 	}
 
-	public final boolean isSaveTranslationUnit() {
+	public boolean isSaveTranslationUnit() {
 		return saveTranslationUnit;
 	}
 
-	public final void setSaveTranslationUnit(boolean saveTranslationUnit) {
+	public void setSaveTranslationUnit(boolean saveTranslationUnit) {
 		this.saveTranslationUnit = saveTranslationUnit;
 	}
 
-	public final Path getOutputPath() {
+	public Path getOutputPath() {
 		return outputPath;
 	}
 
-	public final void setOutputPath(Path outputPath) {
+	public void setOutputPath(Path outputPath) {
 		this.outputPath = outputPath;
 	}
 
 
-	final String getVersionName() {
+	String getVersionName() {
 		return versionName;
 	}
 
-	final void setVersionName(String versionName) {
+	void setVersionName(String versionName) {
 		this.versionName = versionName;
 	}
 

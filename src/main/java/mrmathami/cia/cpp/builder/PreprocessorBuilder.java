@@ -2,6 +2,7 @@ package mrmathami.cia.cpp.builder;
 
 import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
+import mrmathami.utils.Pair;
 import org.anarres.cpp.FileLexerSource;
 import org.anarres.cpp.LexerException;
 import org.anarres.cpp.Preprocessor;
@@ -12,9 +13,8 @@ import org.anarres.cpp.Token;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 final class PreprocessorBuilder {
@@ -44,57 +44,45 @@ final class PreprocessorBuilder {
 	}
 
 	@Nonnull
-	private static String getFileExtension(@Nonnull Path file) {
-		final String filename = file.getFileName().toString();
-		final int dot = filename.lastIndexOf('.');
-		return dot >= 0 ? filename.substring(dot) : "";
-	}
-
-	private static int fileCompare(@Nonnull Path fileA, @Nonnull Path fileB) {
-		final int compare = getFileExtension(fileA).compareToIgnoreCase(getFileExtension(fileB));
-		if (compare != 0) return compare;
-		return fileA.toString().compareToIgnoreCase(fileB.toString());
-	}
-
-	@Nonnull
 	private static List<Path> includeList(@Nonnull List<Path> projectFiles,
 			@Nonnull List<Path> includePaths) throws CppException {
-		final Map<Path, Set<Path>> includeMap = TranslationUnitBuilder.createIncludeMap(projectFiles, includePaths);
 
-		final Map<Path, int[]> includeScoreMap = new HashMap<>();
-		final List<Path> includeList = new ArrayList<>(includeMap.size());
+		final List<Pair<Path, Set<Path>>> fileIncludesList
+				= TranslationUnitBuilder.createFileIncludesList(projectFiles, includePaths);
+		final int includeSize = fileIncludesList.size();
+		final List<Path> includeList = new ArrayList<>(includeSize);
 
-		final List<Path> minIncludeFiles = new ArrayList<>();
+		final List<IntObjectPair<Path>> includeCounts = new ArrayList<>(includeSize);
+		final Set<Path> includedPaths = new HashSet<>(includeSize);
+		final List<Path> minimumCountPaths = new ArrayList<>(includeSize);
 
-		while (!includeMap.isEmpty()) {
-			long minCount = Long.MAX_VALUE;
-
-			includeScoreMap.clear();
-			for (final Map.Entry<Path, Set<Path>> entry : includeMap.entrySet()) {
-				includeScoreMap.computeIfAbsent(entry.getKey(), any -> new int[]{0});
-				for (final Path sourceIncludePath : entry.getValue()) {
-					if (includeMap.containsKey(sourceIncludePath)) {
-						final int[] wrapper = includeScoreMap.computeIfAbsent(sourceIncludePath, any -> new int[]{0});
-						wrapper[0] += 1;
+		while (includedPaths.size() < includeSize) {
+			includeCounts.clear();
+			for (final Pair<Path, Set<Path>> entry : fileIncludesList) {
+				final Path fromPath = entry.getA();
+				if (!includedPaths.contains(fromPath)) {
+					int count = 0;
+					for (final Path toPath : entry.getB()) {
+						if (!includedPaths.contains(toPath)) count++;
 					}
+					includeCounts.add(new IntObjectPair<>(fromPath, count));
 				}
 			}
 
-			minIncludeFiles.clear();
-			for (final Map.Entry<Path, int[]> entry : includeScoreMap.entrySet()) {
-				final int[] wrapper = entry.getValue();
-				if (wrapper[0] <= minCount) {
-					if (wrapper[0] < minCount) {
-						minCount = wrapper[0];
-						minIncludeFiles.clear();
+			minimumCountPaths.clear();
+			int minCount = Integer.MAX_VALUE;
+			for (final IntObjectPair<Path> pair : includeCounts) {
+				if (pair.value <= minCount) {
+					if (pair.value < minCount) {
+						minCount = pair.value;
+						minimumCountPaths.clear();
 					}
-					minIncludeFiles.add(entry.getKey());
+					minimumCountPaths.add(pair.object);
 				}
 			}
 
-			minIncludeFiles.sort(PreprocessorBuilder::fileCompare);
-			for (final Path includeFile : minIncludeFiles) includeMap.remove(includeFile);
-			includeList.addAll(minIncludeFiles);
+			includedPaths.addAll(minimumCountPaths);
+			includeList.addAll(minimumCountPaths);
 		}
 
 		return includeList;
@@ -169,7 +157,9 @@ final class PreprocessorBuilder {
 			if (tok.getType() == Token.EOF) break;
 
 			if (tok.getType() != Token.C_COMMENT && tok.getType() != Token.CPP_COMMENT) {
-				final String tokText = tok.getText().replace("\r\n", "\n").replace('\r', '\n');
+				final String tokText = tok.getText()
+						.replace("\r\n", "\n")
+						.replace('\r', '\n');
 				if (tok.getType() != Token.WHITESPACE && !tokText.isBlank()) {
 					if (tok.getType() != Token.P_LINE && emptyLine > 0) {
 						fileContent.append(emptyLineBuilder);
@@ -195,5 +185,15 @@ final class PreprocessorBuilder {
 			}
 		}
 		fileContent.append('\n');
+	}
+
+	private static final class IntObjectPair<E> {
+		@Nonnull private final E object;
+		private final int value;
+
+		private IntObjectPair(@Nonnull E object, int value) {
+			this.object = object;
+			this.value = value;
+		}
 	}
 }

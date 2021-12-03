@@ -1,11 +1,11 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.RootNode;
 
-import mrmathami.annotations.Nonnull;
-import mrmathami.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public final class ProjectVersion implements Serializable {
-	private static final long serialVersionUID = 7212810535184666471L;
+	private static final long serialVersionUID = -1L;
 
 	@Nonnull private final String versionName;
 	@Nonnull private final List<String> projectFiles;
@@ -51,34 +51,34 @@ public final class ProjectVersion implements Serializable {
 		}
 	}
 
-	public final void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
+	public void toOutputStream(@Nonnull OutputStream outputStream) throws IOException {
 		final ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 		objectOutputStream.writeObject(this);
 		objectOutputStream.flush();
 	}
 
 	@Nonnull
-	public final String getVersionName() {
+	public String getVersionName() {
 		return versionName;
 	}
 
 	@Nonnull
-	public final List<String> getProjectFiles() {
+	public List<String> getProjectFiles() {
 		return projectFiles;
 	}
 
 	@Nonnull
-	public final List<String> getIncludePaths() {
+	public List<String> getIncludePaths() {
 		return includePaths;
 	}
 
 	@Nonnull
-	public final RootNode getRootNode() {
+	public RootNode getRootNode() {
 		return rootNode;
 	}
 
 	@Nonnull
-	public final Map<DependencyType, Double> getDependencyTypeWeightMap() {
+	public Map<DependencyType, Double> getDependencyTypeWeightMap() {
 		if (typeWeightMap != null) return typeWeightMap;
 		final Map<DependencyType, Double> map = new EnumMap<>(DependencyType.class);
 		for (final DependencyType type : DependencyType.values()) map.put(type, typeWeights[type.ordinal()]);
@@ -86,7 +86,7 @@ public final class ProjectVersion implements Serializable {
 	}
 
 	@Nonnull
-	public final Map<CppNode, Double> getWeightMap() {
+	public Map<CppNode, Double> getWeightMap() {
 		if (weightMap != null) return weightMap;
 		final Map<CppNode, Double> map = new IdentityHashMap<>();
 		map.put(rootNode, weights[0]); // root id == 0

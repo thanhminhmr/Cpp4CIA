@@ -36,11 +36,11 @@ public final class BuilderTest {
 //		System.in.read();
 		long start_time = System.nanoTime();
 
-		final Path projectRoot = Path.of("./test/CIACPP_Bug2_macro/");
+		final Path projectRoot = Path.of("./test");
 		final List<Path> projectFiles =
 				List.of(
-						projectRoot.resolve("header.h"),
-						projectRoot.resolve("source.cpp")
+//						projectRoot.resolve("header.h"),
+						projectRoot.resolve("test.cpp")
 				);
 
 
