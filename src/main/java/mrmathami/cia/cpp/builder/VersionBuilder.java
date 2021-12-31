@@ -11,11 +11,7 @@ import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public final class VersionBuilder {
 	@Nonnull public static final Map<DependencyType, Double> WEIGHT_MAP = Map.of(
@@ -118,7 +114,7 @@ public final class VersionBuilder {
 		}
 	}
 
-	//*
+	/*
 	@Nonnull
 	public static ProjectVersion build(@Nonnull String versionName, @Nonnull Path projectRoot,
 			@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths,

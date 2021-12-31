@@ -1,5 +1,6 @@
 package mrmathami.cia.cpp.differ;
 
+import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.DependencyType;
@@ -8,13 +9,7 @@ import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.builder.ProjectVersion;
 import mrmathami.utils.Pair;
 
-import mrmathami.annotations.Nonnull;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public final class VersionDiffer {
 	@Nonnull public static final Map<DependencyType, Double> IMPACT_WEIGHT_MAP = Map.of(
@@ -87,8 +82,9 @@ public final class VersionDiffer {
 			typeImpactWeights[type.ordinal()] = dependencyTypeImpactWeightMap.get(type);
 		}
 
-		final double[] impactWeights = ImpactWeightBuilder.calculate(dependencyTypeImpactWeightMap, rootB, changedListB);
+		final double[] impactWeights = ImpactWeightBuilder.calculate(typeImpactWeights, rootB, changedListB);
 
-		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes, typeImpactWeights, impactWeights);
+		return new VersionDifference(versionA, versionB, addedNodes, changedNodes, unchangedNodes, removedNodes,
+				typeImpactWeights, impactWeights);
 	}
 }

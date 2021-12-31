@@ -10,17 +10,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Stack;
+import java.util.*;
 
 import static mrmathami.cia.cpp.ast.DependencyMap.DEPENDENCY_ZERO;
 
@@ -460,7 +450,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	/**
 	 * If two nodes have the similar prototype, aka same type.
 	 *
-	 * @param node    node to compare
+	 * @param node node to compare
 	 * @param matcher node matcher
 	 * @return result
 	 */
@@ -475,7 +465,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	/**
 	 * If two nodes have the same prototype, aka same name and same type.
 	 *
-	 * @param node    node to compare
+	 * @param node node to compare
 	 * @param matcher node matcher
 	 * @return result
 	 */
@@ -493,11 +483,10 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * If two nodes are similar, aka same name, same prototype, same parent.
-	 * Only happen when two nodes are in different trees with
-	 * the same structure, or they are the same object.
+	 * If two nodes are similar, aka same name, same prototype, same parent. Only happen when two nodes are in different
+	 * trees with the same structure, or they are the same object.
 	 *
-	 * @param node    node to compare
+	 * @param node node to compare
 	 * @param matcher node matcher
 	 * @return result
 	 */
@@ -519,11 +508,10 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * If two nodes are exactly the same, aka same name, same prototype, same parent, same content.
-	 * Only happen when two nodes are in different trees with
-	 * the same structure, or they are the same object.
+	 * If two nodes are exactly the same, aka same name, same prototype, same parent, same content. Only happen when two
+	 * nodes are in different trees with the same structure, or they are the same object.
 	 *
-	 * @param node    node to compare
+	 * @param node node to compare
 	 * @param matcher node matcher
 	 * @return result
 	 */
@@ -676,8 +664,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * Check if this node is root node.
-	 * Note: a node without parent is a root node.
+	 * Check if this node is root node. Note: a node without parent is a root node.
 	 *
 	 * @return true if this node is root node
 	 */
@@ -686,8 +673,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * Get parent node, or null if there is none.
-	 * Note: a node without parent is a root node.
+	 * Get parent node, or null if there is none. Note: a node without parent is a root node.
 	 *
 	 * @return parent node
 	 */
@@ -727,14 +713,24 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	private void internalRemoveDependencyRecursive() {
+		final List<CppNode> childrenNodes = new ArrayList<>();
+		childrenNodes.add(this);
 		removeAllDependency();
-		getRoot().internalTransferRecursive(this, null);
-		for (final CppNode child : children) child.internalRemoveDependencyRecursive();
+		for (final CppNode node : this) {
+			childrenNodes.add(node);
+			node.removeAllDependency();
+		}
+		final Iterator<CppNode> iterator = getRoot().skippedIterator(this);
+		while (iterator.hasNext()) {
+			final CppNode node = iterator.next();
+			for (final CppNode childNode : childrenNodes) {
+				node.internalOnTransfer(childNode, null);
+			}
+		}
 	}
 
 	/**
-	 * Remove children nodes from current node
-	 * {@link #remove}
+	 * Remove children nodes from current node {@link #remove}
 	 */
 	public final void removeChildren() {
 		checkReadOnly();
@@ -757,9 +753,7 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * Add child node to current node.
-	 * Return false if child node already have parent node.
-	 * Return true otherwise.
+	 * Add child node to current node. Return false if child node already have parent node. Return true otherwise.
 	 *
 	 * @param child a child node to add
 	 * @return whether the operation is success or not
@@ -775,9 +769,8 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	}
 
 	/**
-	 * Remove a child node from current node.
-	 * Return false if the child node doesn't belong to this node.
-	 * Return true otherwise.
+	 * Remove a child node from current node. Return false if the child node doesn't belong to this node. Return true
+	 * otherwise.
 	 *
 	 * @param child a child node to removeFromParent
 	 * @return whether the operation is success or not
@@ -821,8 +814,8 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 		checkReadOnly();
 		// check if current node is root node or child node is not root node
 		if (getRoot() != node.getRoot() || isAncestorOf(node)) return false;
-		boolean isChanged = transferAllDependency(node)
-				|| getRoot().internalTransferRecursive(this, node);
+		boolean isChanged = transferAllDependency(node);
+		isChanged = getRoot().internalTransferRecursive(this, node) | isChanged;
 		if (!children.isEmpty()) {
 			isChanged = true;
 			node.children.addAll(children);
@@ -834,7 +827,9 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 
 	private boolean internalTransferRecursive(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		boolean isChanged = internalOnTransfer(fromNode, toNode);
-		for (final CppNode child : children) isChanged |= child.internalTransferRecursive(fromNode, toNode);
+		for (final CppNode node : this) {
+			isChanged = node.internalOnTransfer(fromNode, toNode) | isChanged;
+		}
 		return isChanged;
 	}
 
@@ -905,29 +900,91 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 	 * @return the iterator
 	 */
 	@Nonnull
+	@Override
 	public final Iterator<CppNode> iterator() {
-		final Stack<Iterator<CppNode>> stack = new Stack<>();
-		stack.push(children.iterator());
-		return new Iterator<>() {
-			@Nullable private CppNode current;
+		return new NodeIterator(children.iterator());
+	}
 
-			public final boolean hasNext() {
-				if (current != null) {
-					stack.push(current.children.iterator());
-					this.current = null;
+	private static final class NodeIterator implements Iterator<CppNode> {
+		@Nonnull private final Deque<Iterator<CppNode>> stack = new ArrayDeque<>();
+
+		NodeIterator(@Nonnull Iterator<CppNode> iterator) {
+			stack.push(iterator);
+		}
+
+		@Override
+		public boolean hasNext() {
+			while (true) {
+				final Iterator<CppNode> iterator = stack.peek();
+				if (iterator == null) return false;
+				if (iterator.hasNext()) return true;
+				stack.pop();
+			}
+		}
+
+		@Nonnull
+		@Override
+		public CppNode next() {
+			final Iterator<CppNode> iterator = stack.peek();
+			if (iterator != null) {
+				final CppNode current = iterator.next();
+				stack.push(current.iterator());
+				return current;
+			}
+			throw new NoSuchElementException();
+		}
+	}
+
+	/**
+	 * Return this tree iterator
+	 *
+	 * @return the iterator
+	 */
+	@Nonnull
+	private Iterator<CppNode> skippedIterator(@Nonnull CppNode skippedNode) {
+		if (this == skippedNode) return Collections.emptyIterator();
+		return new SkippedNodeIterator(children.iterator(), skippedNode);
+	}
+
+	private static final class SkippedNodeIterator implements Iterator<CppNode> {
+		@Nonnull private final Deque<Iterator<CppNode>> stack = new ArrayDeque<>();
+		@Nonnull private final CppNode skippedNode;
+		@Nullable private CppNode currentNode;
+
+		SkippedNodeIterator(@Nonnull Iterator<CppNode> iterator, @Nonnull CppNode skippedNode) {
+			this.skippedNode = skippedNode;
+			stack.push(iterator);
+		}
+
+		@Override
+		public boolean hasNext() {
+			if (currentNode != null) return true;
+			while (true) {
+				final Iterator<CppNode> iterator = stack.peek();
+				if (iterator == null) return false;
+				while (iterator.hasNext()) {
+					final CppNode node = iterator.next();
+					if (node != skippedNode) {
+						this.currentNode = node;
+						return true;
+					}
 				}
-				do {
-					if (stack.peek().hasNext()) return true;
-					stack.pop();
-				} while (!stack.isEmpty());
-				return false;
+				stack.pop();
 			}
+		}
 
-			@Nonnull
-			public final CppNode next() {
-				return this.current = stack.peek().next();
-			}
-		};
+		@Nonnull
+		@Override
+		public CppNode next() {
+			do {
+				if (currentNode != null) {
+					final CppNode node = currentNode;
+					this.currentNode = null;
+					return node;
+				}
+			} while (hasNext());
+			throw new NoSuchElementException();
+		}
 	}
 
 	//</editor-fold>

@@ -1,3 +1,4 @@
+/*
 package mrmathami.cia.cpp;
 
 import mrmathami.cia.cpp.builder.ProjectVersion;
@@ -124,3 +125,4 @@ public final class SerializerTest {
 		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 	}
 }
+*/
