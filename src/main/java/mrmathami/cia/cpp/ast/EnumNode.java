@@ -2,6 +2,7 @@ package mrmathami.cia.cpp.ast;
 
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.List;
@@ -20,12 +21,12 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Nullable
 	@Override
-	public final CppNode getType() {
+	public CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable CppNode type) {
+	public boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
@@ -34,62 +35,62 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Nonnull
 	@Override
-	public final List<VariableNode> getVariables() {
+	public List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">
 
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
-	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
+	protected int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeSimilarHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
-	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
+	protected int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeIdenticalHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
-	protected final int similarHashcode(@Nonnull Matcher matcher) {
+	protected int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isIdentical(node, matcher)
 				&& matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.IDENTICAL);
 	}
 
 	@Override
-	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
@@ -98,7 +99,7 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;
@@ -106,7 +107,7 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Nonnull
 	@Override
-	final String partialElementString() {
+	String partialElementString() {
 		return ", \"type\": " + type;
 	}
 

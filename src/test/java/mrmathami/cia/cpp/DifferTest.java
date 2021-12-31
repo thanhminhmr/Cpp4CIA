@@ -1,17 +1,14 @@
-/*
 package mrmathami.cia.cpp;
 
 import mrmathami.cia.cpp.builder.ProjectVersion;
-import mrmathami.cia.cpp.builder.VersionBuilder;
-import mrmathami.cia.cpp.builder.VersionBuilderDebugger;
 import mrmathami.cia.cpp.differ.VersionDiffer;
-import mrmathami.cia.cpp.differ.VersionDifferDebugger;
 import mrmathami.cia.cpp.differ.VersionDifference;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 
 public final class DifferTest {
 	private DifferTest() {
@@ -19,78 +16,32 @@ public final class DifferTest {
 
 	public static void main(String[] args) throws IOException, CppException {
 //		System.in.read();
-		long start_time = System.nanoTime();
+		final long start_time = System.nanoTime();
 
-		final VersionBuilderDebugger debugger = new VersionBuilderDebugger();
-		debugger.setLoadFileContent(false);
-		debugger.setSaveTranslationUnit(false);
-		debugger.setOutputPath(Path.of("./test"));
+		final Path oldPath = Path.of("");
+		final Path newPath = Path.of("");
 
-		// ==========
-		final Path projectRoot = Path.of("./test/cpp/zpaq714");
-		final List<Path> projectFiles =
-				List.of(
-						Path.of("./test/zpaq714/zpaq.cpp"),
-						Path.of("./test/zpaq714/libzpaq.cpp"),
-						Path.of("./test/zpaq714/libzpaq.h")
-				);
+		try (final InputStream oldPathInputStream = Files.newInputStream(oldPath);
+				final InputStream newPathInputStream = Files.newInputStream(newPath)) {
+			final ProjectVersion projectVersion = ProjectVersion.fromInputStream(oldPathInputStream);
+			final ProjectVersion projectVersion2 = ProjectVersion.fromInputStream(newPathInputStream);
 
-//		final Path projectRoot = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.0");
-//		final List<Path> projectFiles =
-//				List.of(
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.0\\main.cpp"),
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.cpp"),
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.0\\TinyEXIF.h")
-//				);
+			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final List<Path> includePaths = List.of();
+			final VersionDifference difference
+					= VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
 
-		final ProjectVersion projectVersion = VersionBuilder.build("project1", projectRoot, projectFiles, includePaths, VersionBuilder.WEIGHT_MAP, debugger);
-
-
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-
-		// ==========
-		final Path projectRoot2 = Path.of("./test/zpaq715");
-		final List<Path> projectFiles2 =
-				List.of(
-						Path.of("./test/zpaq715/zpaq.cpp"),
-						Path.of("./test/zpaq715/libzpaq.cpp"),
-						Path.of("./test/zpaq715/libzpaq.h")
-				);
-
-//		final Path projectRoot2 = Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.1");
-//		final List<Path> projectFiles2 =
-//				List.of(
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.1\\main.cpp"),
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.1\\TinyEXIF.cpp"),
-//						Path.of("D:\\Research\\SourceCodeComparator\\cia\\test\\cpp\\TinyEXIF-1.0.1\\TinyEXIF.h")
-//				);
-
-		final List<Path> includePaths2 = List.of();
-		final ProjectVersion projectVersion2 = VersionBuilder.build("project2", projectRoot2, projectFiles2, includePaths2, VersionBuilder.WEIGHT_MAP, debugger);
-
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-
-		// ==========
-
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-
-		final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
-
-		VersionDifferDebugger.debugOutput(Path.of("./test"), difference);
-
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
-		try (final FileOutputStream fos = new FileOutputStream("./test/project1_project2.VersionDifference")) {
-			difference.toOutputStream(fos);
+			System.out.println((System.nanoTime() - start_time) / 1000000.0);
+			try (final FileOutputStream fos = new FileOutputStream("./test/project1_project2.VersionDifference")) {
+				difference.toOutputStream(fos);
+				System.out.println((System.nanoTime() - start_time) / 1000000.0);
+			}
 		}
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-		final Project project = new Project("project", List.of(projectVersion, projectVersion2), List.of(difference));
-		try (final FileOutputStream fos = new FileOutputStream("./test/project.Project")) {
-			project.toOutputStream(fos);
-		}
-		System.out.println((System.nanoTime() - start_time) / 1000000.0);
+//		final Project project = new Project("project", List.of(projectVersion, projectVersion2), List.of(difference));
+//		try (final FileOutputStream fos = new FileOutputStream("./test/project.Project")) {
+//			project.toOutputStream(fos);
+//		}
+//		System.out.println((System.nanoTime() - start_time) / 1000000.0);
 	}
 }
-*/

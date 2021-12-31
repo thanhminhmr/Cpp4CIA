@@ -84,8 +84,8 @@ final class ImpactWeightBuilder {
 		return 1.0 - linkWeight;
 	}
 
-	private static @Nonnull
-	double[] reduceWeights(@Nonnull double[] weightsA, @Nonnull double[] weightsB) {
+	@Nonnull
+	private static double[] reduceWeights(@Nonnull double[] weightsA, @Nonnull double[] weightsB) {
 		assert weightsA.length == weightsB.length;
 		for (int i = 0; i < weightsA.length; i++) {
 			weightsA[i] *= weightsB[i];

@@ -716,13 +716,11 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 		final List<CppNode> childrenNodes = new ArrayList<>();
 		childrenNodes.add(this);
 		removeAllDependency();
-		for (final CppNode node : this) {
-			childrenNodes.add(node);
-			node.removeAllDependency();
+		for (final CppNode childNode : this) {
+			childrenNodes.add(childNode);
+			childNode.removeAllDependency();
 		}
-		final Iterator<CppNode> iterator = getRoot().skippedIterator(this);
-		while (iterator.hasNext()) {
-			final CppNode node = iterator.next();
+		for (final CppNode node : getRoot()) {
 			for (final CppNode childNode : childrenNodes) {
 				node.internalOnTransfer(childNode, null);
 			}
@@ -931,58 +929,6 @@ public abstract class CppNode implements Serializable, Iterable<CppNode> {
 				stack.push(current.iterator());
 				return current;
 			}
-			throw new NoSuchElementException();
-		}
-	}
-
-	/**
-	 * Return this tree iterator
-	 *
-	 * @return the iterator
-	 */
-	@Nonnull
-	private Iterator<CppNode> skippedIterator(@Nonnull CppNode skippedNode) {
-		if (this == skippedNode) return Collections.emptyIterator();
-		return new SkippedNodeIterator(children.iterator(), skippedNode);
-	}
-
-	private static final class SkippedNodeIterator implements Iterator<CppNode> {
-		@Nonnull private final Deque<Iterator<CppNode>> stack = new ArrayDeque<>();
-		@Nonnull private final CppNode skippedNode;
-		@Nullable private CppNode currentNode;
-
-		SkippedNodeIterator(@Nonnull Iterator<CppNode> iterator, @Nonnull CppNode skippedNode) {
-			this.skippedNode = skippedNode;
-			stack.push(iterator);
-		}
-
-		@Override
-		public boolean hasNext() {
-			if (currentNode != null) return true;
-			while (true) {
-				final Iterator<CppNode> iterator = stack.peek();
-				if (iterator == null) return false;
-				while (iterator.hasNext()) {
-					final CppNode node = iterator.next();
-					if (node != skippedNode) {
-						this.currentNode = node;
-						return true;
-					}
-				}
-				stack.pop();
-			}
-		}
-
-		@Nonnull
-		@Override
-		public CppNode next() {
-			do {
-				if (currentNode != null) {
-					final CppNode node = currentNode;
-					this.currentNode = null;
-					return node;
-				}
-			} while (hasNext());
 			throw new NoSuchElementException();
 		}
 	}

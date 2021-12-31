@@ -21,7 +21,7 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	final void internalLock() {
+	void internalLock() {
 		super.internalLock();
 		if (body != null) this.body = body.intern();
 	}
@@ -40,12 +40,12 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 
 	@Nullable
 	@Override
-	public final CppNode getType() {
+	public CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable CppNode type) {
+	public boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
@@ -53,51 +53,27 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 	}
 
 	//<editor-fold desc="Node Comparator">
-//	@Override
-//	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-//		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
-//	}
-
-//	@Override
-//	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
-//		int result = super.prototypeSimilarHashcode(matcher);
-//		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
-//		return result;
-//	}
-
-//	@Override
-//	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-//		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.SIMILAR);
-//	}
-
-//	@Override
-//	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
-//		int result = super.prototypeIdenticalHashcode(matcher);
-//		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
-//		return result;
-//	}
-
 	@Override
-	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
-	protected final int similarHashcode(@Nonnull Matcher matcher) {
+	protected int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		return result;
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isIdentical(node, matcher)
 				&& Objects.equals(body, ((VariableNode) node).body)
 				&& matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
-	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + (body != null ? body.hashCode() : 0);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
@@ -106,7 +82,7 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (type != fromNode) return false;
 		this.type = toNode;
 		return true;
@@ -114,7 +90,7 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 
 	@Nonnull
 	@Override
-	final String partialElementString() {
+	String partialElementString() {
 		final StringBuilder builder = new StringBuilder();
 		builder.append(", \"type\": ").append(type)
 				.append(", \"body\": ");

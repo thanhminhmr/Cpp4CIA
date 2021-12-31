@@ -1,18 +1,13 @@
 package mrmathami.cia.cpp.ast;
 
-import mrmathami.utils.Utilities;
-
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
+import mrmathami.utils.Utilities;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public final class ClassNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
 	private static final long serialVersionUID = -6768126335469290258L;
@@ -27,17 +22,17 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Override
-	final void internalLock() {
+	void internalLock() {
 		super.internalLock();
 		this.bases = Set.copyOf(bases);
 	}
 
 	@Nonnull
-	public final Set<CppNode> getBases() {
+	public Set<CppNode> getBases() {
 		return isWritable() ? Collections.unmodifiableSet(bases) : bases;
 	}
 
-	public final boolean addBases(@Nonnull Set<CppNode> bases) {
+	public boolean addBases(@Nonnull Set<CppNode> bases) {
 		checkReadOnly();
 		for (final CppNode base : bases) {
 			if (base == this || base.getRoot() != getRoot()) return false;
@@ -45,54 +40,54 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 		return this.bases.addAll(bases);
 	}
 
-	public final void removeBases() {
+	public void removeBases() {
 		checkReadOnly();
 		bases.clear();
 	}
 
-	public final boolean addBase(@Nonnull CppNode base) {
+	public boolean addBase(@Nonnull CppNode base) {
 		checkReadOnly();
 		return base != this && base.getRoot() == getRoot() && bases.add(base);
 	}
 
-	public final boolean removeBase(@Nonnull CppNode base) {
+	public boolean removeBase(@Nonnull CppNode base) {
 		checkReadOnly();
 		return bases.remove(base);
 	}
 
 	@Nonnull
 	@Override
-	public final List<ClassNode> getClasses() {
+	public List<ClassNode> getClasses() {
 		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<EnumNode> getEnums() {
+	public List<EnumNode> getEnums() {
 		return getChildrenList(EnumNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<FunctionNode> getFunctions() {
+	public List<FunctionNode> getFunctions() {
 		return getChildrenList(FunctionNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<VariableNode> getVariables() {
+	public List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
 		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
 		final int basesSize = bases.size();
@@ -113,14 +108,14 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Override
-	protected final int similarHashcode(@Nonnull Matcher matcher) {
+	protected int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
 		result = 31 * result + bases.size();
 		return result;
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
 		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
 		final int basesSize = bases.size();
@@ -141,7 +136,7 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Override
-	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + bases.size();
 		return result;
@@ -149,7 +144,7 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		if (!bases.contains(fromNode)) return false;
 		bases.remove(fromNode);
 		if (toNode != null) bases.add(toNode);
@@ -157,7 +152,7 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Nonnull
-	final String partialElementString() {
+	String partialElementString() {
 		return ", \"bases\": " + Utilities.collectionToString(bases);
 	}
 

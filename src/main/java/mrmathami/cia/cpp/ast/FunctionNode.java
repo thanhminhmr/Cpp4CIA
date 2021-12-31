@@ -7,12 +7,7 @@ import mrmathami.utils.Utilities;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Objects;
+import java.util.*;
 
 public final class FunctionNode extends CppNode implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
 	private static final long serialVersionUID = -2779864800917566027L;
@@ -29,18 +24,18 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	final void internalLock() {
+	void internalLock() {
 		super.internalLock();
 		if (body != null) this.body = body.intern();
 		this.parameters = List.copyOf(parameters);
 	}
 
 	@Nonnull
-	public final List<CppNode> getParameters() {
+	public List<CppNode> getParameters() {
 		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
-	public final boolean addParameters(@Nonnull List<CppNode> parameters) {
+	public boolean addParameters(@Nonnull List<CppNode> parameters) {
 		checkReadOnly();
 		for (final CppNode parameter : parameters) {
 			if (parameter == this || parameter.getRoot() != getRoot()) return false;
@@ -48,43 +43,43 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return this.parameters.addAll(parameters);
 	}
 
-	public final void removeParameters() {
+	public void removeParameters() {
 		checkReadOnly();
 		parameters.clear();
 	}
 
-	public final boolean addParameter(@Nonnull CppNode parameter) {
+	public boolean addParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		if (parameter == this || parameter.getRoot() != getRoot()) return false;
 		parameters.add(parameter);
 		return true;
 	}
 
-	public final boolean removeParameter(@Nonnull CppNode parameter) {
+	public boolean removeParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		return parameters.remove(parameter);
 	}
 
 	@Nullable
 	@Override
-	public final String getBody() {
+	public String getBody() {
 		return body;
 	}
 
 	@Override
-	public final void setBody(@Nullable String body) {
+	public void setBody(@Nullable String body) {
 		checkReadOnly();
 		this.body = body;
 	}
 
 	@Nullable
 	@Override
-	public final CppNode getType() {
+	public CppNode getType() {
 		return type;
 	}
 
 	@Override
-	public final boolean setType(@Nullable CppNode type) {
+	public boolean setType(@Nullable CppNode type) {
 		checkReadOnly();
 		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
 		this.type = type;
@@ -93,31 +88,31 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 
 	@Nonnull
 	@Override
-	public final List<ClassNode> getClasses() {
+	public List<ClassNode> getClasses() {
 		return getChildrenList(ClassNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<EnumNode> getEnums() {
+	public List<EnumNode> getEnums() {
 		return getChildrenList(EnumNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<VariableNode> getVariables() {
+	public List<VariableNode> getVariables() {
 		return getChildrenList(VariableNode.class);
 	}
 
 	@Nonnull
 	@Override
-	public final List<TypedefNode> getTypedefs() {
+	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
 
 	//<editor-fold desc="Node Comparator">
 	@Override
-	protected final boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 //		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
@@ -131,7 +126,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
+	protected int prototypeSimilarHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeSimilarHashcode(matcher);
 //		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		result = 31 * result + parameters.size(); // prototype similar
@@ -139,7 +134,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 //		if (!matcher.isNodeMatch(type, function.type, MatchLevel.SIMILAR)) return false;
@@ -153,7 +148,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
+	protected int prototypeIdenticalHashcode(@Nonnull Matcher matcher) {
 		int result = super.prototypeIdenticalHashcode(matcher);
 //		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		result = 31 * result + parameters.size(); // prototype similar
@@ -161,7 +156,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isSimilar(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!matcher.isNodeMatch(type, function.type, MatchLevel.PROTOTYPE_IDENTICAL)) return false;
@@ -175,7 +170,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final int similarHashcode(@Nonnull Matcher matcher) {
+	protected int similarHashcode(@Nonnull Matcher matcher) {
 		int result = super.similarHashcode(matcher);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		result = 31 * result + parameters.size(); // similar
@@ -183,7 +178,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
+	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isIdentical(node, matcher)) return false;
 		final FunctionNode function = (FunctionNode) node;
 		if (!Objects.equals(body, function.body)
@@ -200,7 +195,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	protected final int identicalHashcode(@Nonnull Matcher matcher) {
+	protected int identicalHashcode(@Nonnull Matcher matcher) {
 		int result = super.identicalHashcode(matcher);
 		result = 31 * result + (body != null ? body.hashCode() : 0);
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
@@ -210,7 +205,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	//</editor-fold>
 
 	@Override
-	final boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
 		boolean isChanged = false;
 		if (type == fromNode) {
 			this.type = toNode;
@@ -231,7 +226,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Nonnull
-	final String partialElementString() {
+	String partialElementString() {
 		final StringBuilder builder = new StringBuilder()
 				.append(", \"type\": ").append(type)
 				.append(", \"parameters\": ").append(Utilities.collectionToString(parameters))
