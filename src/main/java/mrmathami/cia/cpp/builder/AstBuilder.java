@@ -1,5 +1,7 @@
 package mrmathami.cia.cpp.builder;
 
+import mrmathami.annotations.Nonnull;
+import mrmathami.annotations.Nullable;
 import mrmathami.cia.cpp.CppException;
 import mrmathami.cia.cpp.ast.ClassNode;
 import mrmathami.cia.cpp.ast.CppNode;
@@ -10,7 +12,6 @@ import mrmathami.cia.cpp.ast.IntegralNode;
 import mrmathami.cia.cpp.ast.NamespaceNode;
 import mrmathami.cia.cpp.ast.RootNode;
 import mrmathami.cia.cpp.ast.TypedefNode;
-import mrmathami.cia.cpp.ast.UnknownNode;
 import mrmathami.cia.cpp.ast.VariableNode;
 import mrmathami.utils.Pair;
 import mrmathami.utils.Utilities;
@@ -34,6 +35,7 @@ import org.eclipse.cdt.core.dom.ast.IBinding;
 import org.eclipse.cdt.core.dom.ast.IProblemBinding;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTAliasDeclaration;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier;
+import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTConstructorChainInitializer;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDeclSpecifier;
 import org.eclipse.cdt.core.dom.ast.cpp.ICPPASTDeclarator;
@@ -65,10 +67,9 @@ import org.eclipse.cdt.core.dom.ast.cpp.ICPPUsingDeclaration;
 import org.eclipse.cdt.internal.core.dom.parser.IASTAmbiguousDeclarator;
 import org.eclipse.cdt.internal.core.model.ASTStringUtil;
 
-import mrmathami.annotations.Nonnull;
-import mrmathami.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -78,11 +79,12 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 final class AstBuilder {
-	@Nonnull private static final Pattern PATTERN = Pattern.compile("\\{\\Q" + TranslationUnitBuilder.VIRTUAL_FILENAME + "\\E:\\d+}");
+	@Nonnull private static final Pattern PATTERN
+			= Pattern.compile("\\{\\Q" + TranslationUnitBuilder.VIRTUAL_FILENAME + "\\E:\\d+}");
 
 	@Nonnull private final Map<String, CppNode> integralNodeMap = new HashMap<>();
 	@Nonnull private final Map<IBinding, CppNode> bindingNodeMap = new HashMap<>();
-	@Nonnull private final List<UnknownNode> unknownNodeList = new LinkedList<>();
+	@Nonnull private final Set<IntegralNode> unknownNodes = new LinkedHashSet<>();
 	@Nonnull private final Queue<Pair<CppNode, IASTNode>> childrenCreationQueue = new LinkedList<>();
 	@Nonnull private final RootNode rootNode = new RootNode();
 
@@ -107,43 +109,58 @@ final class AstBuilder {
 	}
 
 	private void cleanUp() {
+		bindingNodeMap.clear();
+
 		// remove all children of variable and function node
-		for (final CppNode node : List.copyOf(bindingNodeMap.values())) {
+		for (final CppNode node : rootNode) {
 			if (node instanceof VariableNode) {
 				final VariableNode variableNode = (VariableNode) node;
 				for (final CppNode childNode : variableNode) {
 					childNode.transferAllDependency(variableNode);
-					if (childNode instanceof UnknownNode) unknownNodeList.remove(childNode);
+					if (childNode instanceof IntegralNode) unknownNodes.remove(childNode);
 				}
 				node.removeChildren();
 
 			} else if (node instanceof FunctionNode) {
 				final FunctionNode functionNode = (FunctionNode) node;
-				for (final CppNode childNode : List.copyOf(functionNode.getChildren())) {
-					if (childNode instanceof VariableNode
-							|| childNode instanceof TypedefNode
-							|| childNode instanceof UnknownNode) {
+				for (final CppNode childNode : functionNode.getChildren().toArray(CppNode[]::new)) {
+					if (childNode instanceof VariableNode || childNode instanceof TypedefNode
+							|| childNode instanceof IntegralNode) {
 						childNode.transferAllDependency(functionNode);
+						for (final CppNode deepNode : childNode) {
+							deepNode.transferAllDependency(functionNode);
+							if (deepNode instanceof IntegralNode) unknownNodes.remove(deepNode);
+						}
 						childNode.remove();
-						if (childNode instanceof UnknownNode) unknownNodeList.remove(childNode);
+						if (childNode instanceof IntegralNode) unknownNodes.remove(childNode);
 					}
 				}
 			}
 		}
 
 		// replace unknown node with integral node
-		for (final UnknownNode unknownNode : List.copyOf(unknownNodeList)) {
+		for (final IntegralNode unknownNode : unknownNodes) {
 			assert unknownNode.getParent() != null;
 			unknownNode.transferAllDependency(unknownNode.getParent());
-			final CppNode integralNode = createIntegralNode(firstNonBlank(unknownNode.getName(), unknownNode.getUniqueName(), unknownNode.getSignature()));
-			if (!replaceNode(unknownNode, integralNode)) integralNode.remove();
+			final CppNode integralNode = integralNodeMap.get(unknownNode.getName());
+			if (integralNode != null) {
+				unknownNode.transfer(integralNode);
+			} else {
+				unknownNode.move(rootNode);
+				integralNodeMap.put(unknownNode.getName(), unknownNode);
+			}
+//			final CppNode integralNode = createIntegralNode(firstNonBlank(unknownNode.getName(),
+//					unknownNode.getUniqueName(), unknownNode.getSignature()));
+//			replaceNode(unknownNode, integralNode);
 		}
+		unknownNodes.clear();
 
 		// clean up nodes
 		for (final CppNode node : integralNodeMap.values()) {
 			node.removeChildren();
 			node.removeAllDependency();
 		}
+		integralNodeMap.clear();
 	}
 
 	private void createOverride() {
@@ -157,13 +174,15 @@ final class AstBuilder {
 
 			final Map<CppNode.Wrapper, FunctionNode> classFunctionsMatched = new HashMap<>();
 			for (final FunctionNode classFunction : classFunctions) {
-				final CppNode.Wrapper wrapper = new CppNode.Wrapper(classFunction, CppNode.MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+				final CppNode.Wrapper wrapper = new CppNode.Wrapper(classFunction,
+						CppNode.MatchLevel.PROTOTYPE_IDENTICAL, matcher);
 				classFunctionsMatched.put(wrapper, classFunction);
 			}
 			for (final CppNode classBase : classBases) {
 				if (!(classBase instanceof ClassNode)) continue;
 				for (final FunctionNode baseFunction : ((ClassNode) classBase).getFunctions()) {
-					final CppNode.Wrapper wrapper = new CppNode.Wrapper(baseFunction, CppNode.MatchLevel.PROTOTYPE_IDENTICAL, matcher);
+					final CppNode.Wrapper wrapper = new CppNode.Wrapper(baseFunction,
+							CppNode.MatchLevel.PROTOTYPE_IDENTICAL, matcher);
 					final FunctionNode functionNode = classFunctionsMatched.get(wrapper);
 					if (functionNode != null) {
 						functionNode.addDependencyTo(baseFunction, DependencyType.OVERRIDE);
@@ -175,7 +194,6 @@ final class AstBuilder {
 
 	@Nonnull
 	private RootNode internalBuild(@Nonnull IASTTranslationUnit translationUnit) {
-		//final RootNode rootNode = new RootNode().build();
 		for (final IASTDeclaration declaration : translationUnit.getDeclarations()) {
 			createChildrenFromDeclaration(rootNode, declaration);
 		}
@@ -194,13 +212,12 @@ final class AstBuilder {
 		rootNode.setNodeCount(++nodeId);
 
 		rootNode.lock();
-
 		return rootNode;
 	}
 
-	private boolean replaceNode(@Nonnull CppNode oldNode, @Nonnull CppNode newNode) {
+	private void replaceNode(@Nonnull CppNode oldNode, @Nonnull CppNode newNode) {
 		assert oldNode.getParent() != null && newNode.getParent() != null;
-		if (oldNode instanceof UnknownNode) unknownNodeList.remove(oldNode);
+		if (oldNode instanceof IntegralNode) unknownNodes.remove(oldNode);
 
 		for (final Map.Entry<IBinding, CppNode> entry : bindingNodeMap.entrySet()) {
 			if (entry.getValue() == oldNode) entry.setValue(newNode);
@@ -209,9 +226,7 @@ final class AstBuilder {
 			if (pair.getA() == oldNode) pair.setA(newNode);
 		}
 
-		final boolean isChanged = oldNode.transfer(newNode);
-		oldNode.remove();
-		return isChanged;
+		oldNode.transfer(newNode);
 	}
 
 	@Nonnull
@@ -219,14 +234,15 @@ final class AstBuilder {
 		final CppNode existNode = integralNodeMap.get(typeName);
 		if (existNode != null) return existNode;
 
-		final CppNode newNode = new IntegralNode(typeName, typeName, typeName);
+		final CppNode newNode = new IntegralNode(typeName);
 		rootNode.addChild(newNode);
 		integralNodeMap.put(typeName, newNode);
 		return newNode;
 	}
 
 	@Nonnull
-	private CppNode createUnknownNode(@Nonnull CppNode parentNode, @Nonnull IBinding binding, @Nonnull String name, boolean createUseDependency) {
+	private CppNode createUnknownNode(@Nonnull CppNode parentNode, @Nonnull IBinding binding, @Nonnull String name,
+			boolean createUseDependency) {
 		if (binding instanceof IProblemBinding) return createIntegralNode(name);
 
 		final IBinding topBinding = binding instanceof ICPPSpecialization
@@ -239,18 +255,18 @@ final class AstBuilder {
 			return existNode;
 		}
 
-		final UnknownNode newNode = new UnknownNode(name, name, name);
+		final IntegralNode newNode = new IntegralNode(name);
 		parentNode.addChild(newNode);
 		if (createUseDependency) parentNode.addDependencyTo(newNode, DependencyType.USE);
 		bindingNodeMap.put(topBinding, newNode);
-		unknownNodeList.add(newNode);
+		unknownNodes.add(newNode);
 		return newNode;
 	}
 
 	@Nonnull
 	private CppNode createNode(@Nullable IBinding binding, @Nullable IASTName astName, @Nullable String signature,
-			@Nonnull CppNode buildingNode, @Nonnull CppNode parentNode) {
-		assert !(buildingNode instanceof UnknownNode) && !(buildingNode instanceof IntegralNode);
+			@Nonnull CppNode newNode, @Nonnull CppNode parentNode) {
+		assert !(newNode instanceof IntegralNode);
 		if (binding == null)
 			return createIntegralNode(astName != null ? astName.toString() : signature != null ? signature : "");
 
@@ -259,14 +275,16 @@ final class AstBuilder {
 				: binding;
 
 		final CppNode existNode = bindingNodeMap.get(topBinding);
-		if (existNode != null && !(existNode instanceof UnknownNode)) return existNode;
+		if (existNode != null && !(existNode instanceof IntegralNode)) return existNode;
 
 		final String name = firstNonBlank(astName != null ? astName.toString() : null, topBinding.getName());
 		final String uniqueName = firstNonBlank(topBinding instanceof ICPPBinding
 				? PATTERN.matcher(ASTTypeUtil.getQualifiedName((ICPPBinding) binding)).replaceAll("{ROOT}")
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
 
-		final CppNode newNode = buildingNode.setName(name).setUniqueName(uniqueName).setSignature(signature != null ? signature : uniqueName);
+		newNode.setName(name);
+		newNode.setUniqueName(uniqueName);
+		newNode.setSignature(signature != null ? signature : uniqueName);
 		parentNode.addChild(newNode);
 		parentNode.addDependencyTo(newNode, DependencyType.MEMBER);
 
@@ -276,7 +294,8 @@ final class AstBuilder {
 	}
 
 	@Nonnull
-	private CppNode createFromDeclarator(@Nonnull CppNode parentNode, @Nonnull CppNode typeNode, @Nonnull IASTDeclarator declarator, boolean isTypedef) {
+	private CppNode createFromDeclarator(@Nonnull CppNode parentNode, @Nonnull CppNode typeNode,
+			@Nonnull IASTDeclarator declarator, boolean isTypedef) {
 		final IASTName declaratorName = declarator.getName();
 		final IBinding declaratorBinding = declaratorName.resolveBinding();
 		final String signature = ASTStringUtil.getSignatureString(declarator);
@@ -295,7 +314,8 @@ final class AstBuilder {
 				functionNode.addDependencyTo(typeNode, DependencyType.USE);
 
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
-					final CppNode parameterType = createFromDeclSpecifier(functionNode, functionParameter.getDeclSpecifier());
+					final CppNode parameterType
+							= createFromDeclSpecifier(functionNode, functionParameter.getDeclSpecifier());
 					createFromDeclarator(functionNode, parameterType, functionParameter.getDeclarator(), true);
 					((FunctionNode) functionNode).addParameter(parameterType);
 				}
@@ -338,7 +358,8 @@ final class AstBuilder {
 			}
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromDeclarator(declarator = (" + Utilities.objectIdentifyString(declarator) + "))");
+			throw new IllegalArgumentException("createFromDeclarator(declarator = ("
+					+ Utilities.objectIdentifyString(declarator) + "))");
 		}
 	}
 
@@ -356,7 +377,8 @@ final class AstBuilder {
 					new EnumNode(), parentNode);
 			if (enumNode instanceof EnumNode) {
 				final ICPPASTDeclSpecifier enumBaseType = enumerationSpecifier.getBaseType();
-				final CppNode baseType = enumBaseType != null ? createFromDeclSpecifier(parentNode, enumBaseType) : null;
+				final CppNode baseType = enumBaseType != null
+						? createFromDeclSpecifier(parentNode, enumBaseType) : null;
 				final CppNode nodeType = enumerationSpecifier.isScoped() ? enumNode : baseType;
 
 				if (baseType != null) {
@@ -407,18 +429,18 @@ final class AstBuilder {
 			final CppNode classNode = createNode(className.resolveBinding(), className, signature,
 					new ClassNode(), parentNode);
 			if (classNode instanceof ClassNode) {
-				for (final ICPPASTCompositeTypeSpecifier.ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
+				for (final ICPPASTBaseSpecifier classBaseSpecifier : classSpecifier.getBaseSpecifiers()) {
 					final ICPPASTNameSpecifier classBaseNameSpecifier = classBaseSpecifier.getNameSpecifier();
 					final IBinding classBaseNameBinding = classBaseNameSpecifier.resolveBinding();
 
-					final CppNode classBaseNode = createUnknownNode(parentNode, classBaseNameBinding, classBaseNameBinding.getName(), true);
+					final CppNode classBaseNode = createUnknownNode(parentNode, classBaseNameBinding,
+							classBaseNameBinding.getName(), true);
 					((ClassNode) classNode).addBase(classBaseNode);
 					classNode.addDependencyTo(classBaseNode, DependencyType.INHERITANCE);
 				}
 
 				final StringBuilder bodyBuilder = classNode.getName().isBlank()
-						? new StringBuilder().append(classNode.getSignature()).append('{')
-						: null;
+						? new StringBuilder().append(classNode.getSignature()).append('{') : null;
 				for (final IASTDeclaration classChildDeclaration : classSpecifier.getDeclarations(false)) {
 					final List<CppNode> nodeList = createChildrenFromDeclaration(classNode, classChildDeclaration);
 					if (bodyBuilder != null) {
@@ -449,22 +471,24 @@ final class AstBuilder {
 
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromDeclSpecifier(declSpecifier = (" + Utilities.objectIdentifyString(declSpecifier) + "))");
+			throw new IllegalArgumentException("createFromDeclSpecifier(declSpecifier = ("
+					+ Utilities.objectIdentifyString(declSpecifier) + "))");
 		}
 	}
 
-	@Nonnull
-	private CppNode createFromTemplateParameter(@Nonnull CppNode parentNode, @Nonnull ICPPASTTemplateParameter templateParameter) {
+	private void createFromTemplateParameter(@Nonnull CppNode parentNode,
+			@Nonnull ICPPASTTemplateParameter templateParameter) {
 		if (templateParameter instanceof ICPPASTParameterDeclaration) {
 			// region Template Variable
 			final ICPPASTParameterDeclaration parameterDeclaration = (ICPPASTParameterDeclaration) templateParameter;
 			final CppNode parameterType = createFromDeclSpecifier(parentNode, parameterDeclaration.getDeclSpecifier());
-			return createFromDeclarator(parentNode, parameterType, parameterDeclaration.getDeclarator(), false);
+			createFromDeclarator(parentNode, parameterType, parameterDeclaration.getDeclarator(), false);
 			// endregion
 
 		} else if (templateParameter instanceof ICPPASTSimpleTypeTemplateParameter) {
 			// region Template Typename
-			final ICPPASTSimpleTypeTemplateParameter simpleParameter = (ICPPASTSimpleTypeTemplateParameter) templateParameter;
+			final ICPPASTSimpleTypeTemplateParameter simpleParameter
+					= (ICPPASTSimpleTypeTemplateParameter) templateParameter;
 			final IASTName simpleName = simpleParameter.getName();
 			final IBinding simpleBinding = simpleName.resolveBinding();
 
@@ -486,11 +510,11 @@ final class AstBuilder {
 				}
 			}
 			// endregion
-			return typedefNode;
 
 		} else if (templateParameter instanceof ICPPASTTemplatedTypeTemplateParameter) {
 			// region Nested Template
-			final ICPPASTTemplatedTypeTemplateParameter nestedParameter = (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
+			final ICPPASTTemplatedTypeTemplateParameter nestedParameter
+					= (ICPPASTTemplatedTypeTemplateParameter) templateParameter;
 			final IASTName nestedName = nestedParameter.getName();
 			final CppNode nestedNode = createNode(nestedName.resolveBinding(), nestedName, null,
 					new TypedefNode(), parentNode);
@@ -498,16 +522,17 @@ final class AstBuilder {
 				createFromTemplateParameter(nestedNode, innerParameter);
 			}
 			// endregion
-			return nestedNode;
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createFromTemplateParameter(parentNode = (" + Utilities.objectIdentifyString(parentNode)
-					+ "), templateParameter = (" + Utilities.objectIdentifyString(templateParameter) + "))");
+			throw new IllegalArgumentException("createFromTemplateParameter(parentNode = ("
+					+ Utilities.objectIdentifyString(parentNode) + "), templateParameter = ("
+					+ Utilities.objectIdentifyString(templateParameter) + "))");
 		}
 	}
 
 	@Nonnull
-	private List<CppNode> createChildrenFromDeclaration(@Nonnull CppNode parentNode, @Nonnull IASTDeclaration declaration) {
+	private List<CppNode> createChildrenFromDeclaration(@Nonnull CppNode parentNode,
+			@Nonnull IASTDeclaration declaration) {
 		if (declaration instanceof ICPPASTVisibilityLabel
 				|| declaration instanceof IASTASMDeclaration
 				|| declaration instanceof IASTProblemDeclaration
@@ -521,7 +546,8 @@ final class AstBuilder {
 			// region Using Declaration / Directive
 			final IASTName declarationName = ((ICPPASTUsingDeclaration) declaration).getName();
 			final IBinding declarationBinding = declarationName.resolveBinding();
-			final CppNode declarationNode = createNode(declarationBinding, declarationName, null, new TypedefNode(), parentNode);
+			final CppNode declarationNode
+					= createNode(declarationBinding, declarationName, null, new TypedefNode(), parentNode);
 			if (declarationNode instanceof TypedefNode && declarationBinding instanceof ICPPUsingDeclaration) {
 				for (final IBinding delegateBinding : ((ICPPUsingDeclaration) declarationBinding).getDelegates()) {
 					createUnknownNode(declarationNode, delegateBinding, declarationName.toString(), true);
@@ -533,7 +559,8 @@ final class AstBuilder {
 		} else if (declaration instanceof ICPPASTUsingDirective) {
 			// region Using Declaration / Directive
 			final IASTName usingName = ((ICPPASTUsingDirective) declaration).getQualifiedName();
-			final CppNode usingNode = createUnknownNode(parentNode, usingName.resolveBinding(), usingName.toString(), true);
+			final CppNode usingNode
+					= createUnknownNode(parentNode, usingName.resolveBinding(), usingName.toString(), true);
 			// endregion
 			return List.of(usingNode);
 
@@ -576,14 +603,17 @@ final class AstBuilder {
 		} else if (declaration instanceof ICPPASTFunctionDefinition) {
 			final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
 			// region Function
-			final CppNode functionReturnType = createFromDeclSpecifier(parentNode, functionDefinition.getDeclSpecifier());
-			final CppNode functionNode = createFromDeclarator(parentNode, functionReturnType, functionDefinition.getDeclarator(), false);
+			final CppNode functionReturnType
+					= createFromDeclSpecifier(parentNode, functionDefinition.getDeclSpecifier());
+			final CppNode functionNode
+					= createFromDeclarator(parentNode, functionReturnType, functionDefinition.getDeclarator(), false);
 			final StringBuilder functionBodyBuilder = new StringBuilder();
 			// function with constructor
-			for (final ICPPASTConstructorChainInitializer memberChainInitializer : functionDefinition.getMemberInitializers()) {
+			for (final ICPPASTConstructorChainInitializer memberChainInitializer
+					: functionDefinition.getMemberInitializers()) {
 				final IASTName memberName = memberChainInitializer.getMemberInitializerId();
 				createUnknownNode(functionNode, memberName.resolveBinding(), memberName.toString(), true);
-				functionBodyBuilder.append(memberName.toString()).append('(');
+				functionBodyBuilder.append(memberName).append('(');
 				final IASTInitializer memberInitializer = memberChainInitializer.getInitializer();
 				if (memberInitializer != null) {
 					childrenCreationQueue.add(Pair.mutableOf(functionNode, memberInitializer));
@@ -596,7 +626,8 @@ final class AstBuilder {
 			if (functionBody != null) {
 				childrenCreationQueue.add(Pair.mutableOf(functionNode, functionBody));
 				if (functionNode instanceof FunctionNode) {
-					((FunctionNode) functionNode).setBody(functionBodyBuilder.append(functionBody.getRawSignature()).toString());
+					final String body = functionBodyBuilder.append(functionBody.getRawSignature()).toString();
+					((FunctionNode) functionNode).setBody(body);
 				}
 			}
 			// endregion
@@ -605,7 +636,8 @@ final class AstBuilder {
 		} else if (declaration instanceof ICPPASTTemplateDeclaration) {
 			final ICPPASTTemplateDeclaration templateDeclaration = (ICPPASTTemplateDeclaration) declaration;
 			// region Template
-			final List<CppNode> innerNodeList = createChildrenFromDeclaration(parentNode, templateDeclaration.getDeclaration());
+			final List<CppNode> innerNodeList
+					= createChildrenFromDeclaration(parentNode, templateDeclaration.getDeclaration());
 			if (!innerNodeList.isEmpty()) {
 				final CppNode innerNode = innerNodeList.get(0);
 				for (final ICPPASTTemplateParameter templateParameter : templateDeclaration.getTemplateParameters()) {
@@ -643,8 +675,9 @@ final class AstBuilder {
 
 		} else {
 			// todo: debug?
-			throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = (" + Utilities.objectIdentifyString(parentNode)
-					+ "), declaration = (" + Utilities.objectIdentifyString(declaration) + "))");
+			throw new IllegalArgumentException("createChildrenFromDeclaration(parentNode = ("
+					+ Utilities.objectIdentifyString(parentNode) + "), declaration = ("
+					+ Utilities.objectIdentifyString(declaration) + "))");
 		}
 	}
 
@@ -654,7 +687,8 @@ final class AstBuilder {
 				createChildrenFromDeclaration(parentNode, (IASTDeclaration) astChild);
 			} else if (astChild instanceof IASTName) {
 				final IASTName astName = (IASTName) astChild;
-				final CppNode childNode = createUnknownNode(parentNode, astName.resolveBinding(), astName.toString(), false);
+				final CppNode childNode
+						= createUnknownNode(parentNode, astName.resolveBinding(), astName.toString(), false);
 				parentNode.addDependencyTo(childNode,
 						childNode instanceof FunctionNode ? DependencyType.INVOCATION : DependencyType.USE);
 			} else {

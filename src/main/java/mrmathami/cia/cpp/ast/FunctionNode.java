@@ -1,16 +1,23 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.annotations.Internal;
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
 import mrmathami.utils.Utilities;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
+import java.util.Objects;
 
 public final class FunctionNode extends CppNode implements IBodyContainer, ITypeContainer, IClassContainer, IEnumContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = -2779864800917566027L;
+	private static final long serialVersionUID = -1L;
 
 	@Nonnull private transient List<CppNode> parameters = new LinkedList<>();
 	@Nullable private String body;
@@ -19,42 +26,37 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	public FunctionNode() {
 	}
 
-	public FunctionNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
-		super(name, uniqueName, signature);
-	}
-
-	@Override
-	void internalLock() {
-		super.internalLock();
-		if (body != null) this.body = body.intern();
-		this.parameters = List.copyOf(parameters);
-	}
+	//region Getter & Setter
 
 	@Nonnull
 	public List<CppNode> getParameters() {
 		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
+	@Internal
+	@SuppressWarnings("AssertWithSideEffects")
 	public boolean addParameters(@Nonnull List<CppNode> parameters) {
 		checkReadOnly();
-		for (final CppNode parameter : parameters) {
-			if (parameter == this || parameter.getRoot() != getRoot()) return false;
-		}
+		assert parameters.stream().noneMatch(this::equals)
+				&& parameters.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
 		return this.parameters.addAll(parameters);
 	}
 
+	@Internal
 	public void removeParameters() {
 		checkReadOnly();
 		parameters.clear();
 	}
 
-	public boolean addParameter(@Nonnull CppNode parameter) {
+	@Internal
+	@SuppressWarnings("AssertWithSideEffects")
+	public void addParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
-		if (parameter == this || parameter.getRoot() != getRoot()) return false;
+		assert parameter != this && parameter.getRoot() == getRoot();
 		parameters.add(parameter);
-		return true;
 	}
 
+	@Internal
 	public boolean removeParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
 		return parameters.remove(parameter);
@@ -66,6 +68,7 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return body;
 	}
 
+	@Internal
 	@Override
 	public void setBody(@Nullable String body) {
 		checkReadOnly();
@@ -78,13 +81,18 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return type;
 	}
 
+	@Internal
 	@Override
-	public boolean setType(@Nullable CppNode type) {
+	@SuppressWarnings("AssertWithSideEffects")
+	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
-		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
+		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
-		return true;
 	}
+
+	//endregion Getter & Setter
+
+	//region Containers
 
 	@Nonnull
 	@Override
@@ -110,7 +118,10 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return getChildrenList(TypedefNode.class);
 	}
 
-	//<editor-fold desc="Node Comparator">
+	//endregion Containers
+
+	//region Node Comparator
+
 	@Override
 	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		if (!super.isPrototypeSimilar(node, matcher)) return false;
@@ -202,19 +213,24 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		result = 31 * result + parameters.size(); // identical
 		return result;
 	}
-	//</editor-fold>
+
+	//endregion Node Comparator
+
+	//region TreeNode
 
 	@Override
-	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
-		boolean isChanged = false;
-		if (type == fromNode) {
-			this.type = toNode;
-			isChanged = true;
-		}
+	void internalLock(@Nonnull Map<String, String> stringPool, @Nonnull Map<DependencyMap, DependencyMap> countsPool) {
+		super.internalLock(stringPool, countsPool);
+		if (body != null) this.body = stringPool.computeIfAbsent(body, String::toString);
+		this.parameters = List.copyOf(parameters);
+	}
+
+	@Override
+	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+		if (type == fromNode) this.type = toNode;
 		final ListIterator<CppNode> iterator = parameters.listIterator();
 		while (iterator.hasNext()) {
 			if (iterator.next() == fromNode) {
-				isChanged = true;
 				if (toNode != null) {
 					iterator.set(toNode);
 				} else {
@@ -222,8 +238,9 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 				}
 			}
 		}
-		return isChanged;
 	}
+
+	//endregion TreeNode
 
 	@Nonnull
 	String partialElementString() {
@@ -241,17 +258,36 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return builder.toString();
 	}
 
-	//<editor-fold desc="Object Helper">
-	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+	//region Object Helper
+
+	@Override
+	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
 		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		outputStream.defaultWriteObject();
-		outputStream.writeObject(List.copyOf(parameters));
+		super.writeExternal(output);
+
+		output.writeObject(body);
+		output.writeObject(type);
+
+		output.writeInt(parameters.size());
+		for (final CppNode parameter : parameters) {
+			output.writeObject(parameter);
+		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
-		inputStream.defaultReadObject();
-		this.parameters = (List<CppNode>) inputStream.readObject();
+	@Override
+	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.readExternal(input);
+
+		this.body = castNullable(input.readObject(), String.class);
+		this.type = castNullable(input.readObject(), CppNode.class);
+
+		final int parametersSize = input.readInt();
+		final CppNode[] parameters = new CppNode[parametersSize];
+		for (int i = 0; i < parametersSize; i++) {
+			parameters[i] = castNonnull(input.readObject(), CppNode.class);
+		}
+		this.parameters = List.of(parameters);
 	}
-	//</editor-fold>
+
+	//endregion Object Helper
 }

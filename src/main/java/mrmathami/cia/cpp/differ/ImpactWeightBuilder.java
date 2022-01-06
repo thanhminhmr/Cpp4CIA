@@ -14,7 +14,7 @@ import java.util.Optional;
 import java.util.function.Function;
 
 final class ImpactWeightBuilder {
-	private static final double THRESHOLD = 0x1.0p-256;
+	private static final double THRESHOLD = 0x1.0p-128;
 
 	private ImpactWeightBuilder() {
 	}

@@ -1,22 +1,20 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.annotations.Internal;
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.List;
 
 public final class EnumNode extends CppNode implements ITypeContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = 6958602690011907254L;
+	private static final long serialVersionUID = -1L;
 
 	@Nullable private CppNode type;
 
 	public EnumNode() {
-	}
-
-	public EnumNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
-		super(name, uniqueName, signature);
 	}
 
 	@Nullable
@@ -25,13 +23,16 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 		return type;
 	}
 
+	@Internal
 	@Override
-	public boolean setType(@Nullable CppNode type) {
+	@SuppressWarnings("AssertWithSideEffects")
+	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
-		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
+		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
-		return true;
 	}
+
+	//region Containers
 
 	@Nonnull
 	@Override
@@ -45,8 +46,9 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 		return getChildrenList(TypedefNode.class);
 	}
 
-	//<editor-fold desc="Node Comparator">
+	//endregion Containers
 
+	//<editor-fold desc="Node Comparator">
 	@Override
 	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
@@ -95,14 +97,11 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
-
 	//</editor-fold>
 
 	@Override
-	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
-		if (type != fromNode) return false;
-		this.type = toNode;
-		return true;
+	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+		if (type == fromNode) this.type = toNode;
 	}
 
 	@Nonnull
@@ -112,9 +111,19 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 	}
 
 	//<editor-fold desc="Object Helper">
-	private void writeObject(ObjectOutputStream outputStream) throws IOException {
+	@Override
+	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
 		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		outputStream.defaultWriteObject();
+		super.writeExternal(output);
+
+		output.writeObject(type);
+	}
+
+	@Override
+	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.readExternal(input);
+
+		this.type = castNullable(input.readObject(), CppNode.class);
 	}
 	//</editor-fold>
 }
