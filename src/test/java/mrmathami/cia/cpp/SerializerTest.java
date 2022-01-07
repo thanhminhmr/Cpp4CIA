@@ -2,7 +2,6 @@ package mrmathami.cia.cpp;
 
 import mrmathami.cia.cpp.builder.ProjectVersion;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,13 +10,14 @@ public final class SerializerTest {
 	private SerializerTest() {
 	}
 
-	public static void main(String[] args) throws IOException, CppException {
+	public static void main(String[] args) throws Exception {
 //		System.in.read();
 		long start_time = System.nanoTime();
 		{
 			final Path outputProject = Path.of("zpaq715.proj");
 			try (final InputStream inputStream = Files.newInputStream(outputProject)) {
 				final ProjectVersion projectVersion = ProjectVersion.fromInputStream(inputStream);
+				System.out.println(projectVersion.getRootNode().toTreeString());
 				System.out.println(projectVersion);
 			}
 

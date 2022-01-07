@@ -175,11 +175,11 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 		return ", \"bases\": " + Utilities.collectionToString(bases);
 	}
 
-	//<editor-fold desc="Object Helper">
+	//region Object Helper
+
 	@Override
-	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		super.writeExternal(output);
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
 
 		output.writeInt(bases.size());
 		for (final CppNode base : bases) {
@@ -188,13 +188,14 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 
 	@Override
-	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
-		super.readExternal(input);
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
 
 		final int basesSize = input.readInt();
 		for (int i = 0; i < basesSize; i++) {
 			bases.add(castNonnull(input.readObject(), CppNode.class));
 		}
 	}
-	//</editor-fold>
+
+	//endregion Object Helper
 }

@@ -401,8 +401,8 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		checkReadOnly();
 		final int[] counts = dependencyTo.get(node);
 		assert counts == node.dependencyFrom.get(this) : "WRONG TREE DEPENDENCY CONSTRUCTION!";
-		if (counts != null) {
-			counts[type.ordinal()] = 0;
+		if (counts != null && counts[type.ordinal()] > 0) {
+			counts[type.ordinal()] -= 1;
 			if (Arrays.equals(counts, DEPENDENCY_ZERO)) {
 				dependencyTo.remove(node);
 				node.dependencyFrom.remove(this);
@@ -414,7 +414,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 
 	//</editor-fold>
 
-	//<editor-fold desc="Object Helper">
+	//region Object Helper
 
 	void internalLock(@Nonnull Map<String, String> stringPool, @Nonnull Map<DependencyMap, DependencyMap> countsPool) {
 		this.name = stringPool.computeIfAbsent(name, String::toString);
@@ -463,6 +463,14 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 
 	@Override
 	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
+		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
+	}
+
+	@Override
+	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+	}
+
+	void write(@Nonnull ObjectOutput output) throws IOException {
 		output.writeInt(id);
 		output.writeObject(name);
 		output.writeObject(uniqueName);
@@ -476,12 +484,14 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		output.writeInt(dependencyFrom.size());
 		for (final Map.Entry<CppNode, int[]> entry : dependencyFrom.entrySet()) {
 			output.writeObject(entry.getKey());
-			for (int count : entry.getValue()) output.writeInt(count);
+			output.writeObject(entry.getValue());
+//			for (int count : entry.getValue()) output.writeInt(count);
 		}
 	}
 
-	@Override
-	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		this.writable = false;
+
 		this.id = input.readInt();
 		this.name = castNonnull(input.readObject(), String.class);
 		this.uniqueName = castNonnull(input.readObject(), String.class);
@@ -499,17 +509,18 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		final int dependencySize = input.readInt();
 		for (int i = 0; i < dependencySize; i++) {
 			final CppNode dependingNode = castNonnull(input.readObject(), CppNode.class);
-			final int[] dependencyCounts = DEPENDENCY_ZERO.clone();
-			for (int j = 0; j < dependencyCounts.length; j++) {
-				dependencyCounts[j] = input.readInt();
-			}
+			final int[] dependencyCounts = castNonnull(input.readObject(), int[].class);
+//			final int[] dependencyCounts = DEPENDENCY_ZERO.clone();
+//			for (int j = 0; j < dependencyCounts.length; j++) {
+//				dependencyCounts[j] = input.readInt();
+//			}
 
 			dependencyFrom.put(dependingNode, dependencyCounts);
 			dependingNode.dependencyTo.put(this, dependencyCounts);
 		}
 	}
 
-	//</editor-fold>
+	//endregion Object Helper
 
 	//<editor-fold desc="Node Comparator">
 
@@ -824,7 +835,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		checkReadOnly();
 		// check if child node is root node or adding to itself
 		final CppNode root = getRoot();
-		assert child.parent == null && root != child : "WRONG CALL TO METHOD!";
+		assert child.parent == null && root != child;
 		children.add(child);
 		child.parent = this;
 		child.setRootRecursive(root);
@@ -839,7 +850,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 	public final void removeChild(@Nonnull CppNode child) {
 		checkReadOnly();
 		// check if current node is not parent node of child node
-		assert child.parent == this : "WRONG CALL TO METHOD!";
+		assert child.parent == this;
 		assert children.contains(child) : "WRONG TREE CONSTRUCTION!";
 		// remove child
 		internalRemoveChild(child);
@@ -852,7 +863,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 	public final void remove() {
 		checkReadOnly();
 		// check if current node is root node
-		assert parent != null : "WRONG CALL TO METHOD!";
+		assert parent != null;
 		parent.internalRemoveChild(this);
 	}
 
@@ -871,12 +882,12 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 	 * @param node destination node
 	 */
 	@Internal
+	@SuppressWarnings("AssertWithSideEffects")
 	public final void transfer(@Nonnull CppNode node) {
 		checkReadOnly();
 		// check if current node is root node or child node is not root node
 		final CppNode root = getRoot();
-		final CppNode nodeRoot = node.getRoot();
-		assert root == nodeRoot && !isAncestorOf(node) : "WRONG CALL TO METHOD!";
+		assert root == node.getRoot() && !isAncestorOf(node);
 		transferAllDependency(node);
 		root.internalTransferRecursive(this, node);
 		if (!children.isEmpty()) {
@@ -903,11 +914,10 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 	 * Move this node to a new parent.
 	 */
 	@Internal
+	@SuppressWarnings("AssertWithSideEffects")
 	public final void move(@Nonnull CppNode newParent) {
 		checkReadOnly();
-		final CppNode root = getRoot();
-		final CppNode nodeRoot = newParent.getRoot();
-		assert parent != null && root == nodeRoot && !isAncestorOf(newParent) : "WRONG CALL TO METHOD!";
+		assert parent != null && getRoot() == newParent.getRoot() && !isAncestorOf(newParent);
 		parent.children.remove(this);
 		newParent.children.add(this);
 		this.parent = newParent;

@@ -2,8 +2,6 @@ package mrmathami.cia.cpp.ast;
 
 import mrmathami.annotations.Nonnull;
 
-import java.io.IOException;
-import java.io.ObjectOutput;
 import java.util.List;
 
 public final class NamespaceNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
@@ -45,14 +43,4 @@ public final class NamespaceNode extends CppNode implements IClassContainer, IEn
 	}
 
 	//endregion Containers
-
-	//region Object Helper
-
-	@Override
-	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		super.writeExternal(output);
-	}
-
-	//endregion Object Helper
 }

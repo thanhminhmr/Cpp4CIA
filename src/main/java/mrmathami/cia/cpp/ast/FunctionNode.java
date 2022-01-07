@@ -261,9 +261,8 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	//region Object Helper
 
 	@Override
-	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		super.writeExternal(output);
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
 
 		output.writeObject(body);
 		output.writeObject(type);
@@ -275,8 +274,8 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	}
 
 	@Override
-	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
-		super.readExternal(input);
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
 
 		this.body = castNullable(input.readObject(), String.class);
 		this.type = castNullable(input.readObject(), CppNode.class);

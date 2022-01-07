@@ -234,7 +234,7 @@ final class AstBuilder {
 		final CppNode existNode = integralNodeMap.get(typeName);
 		if (existNode != null) return existNode;
 
-		final CppNode newNode = new IntegralNode(typeName);
+		final IntegralNode newNode = new IntegralNode(typeName);
 		rootNode.addChild(newNode);
 		integralNodeMap.put(typeName, newNode);
 		return newNode;
@@ -267,8 +267,9 @@ final class AstBuilder {
 	private CppNode createNode(@Nullable IBinding binding, @Nullable IASTName astName, @Nullable String signature,
 			@Nonnull CppNode newNode, @Nonnull CppNode parentNode) {
 		assert !(newNode instanceof IntegralNode);
-		if (binding == null)
+		if (binding == null) {
 			return createIntegralNode(astName != null ? astName.toString() : signature != null ? signature : "");
+		}
 
 		final IBinding topBinding = binding instanceof ICPPSpecialization
 				? Objects.requireNonNullElse(((ICPPSpecialization) binding).getSpecializedBinding(), binding)

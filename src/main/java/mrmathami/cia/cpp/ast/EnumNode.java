@@ -48,7 +48,8 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	//endregion Containers
 
-	//<editor-fold desc="Node Comparator">
+	//region Node Comparator
+
 	@Override
 	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
@@ -97,7 +98,8 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.SIMILAR);
 		return result;
 	}
-	//</editor-fold>
+
+	//endregion Node Comparator
 
 	@Override
 	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
@@ -110,21 +112,22 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 		return ", \"type\": " + type;
 	}
 
-	//<editor-fold desc="Object Helper">
+	//region Object Helper
+
 	@Override
-	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		super.writeExternal(output);
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
 
 		output.writeObject(type);
 	}
 
 	@Override
-	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
-		super.readExternal(input);
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
 
 		this.type = castNullable(input.readObject(), CppNode.class);
 	}
-	//</editor-fold>
+
+	//endregion Object Helper
 }
 

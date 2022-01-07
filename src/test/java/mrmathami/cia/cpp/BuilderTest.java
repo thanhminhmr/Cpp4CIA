@@ -92,15 +92,18 @@ public final class BuilderTest {
 
 //		final Path inputZip = Path.of("/home/meo/Downloads/zpaq715.zip");
 //		final Path outputProject = Path.of("zpaq715.proj");
-		final Path inputZip = Path.of("/home/meo/Documents/PrusaSlicer_new.zip");
-		final Path outputProject = Path.of("/home/meo/Documents/PrusaSlicer_new.proj");
+		final Path inputZip = Path.of("/home/meo/Documents/PrusaSlicer_old.zip");
+		final Path outputProject = Path.of("PrusaSlicer_old.proj");
 
 		try (final InputStream inputStream = Files.newInputStream(inputZip)) {
 			Files.createDirectories(extractPath);
 			final ProjectVersion projectVersion = createProjectVersion(id, extractPath, inputStream,
+//					"", "");
 					"/src", "");
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
+
+			System.out.println(projectVersion.getRootNode().toTreeString());
 
 			try (final OutputStream outputStream = Files.newOutputStream(outputProject)) {
 				projectVersion.toOutputStream(outputStream);
