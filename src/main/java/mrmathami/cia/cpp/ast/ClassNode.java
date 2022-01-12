@@ -1,59 +1,69 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.annotations.Internal;
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
 import mrmathami.utils.Utilities;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.*;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public final class ClassNode extends CppNode implements IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = -6768126335469290258L;
+	private static final long serialVersionUID = -1L;
 
 	@Nonnull private transient Set<CppNode> bases = new HashSet<>();
 
 	public ClassNode() {
 	}
 
-	public ClassNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
-		super(name, uniqueName, signature);
-	}
-
-	@Override
-	void internalLock() {
-		super.internalLock();
-		this.bases = Set.copyOf(bases);
-	}
+	//region Getter & Setter
 
 	@Nonnull
 	public Set<CppNode> getBases() {
 		return isWritable() ? Collections.unmodifiableSet(bases) : bases;
 	}
 
-	public boolean addBases(@Nonnull Set<CppNode> bases) {
+//	@Internal
+//	@SuppressWarnings("AssertWithSideEffects")
+//	public void addBases(@Nonnull Set<CppNode> bases) {
+//		checkReadOnly();
+//		assert bases.stream().noneMatch(this::equals)
+//				&& bases.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
+//		this.bases.addAll(bases);
+//	}
+
+//	@Internal
+//	public void removeBases() {
+//		checkReadOnly();
+//		bases.clear();
+//	}
+
+	@Internal
+	@SuppressWarnings("AssertWithSideEffects")
+	public void addBase(@Nonnull CppNode base) {
 		checkReadOnly();
-		for (final CppNode base : bases) {
-			if (base == this || base.getRoot() != getRoot()) return false;
-		}
-		return this.bases.addAll(bases);
+		assert base != this && base.getRoot() == getRoot();
+		bases.add(base);
+		addDependencyTo(base, DependencyType.INHERITANCE);
 	}
 
-	public void removeBases() {
+	@Internal
+	public void removeBase(@Nonnull CppNode base) {
 		checkReadOnly();
-		bases.clear();
+		bases.remove(base);
+		removeDependencyTo(base, DependencyType.INHERITANCE);
 	}
 
-	public boolean addBase(@Nonnull CppNode base) {
-		checkReadOnly();
-		return base != this && base.getRoot() == getRoot() && bases.add(base);
-	}
+	//endregion Getter & Setter
 
-	public boolean removeBase(@Nonnull CppNode base) {
-		checkReadOnly();
-		return bases.remove(base);
-	}
+	//region Containers
 
 	@Nonnull
 	@Override
@@ -84,6 +94,8 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	public List<TypedefNode> getTypedefs() {
 		return getChildrenList(TypedefNode.class);
 	}
+
+	//endregion Containers
 
 	//<editor-fold desc="Node Comparator">
 	@Override
@@ -143,30 +155,49 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	}
 	//</editor-fold>
 
+	//region TreeNode
+
 	@Override
-	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
-		if (!bases.contains(fromNode)) return false;
+	void internalLock(@Nonnull Map<String, String> stringPool, @Nonnull Map<DependencyMap, DependencyMap> countsPool) {
+		super.internalLock(stringPool, countsPool);
+		this.bases = Set.copyOf(bases);
+	}
+
+	@Override
+	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+		if (!bases.contains(fromNode)) return;
 		bases.remove(fromNode);
 		if (toNode != null) bases.add(toNode);
-		return true;
 	}
+
+	//endregion TreeNode
 
 	@Nonnull
 	String partialElementString() {
 		return ", \"bases\": " + Utilities.collectionToString(bases);
 	}
 
-	//<editor-fold desc="Object Helper">
-	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		outputStream.defaultWriteObject();
-		outputStream.writeObject(Set.copyOf(bases));
+	//region Object Helper
+
+	@Override
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
+
+		output.writeInt(bases.size());
+		for (final CppNode base : bases) {
+			output.writeObject(base);
+		}
 	}
 
-	@SuppressWarnings("unchecked")
-	private void readObject(ObjectInputStream inputStream) throws IOException, ClassNotFoundException {
-		inputStream.defaultReadObject();
-		this.bases = (Set<CppNode>) inputStream.readObject();
+	@Override
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
+
+		final int basesSize = input.readInt();
+		for (int i = 0; i < basesSize; i++) {
+			bases.add(castNonnull(input.readObject(), CppNode.class));
+		}
 	}
-	//</editor-fold>
+
+	//endregion Object Helper
 }

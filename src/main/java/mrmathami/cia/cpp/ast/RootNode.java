@@ -2,31 +2,45 @@ package mrmathami.cia.cpp.ast;
 
 import mrmathami.annotations.Nonnull;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.StreamSupport;
 
 public final class RootNode extends CppNode implements IIntegralContainer, IClassContainer, IEnumContainer, IFunctionContainer, IVariableContainer, ITypedefContainer {
-	private static final long serialVersionUID = 4616684807799617419L;
+	private static final long serialVersionUID = -1L;
 
 	private int nodeCount;
 
 	public RootNode() {
-		super("ROOT", "ROOT", "ROOT");
+		setName("ROOT");
+		setUniqueName("ROOT");
+		setSignature("ROOT");
 	}
 
 	public void lock() {
-		if (isWritable()) internalLock();
+		final HashMap<String, String> stringPool = new HashMap<>();
+		final HashMap<DependencyMap, DependencyMap> countsPool = new HashMap<>();
+		if (isWritable()) internalLock(stringPool, countsPool);
+		for (final CppNode node : this) {
+			if (node.isWritable()) node.internalLock(stringPool, countsPool);
+		}
+		stringPool.clear();
+		countsPool.clear();
 	}
 
 	public int getNodeCount() {
 		return nodeCount;
 	}
 
-	@Nonnull
-	public RootNode setNodeCount(int nodeCount) {
+	public void setNodeCount(int nodeCount) {
 		checkReadOnly();
 		this.nodeCount = nodeCount;
-		return this;
 	}
+
+	//region Containers
 
 	@Nonnull
 	@Override
@@ -64,9 +78,46 @@ public final class RootNode extends CppNode implements IIntegralContainer, IClas
 		return getChildrenList(TypedefNode.class);
 	}
 
+	//endregion Containers
+
 	@Nonnull
 	@Override
 	String partialElementString() {
 		return ", \"nodeCount\": " + nodeCount;
 	}
+
+	//region Object Helper
+
+	@Override
+	public void writeExternal(@Nonnull ObjectOutput output) throws IOException {
+		final CppNode[] nodes = StreamSupport.stream(spliterator(), false).toArray(CppNode[]::new);
+		output.writeObject(nodes);
+
+		write(output);
+		for (final CppNode node : nodes) node.write(output);
+	}
+
+	@Override
+	public void readExternal(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		final CppNode[] nodes = castNonnull(input.readObject(), CppNode[].class);
+
+		read(input);
+		for (final CppNode node : nodes) node.read(input);
+	}
+
+	@Override
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
+
+		output.writeInt(nodeCount);
+	}
+
+	@Override
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
+
+		this.nodeCount = input.readInt();
+	}
+
+	//endregion Object Helper
 }

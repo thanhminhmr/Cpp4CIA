@@ -1,29 +1,22 @@
 package mrmathami.cia.cpp.ast;
 
+import mrmathami.annotations.Internal;
 import mrmathami.annotations.Nonnull;
 import mrmathami.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.Map;
 import java.util.Objects;
 
 public final class VariableNode extends CppNode implements IBodyContainer, ITypeContainer {
-	private static final long serialVersionUID = -7716874065327722815L;
+	private static final long serialVersionUID = -1L;
 
 	@Nullable private String body;
 	@Nullable private CppNode type;
 
 	public VariableNode() {
-	}
-
-	public VariableNode(@Nonnull String name, @Nonnull String uniqueName, @Nonnull String signature) {
-		super(name, uniqueName, signature);
-	}
-
-	@Override
-	void internalLock() {
-		super.internalLock();
-		if (body != null) this.body = body.intern();
 	}
 
 	@Nullable
@@ -32,6 +25,7 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 		return body;
 	}
 
+	@Internal
 	@Override
 	public void setBody(@Nullable String body) {
 		checkReadOnly();
@@ -44,15 +38,18 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 		return type;
 	}
 
+	@Internal
 	@Override
-	public boolean setType(@Nullable CppNode type) {
+	@SuppressWarnings("AssertWithSideEffects")
+	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
-		if (type != null && (type == this || type.getRoot() != getRoot())) return false;
+		assert this.type == null; // no overwrite
+		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
-		return true;
+		if (type != null) addDependencyTo(type, DependencyType.USE);
 	}
 
-	//<editor-fold desc="Node Comparator">
+	//region Node Comparator
 	@Override
 	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
 		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
@@ -79,14 +76,22 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 		result = 31 * result + matcher.nodeHashcode(type, MatchLevel.PROTOTYPE_IDENTICAL);
 		return result;
 	}
-	//</editor-fold>
+	//endregion Node Comparator
+
+	//region TreeNode
 
 	@Override
-	boolean internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
-		if (type != fromNode) return false;
-		this.type = toNode;
-		return true;
+	void internalLock(@Nonnull Map<String, String> stringPool, @Nonnull Map<DependencyMap, DependencyMap> countsPool) {
+		super.internalLock(stringPool, countsPool);
+		if (body != null) this.body = stringPool.computeIfAbsent(body, String::toString);
 	}
+
+	@Override
+	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+		if (type == fromNode) this.type = toNode;
+	}
+
+	//endregion TreeNode
 
 	@Nonnull
 	@Override
@@ -104,10 +109,23 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 		return builder.toString();
 	}
 
-	//<editor-fold desc="Object Helper">
-	private void writeObject(ObjectOutputStream outputStream) throws IOException {
-		if (getParent() == null) throw new IOException("Only RootNode is directly Serializable!");
-		outputStream.defaultWriteObject();
+	//region Object Helper
+
+	@Override
+	public void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
+
+		output.writeObject(body);
+		output.writeObject(type);
 	}
-	//</editor-fold>
+
+	@Override
+	public void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
+
+		this.body = castNullable(input.readObject(), String.class);
+		this.type = castNullable(input.readObject(), CppNode.class);
+	}
+
+	//endregion Object Helper
 }

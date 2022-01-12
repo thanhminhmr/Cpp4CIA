@@ -18,8 +18,8 @@ public final class DifferTest {
 //		System.in.read();
 		final long start_time = System.nanoTime();
 
-		final Path oldPath = Path.of("");
-		final Path newPath = Path.of("");
+		final Path oldPath = Path.of("PrusaSlicer_old.proj");
+		final Path newPath = Path.of("PrusaSlicer_new.proj");
 
 		try (final InputStream oldPathInputStream = Files.newInputStream(oldPath);
 				final InputStream newPathInputStream = Files.newInputStream(newPath)) {
@@ -32,7 +32,7 @@ public final class DifferTest {
 					= VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
-			try (final FileOutputStream fos = new FileOutputStream("./test/project1_project2.VersionDifference")) {
+			try (final FileOutputStream fos = new FileOutputStream("project1_project2.VersionDifference")) {
 				difference.toOutputStream(fos);
 				System.out.println((System.nanoTime() - start_time) / 1000000.0);
 			}

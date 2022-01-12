@@ -9,7 +9,12 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.UUID;
 import java.util.stream.StreamSupport;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -85,14 +90,20 @@ public final class BuilderTest {
 		final String id = UUID.randomUUID().toString();
 		final Path extractPath = Path.of("/tmp").resolve(id);
 
+//		final Path inputZip = Path.of("/home/meo/Downloads/zpaq715.zip");
+//		final Path outputProject = Path.of("zpaq715.proj");
 		final Path inputZip = Path.of("/home/meo/Documents/PrusaSlicer_new.zip");
-		final Path outputProject = Path.of("/home/meo/Documents/PrusaSlicer_new.proj");
+		final Path outputProject = Path.of("PrusaSlicer_new.proj");
 
 		try (final InputStream inputStream = Files.newInputStream(inputZip)) {
+			Files.createDirectories(extractPath);
 			final ProjectVersion projectVersion = createProjectVersion(id, extractPath, inputStream,
+//					"", "");
 					"/src", "");
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
+
+			System.out.println(projectVersion.getRootNode().toTreeString());
 
 			try (final OutputStream outputStream = Files.newOutputStream(outputProject)) {
 				projectVersion.toOutputStream(outputStream);
