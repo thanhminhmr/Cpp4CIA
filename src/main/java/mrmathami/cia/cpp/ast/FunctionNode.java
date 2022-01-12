@@ -33,20 +33,20 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		return isWritable() ? Collections.unmodifiableList(parameters) : parameters;
 	}
 
-	@Internal
-	@SuppressWarnings("AssertWithSideEffects")
-	public boolean addParameters(@Nonnull List<CppNode> parameters) {
-		checkReadOnly();
-		assert parameters.stream().noneMatch(this::equals)
-				&& parameters.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
-		return this.parameters.addAll(parameters);
-	}
+//	@Internal
+//	@SuppressWarnings("AssertWithSideEffects")
+//	public boolean addParameters(@Nonnull List<CppNode> parameters) {
+//		checkReadOnly();
+//		assert parameters.stream().noneMatch(this::equals)
+//				&& parameters.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
+//		return this.parameters.addAll(parameters);
+//	}
 
-	@Internal
-	public void removeParameters() {
-		checkReadOnly();
-		parameters.clear();
-	}
+//	@Internal
+//	public void removeParameters() {
+//		checkReadOnly();
+//		parameters.clear();
+//	}
 
 	@Internal
 	@SuppressWarnings("AssertWithSideEffects")
@@ -54,12 +54,14 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 		checkReadOnly();
 		assert parameter != this && parameter.getRoot() == getRoot();
 		parameters.add(parameter);
+		addDependencyTo(parameter, DependencyType.USE);
 	}
 
 	@Internal
-	public boolean removeParameter(@Nonnull CppNode parameter) {
+	public void removeParameter(@Nonnull CppNode parameter) {
 		checkReadOnly();
-		return parameters.remove(parameter);
+		parameters.remove(parameter);
+		removeDependencyTo(parameter, DependencyType.USE);
 	}
 
 	@Nullable
@@ -86,8 +88,10 @@ public final class FunctionNode extends CppNode implements IBodyContainer, IType
 	@SuppressWarnings("AssertWithSideEffects")
 	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
+		assert this.type == null; // no overwrite
 		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
+		if (type != null) addDependencyTo(type, DependencyType.USE);
 	}
 
 	//endregion Getter & Setter

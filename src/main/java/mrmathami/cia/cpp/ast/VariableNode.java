@@ -43,8 +43,10 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 	@SuppressWarnings("AssertWithSideEffects")
 	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
+		assert this.type == null; // no overwrite
 		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
+		if (type != null) addDependencyTo(type, DependencyType.USE);
 	}
 
 	//region Node Comparator

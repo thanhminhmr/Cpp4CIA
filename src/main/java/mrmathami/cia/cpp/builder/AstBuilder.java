@@ -113,54 +113,40 @@ final class AstBuilder {
 
 		// remove all children of variable and function node
 		for (final CppNode node : rootNode) {
-			if (node instanceof VariableNode) {
-				final VariableNode variableNode = (VariableNode) node;
-				for (final CppNode childNode : variableNode) {
-					childNode.transferAllDependency(variableNode);
-					if (childNode instanceof IntegralNode) unknownNodes.remove(childNode);
-				}
-				node.removeChildren();
-
-			} else if (node instanceof FunctionNode) {
-				final FunctionNode functionNode = (FunctionNode) node;
-				for (final CppNode childNode : functionNode.getChildren().toArray(CppNode[]::new)) {
-					if (childNode instanceof VariableNode || childNode instanceof TypedefNode
-							|| childNode instanceof IntegralNode) {
-						childNode.transferAllDependency(functionNode);
-						for (final CppNode deepNode : childNode) {
-							deepNode.transferAllDependency(functionNode);
-							if (deepNode instanceof IntegralNode) unknownNodes.remove(deepNode);
-						}
-						childNode.remove();
-						if (childNode instanceof IntegralNode) unknownNodes.remove(childNode);
-					}
-				}
+			if (node instanceof FunctionNode || node instanceof VariableNode) {
+				node.collapse();
 			}
 		}
-
-		// replace unknown node with integral node
-		for (final IntegralNode unknownNode : unknownNodes) {
-			assert unknownNode.getParent() != null;
-			unknownNode.transferAllDependency(unknownNode.getParent());
-			final CppNode integralNode = integralNodeMap.get(unknownNode.getName());
-			if (integralNode != null) {
-				unknownNode.transfer(integralNode);
-			} else {
-				unknownNode.move(rootNode);
-				integralNodeMap.put(unknownNode.getName(), unknownNode);
-			}
-//			final CppNode integralNode = createIntegralNode(firstNonBlank(unknownNode.getName(),
-//					unknownNode.getUniqueName(), unknownNode.getSignature()));
-//			replaceNode(unknownNode, integralNode);
-		}
-		unknownNodes.clear();
 
 		// clean up nodes
 		for (final CppNode node : integralNodeMap.values()) {
 			node.removeChildren();
 			node.removeAllDependency();
 		}
-		integralNodeMap.clear();
+
+		// replace unknown node with integral node
+		for (final IntegralNode unknownNode : unknownNodes) {
+			if (unknownNode.getRoot() != rootNode) continue;
+			final CppNode parent = unknownNode.getParent();
+			assert parent != null;
+
+			if (unknownNode.getAllDependencyFrom().isEmpty()
+					&& unknownNode.getAllDependencyTo().isEmpty()) {
+				unknownNode.collapseToParent();
+			} else {
+				unknownNode.collapse();
+				final CppNode integralNode = integralNodeMap.get(unknownNode.getName());
+				if (integralNode != null) {
+					unknownNode.transfer(integralNode);
+					integralNode.transferAllDependency(parent);
+				} else {
+					unknownNode.move(rootNode);
+					unknownNode.transferAllDependency(parent);
+					integralNodeMap.put(unknownNode.getName(), unknownNode);
+				}
+			}
+		}
+		unknownNodes.clear();
 	}
 
 	private void createOverride() {
@@ -312,13 +298,14 @@ final class AstBuilder {
 
 			if (functionNode instanceof FunctionNode) {
 				((FunctionNode) functionNode).setType(typeNode);
-				functionNode.addDependencyTo(typeNode, DependencyType.USE);
+				//functionNode.addDependencyTo(typeNode, DependencyType.USE);
 
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
 					final CppNode parameterType
 							= createFromDeclSpecifier(functionNode, functionParameter.getDeclSpecifier());
 					createFromDeclarator(functionNode, parameterType, functionParameter.getDeclarator(), true);
 					((FunctionNode) functionNode).addParameter(parameterType);
+					//functionNode.addDependencyTo(parameterType, DependencyType.USE);
 				}
 
 				final IASTInitializer initializer = declarator.getInitializer();
@@ -336,7 +323,7 @@ final class AstBuilder {
 						new TypedefNode(), parentNode);
 				if (typedefNode instanceof TypedefNode) {
 					((TypedefNode) typedefNode).setType(typeNode);
-					typedefNode.addDependencyTo(typeNode, DependencyType.USE);
+					//typedefNode.addDependencyTo(typeNode, DependencyType.USE);
 				}
 				// endregion
 				return typedefNode;
@@ -346,7 +333,7 @@ final class AstBuilder {
 						new VariableNode(), parentNode);
 				if (variableNode instanceof VariableNode) {
 					((VariableNode) variableNode).setType(typeNode);
-					variableNode.addDependencyTo(typeNode, DependencyType.USE);
+					//variableNode.addDependencyTo(typeNode, DependencyType.USE);
 
 					final IASTInitializer initializer = declarator.getInitializer();
 					if (initializer != null) {
@@ -384,7 +371,7 @@ final class AstBuilder {
 
 				if (baseType != null) {
 					((EnumNode) enumNode).setType(baseType);
-					enumNode.addDependencyTo(baseType, DependencyType.USE);
+					//enumNode.addDependencyTo(baseType, DependencyType.USE);
 				}
 
 				final StringBuilder bodyBuilder = enumNode.getName().isBlank() ? new StringBuilder() : null;
@@ -402,7 +389,7 @@ final class AstBuilder {
 					if (enumeratorNode instanceof VariableNode) {
 						if (nodeType != null) {
 							((VariableNode) enumeratorNode).setType(nodeType);
-							enumeratorNode.addDependencyTo(nodeType, DependencyType.USE);
+							//enumeratorNode.addDependencyTo(nodeType, DependencyType.USE);
 						}
 
 						final IASTExpression expression = enumerator.getValue();
@@ -437,7 +424,7 @@ final class AstBuilder {
 					final CppNode classBaseNode = createUnknownNode(parentNode, classBaseNameBinding,
 							classBaseNameBinding.getName(), true);
 					((ClassNode) classNode).addBase(classBaseNode);
-					classNode.addDependencyTo(classBaseNode, DependencyType.INHERITANCE);
+					//classNode.addDependencyTo(classBaseNode, DependencyType.INHERITANCE);
 				}
 
 				final StringBuilder bodyBuilder = classNode.getName().isBlank()
@@ -506,7 +493,9 @@ final class AstBuilder {
 					final CppNode element = elementDeclarator != null && elementType != null
 							? createFromDeclarator(typedefNode, elementType, elementDeclarator, false) : null;
 					if (element != null || elementType != null) {
-						((TypedefNode) typedefNode).setType(element != null ? element : elementType);
+						final CppNode typeNode = element != null ? element : elementType;
+						((TypedefNode) typedefNode).setType(typeNode);
+						//typedefNode.addDependencyTo(typeNode, DependencyType.USE);
 					}
 				}
 			}

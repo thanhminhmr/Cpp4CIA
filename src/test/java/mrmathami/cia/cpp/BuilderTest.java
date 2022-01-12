@@ -92,8 +92,8 @@ public final class BuilderTest {
 
 //		final Path inputZip = Path.of("/home/meo/Downloads/zpaq715.zip");
 //		final Path outputProject = Path.of("zpaq715.proj");
-		final Path inputZip = Path.of("/home/meo/Documents/PrusaSlicer_old.zip");
-		final Path outputProject = Path.of("PrusaSlicer_old.proj");
+		final Path inputZip = Path.of("/home/meo/Documents/PrusaSlicer_new.zip");
+		final Path outputProject = Path.of("PrusaSlicer_new.proj");
 
 		try (final InputStream inputStream = Files.newInputStream(inputZip)) {
 			Files.createDirectories(extractPath);

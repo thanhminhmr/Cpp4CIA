@@ -30,20 +30,20 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 		return isWritable() ? Collections.unmodifiableSet(bases) : bases;
 	}
 
-	@Internal
-	@SuppressWarnings("AssertWithSideEffects")
-	public void addBases(@Nonnull Set<CppNode> bases) {
-		checkReadOnly();
-		assert bases.stream().noneMatch(this::equals)
-				&& bases.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
-		this.bases.addAll(bases);
-	}
+//	@Internal
+//	@SuppressWarnings("AssertWithSideEffects")
+//	public void addBases(@Nonnull Set<CppNode> bases) {
+//		checkReadOnly();
+//		assert bases.stream().noneMatch(this::equals)
+//				&& bases.stream().map(CppNode::getRoot).allMatch(getRoot()::equals);
+//		this.bases.addAll(bases);
+//	}
 
-	@Internal
-	public void removeBases() {
-		checkReadOnly();
-		bases.clear();
-	}
+//	@Internal
+//	public void removeBases() {
+//		checkReadOnly();
+//		bases.clear();
+//	}
 
 	@Internal
 	@SuppressWarnings("AssertWithSideEffects")
@@ -51,12 +51,14 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 		checkReadOnly();
 		assert base != this && base.getRoot() == getRoot();
 		bases.add(base);
+		addDependencyTo(base, DependencyType.INHERITANCE);
 	}
 
 	@Internal
 	public void removeBase(@Nonnull CppNode base) {
 		checkReadOnly();
 		bases.remove(base);
+		removeDependencyTo(base, DependencyType.INHERITANCE);
 	}
 
 	//endregion Getter & Setter

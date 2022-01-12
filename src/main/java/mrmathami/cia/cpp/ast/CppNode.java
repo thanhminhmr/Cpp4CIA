@@ -94,7 +94,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		}
 	}
 
-	//<editor-fold desc="Node">
+	//region Node
 
 	public final int getId() {
 		return id;
@@ -139,11 +139,11 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		this.signature = signature;
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="Dependency">
+	//region Dependency
 
-	//<editor-fold desc="All Dependency">
+	//region All Dependency
 
 	@Internal
 	public final void transferAllDependency(@Nonnull CppNode node) {
@@ -161,9 +161,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		return equalsAllDependencyFrom(node, matcher) && equalsAllDependencyTo(node, matcher);
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="All Dependency From">
+	//region All Dependency From
 
 	@Nonnull
 	public final Set<CppNode> getAllDependencyFrom() {
@@ -222,9 +222,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		return nodeDependencyFrom.isEmpty();
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="All Dependency To">
+	//region All Dependency To
 
 	@Nonnull
 	public final Set<CppNode> getAllDependencyTo() {
@@ -287,9 +287,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		return map.isEmpty();
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="Node Dependency From">
+	//region Node Dependency From
 
 	@Nonnull
 	public final DependencyMap getNodeDependencyFrom(@Nonnull CppNode node) {
@@ -306,9 +306,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		node.removeNodeDependencyTo(this);
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="Node Dependency To">
+	//region Node Dependency To
 
 	@Nonnull
 	public final DependencyMap getNodeDependencyTo(@Nonnull CppNode node) {
@@ -351,9 +351,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		node.dependencyFrom.remove(this);
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="Dependency From">
+	//region Dependency From
 
 	public final int getDependencyFrom(@Nonnull CppNode node, @Nonnull DependencyType type) {
 		return node.getDependencyTo(this, type);
@@ -369,9 +369,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		node.removeDependencyTo(this, type);
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="Dependency To">
+	//region Dependency To
 
 	public final int getDependencyTo(@Nonnull CppNode node, @Nonnull DependencyType type) {
 		final int[] counts = dependencyTo.get(node);
@@ -410,9 +410,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		}
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//</editor-fold>
+	//endregion
 
 	//region Object Helper
 
@@ -522,7 +522,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 
 	//endregion Object Helper
 
-	//<editor-fold desc="Node Comparator">
+	//region Node Comparator
 
 	/**
 	 * If two nodes have the similar prototype, aka same type.
@@ -649,10 +649,12 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 			final Pair<MatchLevel, MatchLevel> newLevelPair = levelPair != null ? levelPair
 					: Pair.mutableOf(null, null);
 			if (levelPair == null) map.put(nodePair, newLevelPair);
+			// i am optimistic! But with a backup
+			final MatchLevel backupLevelA = newLevelPair.setA(level);
 			if (level.matcher.isNodeMatch(nodeA, nodeB, this)) {
-				newLevelPair.setA(level);
 				return true;
 			} else {
+				newLevelPair.setA(backupLevelA);
 				newLevelPair.setB(level);
 				return false;
 			}
@@ -726,9 +728,9 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		}
 	}
 
-	//</editor-fold>
+	//endregion
 
-	//<editor-fold desc="TreeNode">
+	//region TreeNode
 
 	/**
 	 * Return the root node.
@@ -784,23 +786,6 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		return isWritable() ? Collections.unmodifiableList(children) : children;
 	}
 
-	private void internalRemoveDependencyRecursive() {
-		final List<CppNode> childrenNodes = new ArrayList<>();
-		childrenNodes.add(this);
-		removeAllDependency();
-		for (final CppNode node : this) {
-			childrenNodes.add(node);
-			node.removeAllDependency();
-		}
-		final Iterator<CppNode> iterator = getRoot().skippedIterator(this);
-		while (iterator.hasNext()) {
-			final CppNode node = iterator.next();
-			for (final CppNode childNode : childrenNodes) {
-				node.internalOnTransfer(childNode, null);
-			}
-		}
-	}
-
 	/**
 	 * Remove children nodes from current node {@link #remove}
 	 */
@@ -817,6 +802,15 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 			child.setRootRecursive(null);
 			child.parent = null;
 			iterator.remove();
+		}
+	}
+
+	private void internalRemoveDependencyRecursive() {
+		internalTransferReference(null);
+		removeAllDependency();
+		for (final CppNode childNode : this) {
+			childNode.internalTransferReference(null);
+			childNode.removeAllDependency();
 		}
 	}
 
@@ -853,6 +847,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		assert child.parent == this;
 		assert children.contains(child) : "WRONG TREE CONSTRUCTION!";
 		// remove child
+		child.internalRemoveDependencyRecursive();
 		internalRemoveChild(child);
 	}
 
@@ -864,13 +859,13 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		checkReadOnly();
 		// check if current node is root node
 		assert parent != null;
+		internalRemoveDependencyRecursive();
 		parent.internalRemoveChild(this);
 	}
 
 	// Exactly the same as remove child, without checking input
 	private void internalRemoveChild(@Nonnull CppNode child) {
 		assert child.parent == this && children.contains(child);
-		child.internalRemoveDependencyRecursive();
 		child.parent = null;
 		child.setRootRecursive(null);
 		children.remove(child);
@@ -888,8 +883,8 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		// check if current node is root node or child node is not root node
 		final CppNode root = getRoot();
 		assert root == node.getRoot() && !isAncestorOf(node);
+		internalTransferReference(node);
 		transferAllDependency(node);
-		root.internalTransferRecursive(this, node);
 		if (!children.isEmpty()) {
 			node.children.addAll(children);
 			for (final CppNode child : children) child.parent = node;
@@ -900,14 +895,57 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		this.parent = null;
 	}
 
-	private void internalTransferRecursive(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
-		internalOnTransfer(fromNode, toNode);
-		for (final CppNode node : this) {
-			node.internalOnTransfer(fromNode, toNode);
+	private void internalTransferReference(@Nullable CppNode toNode) {
+		for (final CppNode dependencyNode : getAllDependencyFrom()) {
+			dependencyNode.internalOnTransfer(this, toNode);
+		}
+		for (final CppNode dependencyNode : getAllDependencyTo()) {
+			dependencyNode.internalOnTransfer(this, toNode);
 		}
 	}
 
 	void internalOnTransfer(@Nonnull CppNode fromNode, @Nullable CppNode toNode) {
+	}
+
+	@Internal
+	public final void collapse() {
+		checkReadOnly();
+		for (final CppNode childNode : this) {
+			childNode.internalTransferReference(null);
+			childNode.transferAllDependency(this);
+		}
+		// fast remove child without transfer ref
+		for (final Iterator<CppNode> iterator = children.iterator(); iterator.hasNext(); ) {
+			final CppNode child = iterator.next();
+			assert child.parent == this : "WRONG TREE CONSTRUCTION!";
+			// remove child
+			child.setRootRecursive(null);
+			child.parent = null;
+			iterator.remove();
+		}
+	}
+
+	@Internal
+	public final void collapseToParent() {
+		checkReadOnly();
+		assert parent != null;
+		internalTransferReference(null);
+		transferAllDependency(parent);
+		for (final CppNode childNode : this) {
+			childNode.internalTransferReference(null);
+			childNode.transferAllDependency(parent);
+		}
+		// fast remove child without transfer ref
+		for (final Iterator<CppNode> iterator = children.iterator(); iterator.hasNext(); ) {
+			final CppNode child = iterator.next();
+			assert child.parent == this : "WRONG TREE CONSTRUCTION!";
+			// remove child
+			child.setRootRecursive(null);
+			child.parent = null;
+			iterator.remove();
+		}
+		parent.children.remove(this);
+		this.parent = null;
 	}
 
 	/**
@@ -923,7 +961,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		this.parent = newParent;
 	}
 
-	//<editor-fold desc="toString">
+	//region toString
 	@Nonnull
 	private String innerHeaderString() {
 		return "\"class\": \"" + getClass().getSimpleName()
@@ -978,7 +1016,7 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 			builder.append('\n').append(alignString).append("]}");
 		}
 	}
-	//</editor-fold>
+	//endregion
 
 	/**
 	 * Return this tree iterator
@@ -1043,5 +1081,5 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 		}
 	}
 
-	//</editor-fold>
+	//endregion
 }

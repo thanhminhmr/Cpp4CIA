@@ -28,8 +28,10 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 	@SuppressWarnings("AssertWithSideEffects")
 	public void setType(@Nullable CppNode type) {
 		checkReadOnly();
+		assert this.type == null; // no overwrite
 		assert type == null || (type != this && type.getRoot() == getRoot());
 		this.type = type;
+		if (type != null) addDependencyTo(type, DependencyType.USE);
 	}
 
 	@Nonnull

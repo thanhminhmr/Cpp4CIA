@@ -105,5 +105,19 @@ public final class RootNode extends CppNode implements IIntegralContainer, IClas
 		for (final CppNode node : nodes) node.read(input);
 	}
 
+	@Override
+	void write(@Nonnull ObjectOutput output) throws IOException {
+		super.write(output);
+
+		output.writeInt(nodeCount);
+	}
+
+	@Override
+	void read(@Nonnull ObjectInput input) throws IOException, ClassNotFoundException {
+		super.read(input);
+
+		this.nodeCount = input.readInt();
+	}
+
 	//endregion Object Helper
 }

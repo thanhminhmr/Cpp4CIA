@@ -14,7 +14,7 @@ public final class SerializerTest {
 //		System.in.read();
 		long start_time = System.nanoTime();
 		{
-			final Path outputProject = Path.of("zpaq715.proj");
+			final Path outputProject = Path.of("PrusaSlicer_old_2.proj");
 			try (final InputStream inputStream = Files.newInputStream(outputProject)) {
 				final ProjectVersion projectVersion = ProjectVersion.fromInputStream(inputStream);
 				System.out.println(projectVersion.getRootNode().toTreeString());
