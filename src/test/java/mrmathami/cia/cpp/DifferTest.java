@@ -15,6 +15,7 @@ public final class DifferTest {
 	}
 
 	public static void main(String[] args) throws IOException, CppException {
+//		System.out.println("press enter to start!");
 //		System.in.read();
 		final long start_time = System.nanoTime();
 
@@ -28,8 +29,8 @@ public final class DifferTest {
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 
-			final VersionDifference difference
-					= VersionDiffer.compare(projectVersion, projectVersion2, VersionDiffer.IMPACT_WEIGHT_MAP);
+			final VersionDifference difference = VersionDiffer.compare(projectVersion, projectVersion2,
+					VersionDiffer.IMPACT_WEIGHT_MAP, 8);
 
 			System.out.println((System.nanoTime() - start_time) / 1000000.0);
 			try (final FileOutputStream fos = new FileOutputStream("project1_project2.VersionDifference")) {
