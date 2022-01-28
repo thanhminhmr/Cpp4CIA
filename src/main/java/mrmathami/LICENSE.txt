@@ -1,5 +1,5 @@
 The following license are applied to the source code files in this folder and
-any sub-folder in it.
+any sub-folders inside it.
 
 
 MIT License
