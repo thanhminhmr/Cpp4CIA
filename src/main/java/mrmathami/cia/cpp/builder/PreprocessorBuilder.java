@@ -3,7 +3,7 @@ package mrmathami.cia.cpp.builder;
 import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
 import mrmathami.utils.Pair;
-import org.anarres.cpp.FileLexerSource;
+import org.anarres.cpp.InputLexerSource;
 import org.anarres.cpp.LexerException;
 import org.anarres.cpp.Preprocessor;
 import org.anarres.cpp.PreprocessorListener;
@@ -11,11 +11,13 @@ import org.anarres.cpp.Source;
 import org.anarres.cpp.Token;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 final class PreprocessorBuilder {
 	@Nonnull private static final PreprocessorListener EMPTY_PREPROCESSOR_LISTENER = new PreprocessorListener() {
@@ -89,16 +91,18 @@ final class PreprocessorBuilder {
 	}
 
 	@Nonnull
-	public static char[] build(@Nonnull List<Path> projectFiles,
+	public static char[] build(@Nonnull Path projectRootPath, @Nonnull List<Path> projectFiles,
 			@Nonnull List<Path> includePaths, boolean isReadable) throws CppException {
 		try {
 			final Preprocessor preprocessor = new Preprocessor(EMPTY_PREPROCESSOR_LISTENER);
 			preprocessor.addFeatures(FEATURE_LIST);
 			preprocessor.setSystemIncludePath(includePaths);
-
+			final StringBuilder builder = new StringBuilder();
 			for (final Path sourceFile : includeList(projectFiles, includePaths)) {
-				preprocessor.addInput(new FileLexerSource(sourceFile));
+				builder.append("#include \"").append(projectRootPath.relativize(sourceFile)).append("\"\n");
 			}
+			final Path virtualFile = projectRootPath.resolve(UUID.randomUUID() + ".virtual_file");
+			preprocessor.addInput(new InputLexerSource(new StringReader(builder.toString()), virtualFile));
 
 			// =====
 			final StringBuilder fileContent = new StringBuilder();

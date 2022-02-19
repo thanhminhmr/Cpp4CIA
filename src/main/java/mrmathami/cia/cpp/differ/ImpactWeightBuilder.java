@@ -40,6 +40,8 @@ final class ImpactWeightBuilder {
 		final int nodeCount = rootNode.getNodeCount();
 
 		final double[] changedWeights = new double[nodeCount];
+		if (changedNodes.isEmpty()) return changedWeights;
+
 		final BitSet changedPathSet = new BitSet(nodeCount);
 		Arrays.fill(changedWeights, 1.0);
 		for (final CppNode changedNode : changedNodes) {
@@ -130,11 +132,11 @@ final class ImpactWeightBuilder {
 				@Nonnull
 				@Override
 				public double[] apply(@Nonnull CppNode changedNode) {
-					System.err.println("Thread " + Thread.currentThread().getId() + " START " + changedNode);
+					//System.err.println("Thread " + Thread.currentThread().getId() + " START " + changedNode);
 
 					recursiveCalculate(changedNode, 1.0, 0);
 
-					System.err.println("Thread " + Thread.currentThread().getId() + " END " + changedNode);
+					//System.err.println("Thread " + Thread.currentThread().getId() + " END " + changedNode);
 					return weights;
 				}
 			}.apply(node);

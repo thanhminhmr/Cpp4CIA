@@ -24,16 +24,52 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeMap;
 
-import static org.anarres.cpp.Token.*;
+import static org.anarres.cpp.Token.AND_AND;
+import static org.anarres.cpp.Token.CHARACTER;
+import static org.anarres.cpp.Token.CPP_COMMENT;
+import static org.anarres.cpp.Token.C_COMMENT;
+import static org.anarres.cpp.Token.ELLIPSIS;
+import static org.anarres.cpp.Token.EOF;
+import static org.anarres.cpp.Token.EQUAL;
+import static org.anarres.cpp.Token.GREATER_EQUAL;
+import static org.anarres.cpp.Token.HEADER;
+import static org.anarres.cpp.Token.IDENTIFIER;
+import static org.anarres.cpp.Token.INVALID;
+import static org.anarres.cpp.Token.LEFT_SHIFT;
+import static org.anarres.cpp.Token.LESS_EQUAL;
+import static org.anarres.cpp.Token.M_ARG;
+import static org.anarres.cpp.Token.M_PASTE;
+import static org.anarres.cpp.Token.M_STRING;
+import static org.anarres.cpp.Token.NEW_LINE;
+import static org.anarres.cpp.Token.NOT_EQUAL;
+import static org.anarres.cpp.Token.NUMBER;
+import static org.anarres.cpp.Token.OR_OR;
+import static org.anarres.cpp.Token.P_HASH;
+import static org.anarres.cpp.Token.P_LINE;
+import static org.anarres.cpp.Token.P_PASTE;
+import static org.anarres.cpp.Token.RIGHT_SHIFT;
+import static org.anarres.cpp.Token.STRING;
+import static org.anarres.cpp.Token.WHITESPACE;
 
 /**
- * A C Preprocessor.
- * The Preprocessor outputs a token stream which does not need
- * re-lexing for C or C++. Alternatively, the output text may be
- * reconstructed by concatenating the {@link Token#getText() text}
- * values of the returned {@link Token Tokens}.
+ * A C Preprocessor. The Preprocessor outputs a token stream which does not need re-lexing for C or C++. Alternatively,
+ * the output text may be reconstructed by concatenating the {@link Token#getText() text} values of the returned {@link
+ * Token Tokens}.
  */
 /*
  * Source file name and line number information is conveyed by lines of the form
@@ -68,20 +104,26 @@ public final class Preprocessor implements Closeable {
 			Map.entry("__FILE__", Macro.__FILE__),
 			Map.entry("__COUNTER__", Macro.__COUNTER__),
 			// gcc specific
-			Map.entry("__attribute__", new Macro(Source.INTERNAL, "__attribute__", List.of(""), true)),
+			Map.entry("__attribute__", new Macro("__attribute__", List.of(""), true, null)),
 			// msvc specific
-			Map.entry("__cdecl", new Macro(Source.INTERNAL, "__cdecl")),
-			Map.entry("__clrcall", new Macro(Source.INTERNAL, "__clrcall")),
-			Map.entry("__stdcall", new Macro(Source.INTERNAL, "__stdcall")),
-			Map.entry("__fastcall", new Macro(Source.INTERNAL, "__fastcall")),
-			Map.entry("__thiscall", new Macro(Source.INTERNAL, "__thiscall")),
-			Map.entry("__vectorcall", new Macro(Source.INTERNAL, "__vectorcall")),
-			Map.entry("__declspec", new Macro(Source.INTERNAL, "__declspec", List.of(""), true))
+			Map.entry("_MSC_FULL_VER", new Macro("_MSC_FULL_VER", null, false,
+					List.of(new Token(NUMBER, -1, -1, "1900000", new NumberToken(10, "1900000"))))),
+			Map.entry("_MSC_VER", new Macro("_MSC_VER", null, false,
+					List.of(new Token(NUMBER, -1, -1, "1900", new NumberToken(10, "1900"))))),
+			Map.entry("_MSVC_LANG", new Macro("_MSVC_LANG", null, false,
+					List.of(new Token(NUMBER, -1, -1, "201402L", new NumberToken(10, "201402", NumberToken.F_LONG))))),
+			Map.entry("__cdecl", new Macro("__cdecl", null, false, null)),
+			Map.entry("__clrcall", new Macro("__clrcall", null, false, null)),
+			Map.entry("__stdcall", new Macro("__stdcall", null, false, null)),
+			Map.entry("__fastcall", new Macro("__fastcall", null, false, null)),
+			Map.entry("__thiscall", new Macro("__thiscall", null, false, null)),
+			Map.entry("__vectorcall", new Macro("__vectorcall", null, false, null)),
+			Map.entry("__declspec", new Macro("__declspec", List.of(""), true, null))
 	);
 
 	private final Queue<Source> inputs = new LinkedList<>();
 	private final Map<String, Macro> globalMacros = new HashMap<>(DEFAULT_MACRO);
-	private final Map<String, Macro> localMacros = new HashMap<>();
+	//private final Map<String, Macro> localMacros = new HashMap<>();
 
 	private final Stack<State> states = new Stack<>();
 	private Source source = null;
@@ -107,8 +149,7 @@ public final class Preprocessor implements Closeable {
 
 
 	/**
-	 * Returns the PreprocessorListener which handles events for
-	 * this Preprocessor.
+	 * Returns the PreprocessorListener which handles events for this Preprocessor.
 	 */
 	@Nonnull
 	public PreprocessorListener getListener() {
@@ -140,8 +181,7 @@ public final class Preprocessor implements Closeable {
 	}
 
 	/**
-	 * Returns true if the given feature is in
-	 * the feature-set of this Preprocessor.
+	 * Returns true if the given feature is in the feature-set of this Preprocessor.
 	 */
 	public boolean getFeature(@Nonnull Feature feature) {
 		return features.contains(feature);
@@ -172,8 +212,7 @@ public final class Preprocessor implements Closeable {
 	}
 
 	/**
-	 * Returns true if the given warning is in
-	 * the warning-set of this Preprocessor.
+	 * Returns true if the given warning is in the warning-set of this Preprocessor.
 	 */
 	public boolean getWarning(@Nonnull Warning warning) {
 		return warnings.contains(warning);
@@ -272,16 +311,14 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Adds a Macro to this Preprocessor.
 	 * <p>
-	 * The given {@link Macro} object encapsulates both the name
-	 * and the expansion.
+	 * The given {@link Macro} object encapsulates both the name and the expansion.
 	 */
 	public void addGlobalMacro(@Nonnull Macro macro) {
 		globalMacros.put(macro.getName(), macro);
 	}
 
 	/**
-	 * Returns the Map of Macros parsed during the run of this
-	 * Preprocessor.
+	 * Returns the Map of Macros parsed during the run of this Preprocessor.
 	 *
 	 * @return The {@link Map} of macros currently defined.
 	 */
@@ -293,8 +330,7 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Returns the named macro.
 	 * <p>
-	 * While you can modify the returned object, unexpected things
-	 * might happen if you do.
+	 * While you can modify the returned object, unexpected things might happen if you do.
 	 *
 	 * @return the Macro object, or null if not found.
 	 */
@@ -351,7 +387,7 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Pushes a Source onto the input stack.
 	 *
-	 * @param source  the new Source to push onto the top of the input stack.
+	 * @param source the new Source to push onto the top of the input stack.
 	 * @param autoPop if true, the Source is automatically removed from the input stack at EOF.
 	 * @see #sourcePop()
 	 */
@@ -434,8 +470,7 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Returns an NL or an EOF token.
 	 * <p>
-	 * The metadata on the token will be correct, which is better
-	 * than generating a new one.
+	 * The metadata on the token will be correct, which is better than generating a new one.
 	 * <p>
 	 * This method can, as of recent patches, return a P_LINE token.
 	 */
@@ -584,8 +619,7 @@ public final class Preprocessor implements Closeable {
 	}
 
 	/**
-	 * Return null if parse argument names success.
-	 * Return a token when parse argument when wrong.
+	 * Return null if parse argument names success. Return a token when parse argument when wrong.
 	 */
 	@Nullable
 	private Token parseMacroArgumentNames(@Nonnull List<String> argumentNames) throws IOException, LexerException {
@@ -856,7 +890,7 @@ public final class Preprocessor implements Closeable {
 	 * Attempts to include a file from an include paths, by name.
 	 *
 	 * @param includePaths The list of virtual directories to search for the given name.
-	 * @param name         The name of the file to attempt to include.
+	 * @param name The name of the file to attempt to include.
 	 * @return true if the file was successfully included, false otherwise.
 	 * @throws IOException if an I/O error occurs.
 	 */
@@ -879,17 +913,20 @@ public final class Preprocessor implements Closeable {
 	/**
 	 * Handles an include directive.
 	 *
-	 * @throws IOException    if an I/O error occurs.
+	 * @throws IOException if an I/O error occurs.
 	 * @throws LexerException if the include fails, and the error handler is fatal.
 	 */
 	private void include(@Nullable Path parent, int line, @Nonnull String name, boolean quoted, boolean next)
 			throws IOException, LexerException {
 		// if path is absolute, skip it. We don't have file system model here
-		if (Path.of(name).isAbsolute()
-				|| quoted && parent != null && include(parent.resolveSibling(name))
-				|| (next || !quoted) && include(systemIncludePaths, name, next)) {
-			error(line, 0, "Include file not found: " + (quoted ? '\"' : '<') + name + (quoted ? '\"' : '>'));
+		if (!Path.of(name).isAbsolute()) {
+			if (next || !quoted) {
+				if (include(systemIncludePaths, name, next)) return;
+			} else {
+				if (parent != null && include(parent.resolveSibling(name))) return;
+			}
 		}
+		error(line, 0, "Include file not found: " + (quoted ? '\"' : '<') + name + (quoted ? '\"' : '>'));
 	}
 
 	@Nonnull
@@ -1421,7 +1458,7 @@ public final class Preprocessor implements Closeable {
 	 * Returns the next preprocessor token.
 	 *
 	 * @return The next fully preprocessed token.
-	 * @throws IOException    if an I/O error occurs.
+	 * @throws IOException if an I/O error occurs.
 	 * @throws LexerException if a preprocessing error occurs.
 	 * @see Token
 	 */

@@ -104,17 +104,6 @@ class MacroTokenSource extends Source {
 		/* We know here that arg is null or expired,
 		 * since we cannot paste an expanded arg. */
 
-		final Tokens tokens = pasteToken.getValue(Tokens.class);
-		for (final Token token : tokens) {
-			final int type = token.getType();
-			if (type == M_STRING) {
-				final Token stringToken = stringify(token);
-				// ...
-			} else if (type == M_ARG) {
-				//TODO
-			}
-		}
-
 		int count = 2;
 		// While I hate auxiliary booleans, this does actually seem to be the simplest solution,
 		// as it avoids duplicating all the logic around hasNext() in case COMMA.
