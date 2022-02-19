@@ -198,11 +198,11 @@ final class NumberValue implements Comparable<NumberValue> {
 	}
 
 	public int compareTo(long integer) {
-		return mode ? Double.compare(decimal, integer) : Long.compare(integer, this.integer);
+		return mode ? Double.compare(decimal, integer) : Long.compare(this.integer, integer);
 	}
 
 	public int compareTo(double decimal) {
-		return Double.compare(decimal, mode ? this.decimal : this.integer);
+		return Double.compare(mode ? this.decimal : this.integer, decimal);
 	}
 
 	@Override

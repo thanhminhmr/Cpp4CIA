@@ -11,7 +11,11 @@ import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import java.io.IOException;
 import java.nio.file.LinkOption;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public final class VersionBuilder {
 	@Nonnull public static final Map<DependencyType, Double> WEIGHT_MAP = Map.of(
@@ -94,12 +98,13 @@ public final class VersionBuilder {
 			final List<Path> externalIncludePaths = createPathList(includePaths);
 			final List<Path> internalIncludePaths = createInternalIncludePaths(projectFileList);
 			final List<Path> includePathList = combinePathList(externalIncludePaths, internalIncludePaths);
+			final Path projectRootPath = projectRoot.toRealPath(LinkOption.NOFOLLOW_LINKS);
 
-			final char[] fileContentCharArray = PreprocessorBuilder.build(projectFileList, includePathList, false);
+			final char[] fileContentCharArray
+					= PreprocessorBuilder.build(projectRootPath, projectFileList, includePathList, false);
 			final IASTTranslationUnit translationUnit = TranslationUnitBuilder.build(fileContentCharArray);
 			final RootNode root = AstBuilder.build(translationUnit);
 
-			final Path projectRootPath = projectRoot.toRealPath(LinkOption.NOFOLLOW_LINKS);
 			final List<String> projectFilePaths = createRelativePathStrings(projectFileList, projectRootPath);
 			final List<String> projectIncludePaths = createRelativePathStrings(externalIncludePaths, projectRootPath);
 

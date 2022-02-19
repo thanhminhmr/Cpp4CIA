@@ -33,9 +33,9 @@ public final class Macro extends ArrayList<Token> {
 	private static final long serialVersionUID = -1L;
 
 	// standard macro
-	@Nonnull static final Macro __LINE__ = new Macro(Source.INTERNAL, "__LINE__");
-	@Nonnull static final Macro __FILE__ = new Macro(Source.INTERNAL, "__FILE__");
-	@Nonnull static final Macro __COUNTER__ = new Macro(Source.INTERNAL, "__COUNTER__");
+	@Nonnull static final Macro __LINE__ = new Macro("__LINE__", null, false, null);
+	@Nonnull static final Macro __FILE__ = new Macro("__FILE__", null, false, null);
+	@Nonnull static final Macro __COUNTER__ = new Macro("__COUNTER__", null, false, null);
 
 	@Nonnull private final Source source;
 	@Nonnull private final String name;
@@ -58,19 +58,21 @@ public final class Macro extends ArrayList<Token> {
 		this.variadic = variadic;
 	}
 
-	public Macro(@Nonnull Source source, @Nonnull String name, @Nullable List<String> args) {
-		this(source, name, args, false);
-	}
-
-	public Macro(@Nonnull Source source, String name) {
-		this(source, name, null, false);
+	Macro(@Nonnull String name, @Nullable List<String> args, boolean variadic, @Nullable List<Token> tokens) {
+		super(tokens != null ? tokens : List.of());
+		if (name.equals("defined")) {
+			throw new IllegalArgumentException("Cannot redefine built-in macro 'defined'");
+		}
+		this.source = Source.INTERNAL;
+		this.name = name;
+		this.args = args;
+		this.variadic = variadic;
 	}
 
 	/**
 	 * Returns the Source from which this macro was parsed.
 	 * <p>
-	 * This method may return null if the macro was not parsed
-	 * from a regular file.
+	 * This method may return null if the macro was not parsed from a regular file.
 	 */
 	@Nonnull
 	public Source getSource() {

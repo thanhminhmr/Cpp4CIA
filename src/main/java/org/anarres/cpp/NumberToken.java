@@ -43,6 +43,12 @@ final class NumberToken {
 		this.integer = integer;
 	}
 
+	public NumberToken(int base, @Nonnull String integer, int flags) {
+		this.base = base;
+		this.integer = integer;
+		this.flags = flags;
+	}
+
 	void setFractionalPart(@Nonnull String fraction) {
 		this.fraction = fraction;
 	}

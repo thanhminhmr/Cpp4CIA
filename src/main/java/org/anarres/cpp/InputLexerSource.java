@@ -34,34 +34,37 @@ import java.nio.file.Path;
  */
 public class InputLexerSource extends LexerSource {
 
+	@Nullable private final Path file;
+
 	/**
 	 * Creates a new Source for lexing the given Reader.
 	 * <p>
 	 * Preprocessor directives are honoured within the file.
 	 */
-	public InputLexerSource(@Nonnull InputStream input) throws IOException {
-		this(EncodingDetector.createReader(input));
+	public InputLexerSource(@Nonnull InputStream input, @Nullable Path file) throws IOException {
+		this(EncodingDetector.createReader(input), file);
 	}
 
-	public InputLexerSource(@Nonnull Reader input) {
+	public InputLexerSource(@Nonnull Reader input, @Nullable Path file) {
 		super(input, true);
+		this.file = file;
 	}
 
 	@Nullable
 	@Override
 	public Path getPath() {
-		return null;
+		return file;
 	}
 
 	@Nonnull
 	@Override
 	public String getName() {
-		return "<standard input>";
+		return file != null ? file.getFileName().toString() : "<standard input>";
 	}
 
 	@Nonnull
 	@Override
 	public String toString() {
-		return "standard input";
+		return file != null ? file.toString() : "<standard input>";
 	}
 }
