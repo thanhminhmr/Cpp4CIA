@@ -108,8 +108,32 @@ final class AstBuilder {
 		return "";
 	}
 
+	private void mergeDuplicate(@Nonnull CppNode.Matcher matcher, @Nonnull CppNode node) {
+		final Map<CppNode.Wrapper, CppNode> nodeMap = new HashMap<>();
+		for (final CppNode childNode : List.copyOf(node.getChildren())) {
+			final CppNode.Wrapper wrapper = new CppNode.Wrapper(childNode, CppNode.MatchLevel.IDENTICAL, matcher);
+			final CppNode existingNode = nodeMap.putIfAbsent(wrapper, childNode);
+			if (existingNode != null) {
+				childNode.transfer(existingNode);
+				if (childNode instanceof IntegralNode) {
+					integralNodeMap.remove(childNode.getName());
+					unknownNodes.remove(childNode);
+				}
+			}
+		}
+	}
+
 	private void cleanUp() {
 		bindingNodeMap.clear();
+
+		// merge duplicates
+		{
+			final CppNode.Matcher matcher = new CppNode.Matcher();
+			mergeDuplicate(matcher, rootNode);
+			for (final CppNode node : rootNode) {
+				mergeDuplicate(matcher, node);
+			}
+		}
 
 		// remove all children of variable and function node
 		for (final CppNode node : rootNode) {
@@ -303,9 +327,11 @@ final class AstBuilder {
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
 					final CppNode parameterType
 							= createFromDeclSpecifier(functionNode, functionParameter.getDeclSpecifier());
-					createFromDeclarator(functionNode, parameterType, functionParameter.getDeclarator(), true);
-					((FunctionNode) functionNode).addParameter(parameterType);
-					//functionNode.addDependencyTo(parameterType, DependencyType.USE);
+					if (!(parameterType instanceof IntegralNode) || !parameterType.getName().equals("void")) {
+						createFromDeclarator(functionNode, parameterType, functionParameter.getDeclarator(), true);
+						((FunctionNode) functionNode).addParameter(parameterType);
+						//functionNode.addDependencyTo(parameterType, DependencyType.USE);
+					}
 				}
 
 				final IASTInitializer initializer = declarator.getInitializer();
