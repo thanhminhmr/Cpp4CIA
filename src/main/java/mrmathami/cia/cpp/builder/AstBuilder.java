@@ -8,6 +8,7 @@ import mrmathami.cia.cpp.ast.CppNode;
 import mrmathami.cia.cpp.ast.DependencyType;
 import mrmathami.cia.cpp.ast.EnumNode;
 import mrmathami.cia.cpp.ast.FunctionNode;
+import mrmathami.cia.cpp.ast.IBodyContainer;
 import mrmathami.cia.cpp.ast.IntegralNode;
 import mrmathami.cia.cpp.ast.NamespaceNode;
 import mrmathami.cia.cpp.ast.RootNode;
@@ -111,9 +112,17 @@ final class AstBuilder {
 	private void mergeDuplicate(@Nonnull CppNode.Matcher matcher, @Nonnull CppNode node) {
 		final Map<CppNode.Wrapper, CppNode> nodeMap = new HashMap<>();
 		for (final CppNode childNode : List.copyOf(node.getChildren())) {
-			final CppNode.Wrapper wrapper = new CppNode.Wrapper(childNode, CppNode.MatchLevel.IDENTICAL, matcher);
+			final CppNode.Wrapper wrapper = new CppNode.Wrapper(childNode, CppNode.MatchLevel.SIMILAR, matcher);
 			final CppNode existingNode = nodeMap.putIfAbsent(wrapper, childNode);
-			if (existingNode != null) {
+			if (existingNode == null) continue;
+			if (existingNode instanceof IBodyContainer) {
+				if (((IBodyContainer) existingNode).getBody() == null) {
+					existingNode.transfer(childNode);
+					nodeMap.put(wrapper, childNode);
+				} else {
+					childNode.transfer(existingNode);
+				}
+			} else {
 				childNode.transfer(existingNode);
 				if (childNode instanceof IntegralNode) {
 					integralNodeMap.remove(childNode.getName());
@@ -305,7 +314,7 @@ final class AstBuilder {
 	}
 
 	@Nonnull
-	private CppNode createFromDeclarator(@Nonnull CppNode parentNode, @Nonnull CppNode typeNode,
+	private CppNode createFromDeclarator(@Nonnull CppNode parentNode, @Nullable CppNode typeNode,
 			@Nonnull IASTDeclarator declarator, boolean isTypedef) {
 		final IASTName declaratorName = declarator.getName();
 		final IBinding declaratorBinding = declaratorName.resolveBinding();
@@ -321,8 +330,10 @@ final class AstBuilder {
 					new FunctionNode(), parentNode);
 
 			if (functionNode instanceof FunctionNode) {
-				((FunctionNode) functionNode).setType(typeNode);
-				//functionNode.addDependencyTo(typeNode, DependencyType.USE);
+				if (!(typeNode instanceof IntegralNode) || !typeNode.getName().isEmpty()) {
+					((FunctionNode) functionNode).setType(typeNode);
+					//functionNode.addDependencyTo(typeNode, DependencyType.USE);
+				}
 
 				for (final ICPPASTParameterDeclaration functionParameter : functionDeclarator.getParameters()) {
 					final CppNode parameterType
@@ -335,7 +346,7 @@ final class AstBuilder {
 				}
 
 				final IASTInitializer initializer = declarator.getInitializer();
-				if (initializer != null) {
+				if (initializer != null && initializer.getChildren().length > 0) {
 					((FunctionNode) functionNode).setBody(initializer.getRawSignature());
 					childrenCreationQueue.add(Pair.mutableOf(functionNode, initializer));
 				}
@@ -614,7 +625,7 @@ final class AstBuilder {
 				simpleNodeList.add(createFromDeclarator(parentNode, simpleNodeType, simpleDeclarator, isTypedef));
 			}
 			// endregion
-			return simpleNodeList.size() > 0 ? simpleNodeList : List.of(simpleNodeType);
+			return !simpleNodeList.isEmpty() ? simpleNodeList : List.of(simpleNodeType);
 
 		} else if (declaration instanceof ICPPASTFunctionDefinition) {
 			final ICPPASTFunctionDefinition functionDefinition = (ICPPASTFunctionDefinition) declaration;
@@ -623,7 +634,9 @@ final class AstBuilder {
 					= createFromDeclSpecifier(parentNode, functionDefinition.getDeclSpecifier());
 			final CppNode functionNode
 					= createFromDeclarator(parentNode, functionReturnType, functionDefinition.getDeclarator(), false);
-			final StringBuilder functionBodyBuilder = new StringBuilder();
+			final StringBuilder functionBodyBuilder = new StringBuilder(functionNode instanceof FunctionNode
+					? Objects.requireNonNullElse(((FunctionNode) functionNode).getBody(), "")
+					: "");
 			// function with constructor
 			for (final ICPPASTConstructorChainInitializer memberChainInitializer
 					: functionDefinition.getMemberInitializers()) {
@@ -639,12 +652,12 @@ final class AstBuilder {
 			}
 			// function with body
 			final IASTStatement functionBody = functionDefinition.getBody();
-			if (functionBody != null) {
+			if (functionBody != null && functionBody.getChildren().length > 0) {
 				childrenCreationQueue.add(Pair.mutableOf(functionNode, functionBody));
-				if (functionNode instanceof FunctionNode) {
-					final String body = functionBodyBuilder.append(functionBody.getRawSignature()).toString();
-					((FunctionNode) functionNode).setBody(body);
-				}
+				functionBodyBuilder.append(functionBody.getRawSignature());
+			}
+			if (functionBodyBuilder.length() > 0 && functionNode instanceof FunctionNode) {
+				((FunctionNode) functionNode).setBody(functionBodyBuilder.toString());
 			}
 			// endregion
 			return List.of(functionNode);
