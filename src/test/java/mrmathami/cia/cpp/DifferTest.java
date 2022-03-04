@@ -19,8 +19,8 @@ public final class DifferTest {
 //		System.in.read();
 		final long start_time = System.nanoTime();
 
-		final Path oldPath = Path.of("PrusaSlicer_old.proj");
-		final Path newPath = Path.of("PrusaSlicer_new.proj");
+		final Path oldPath = Path.of("test4_old.proj");
+		final Path newPath = Path.of("test4_new.proj");
 
 		try (final InputStream oldPathInputStream = Files.newInputStream(oldPath);
 				final InputStream newPathInputStream = Files.newInputStream(newPath)) {
