@@ -39,7 +39,7 @@ public final class Test {
 			public void handleCritical(@Nonnull TokenSource source, int line, int column, @Nonnull String msg) throws PreprocessorException {
 			}
 		};
-		try (final BufferedReader reader = Files.newBufferedReader(Path.of("./build/sr2/sr2.cpp"))) {
+		try (final BufferedReader reader = Files.newBufferedReader(Path.of("./local/fv.cpp"))) {
 			final TokenSource tokens = TokenSource.fromReader(reader, eventListener);
 			System.out.println(tokens);
 		}

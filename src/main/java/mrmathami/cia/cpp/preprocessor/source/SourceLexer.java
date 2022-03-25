@@ -11,6 +11,7 @@ import mrmathami.cia.cpp.preprocessor.token.TokenType;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Function;
 
 final class SourceLexer {
 	private static final boolean MSVC_DOLLAR_IDENTIFIER_ENABLED = true;
@@ -344,7 +345,7 @@ final class SourceLexer {
 
 	@Nonnull
 	private Token createToken(@Nonnull TokenType type, @Nonnull String text) {
-		final String internedText = stringInternMap.putIfAbsent(text, text);
+		final String internedText = stringInternMap.computeIfAbsent(text, Function.identity());
 		assert internedText != null;
 		return new Token(type, internedText, tokenSource, line, column, reader.getLine(), reader.getColumn());
 	}
