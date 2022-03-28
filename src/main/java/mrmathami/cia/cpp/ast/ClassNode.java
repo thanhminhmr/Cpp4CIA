@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -100,23 +99,8 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 	//<editor-fold desc="Node Comparator">
 	@Override
 	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		if (!super.isSimilar(node, matcher)) return false;
-		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
-		final int basesSize = bases.size();
-		if (basesSize != nodeBases.size()) return false;
-		final Map<Wrapper, int[]> map = new HashMap<>(basesSize);
-		for (final CppNode base : this.bases) {
-			final Wrapper wrapper = new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher);
-			final int[] countWrapper = map.computeIfAbsent(wrapper, any -> new int[]{0});
-			countWrapper[0] += 1;
-		}
-		for (final CppNode base : nodeBases) {
-			final Wrapper wrapper = new Wrapper(base, MatchLevel.PROTOTYPE_IDENTICAL, matcher);
-			final int[] countWrapper = map.get(wrapper);
-			if (countWrapper == null) return false;
-			if (--countWrapper[0] == 0) map.remove(wrapper);
-		}
-		return map.isEmpty();
+		return super.isSimilar(node, matcher)
+				&& matcher.isNodesMatchUnordered(bases, ((ClassNode) node).bases, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
@@ -128,23 +112,8 @@ public final class ClassNode extends CppNode implements IClassContainer, IEnumCo
 
 	@Override
 	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		if (!super.isIdentical(node, matcher)) return false;
-		final Set<CppNode> nodeBases = ((ClassNode) node).bases;
-		final int basesSize = bases.size();
-		if (basesSize != nodeBases.size()) return false;
-		final Map<Wrapper, int[]> map = new HashMap<>(basesSize);
-		for (final CppNode base : this.bases) {
-			final Wrapper wrapper = new Wrapper(base, MatchLevel.IDENTICAL, matcher);
-			final int[] countWrapper = map.computeIfAbsent(wrapper, any -> new int[]{0});
-			countWrapper[0] += 1;
-		}
-		for (final CppNode base : nodeBases) {
-			final Wrapper wrapper = new Wrapper(base, MatchLevel.IDENTICAL, matcher);
-			final int[] countWrapper = map.get(wrapper);
-			if (countWrapper == null) return false;
-			if (--countWrapper[0] == 0) map.remove(wrapper);
-		}
-		return map.isEmpty();
+		return super.isIdentical(node, matcher)
+				&& matcher.isNodesMatchUnordered(bases, ((ClassNode) node).bases, MatchLevel.IDENTICAL);
 	}
 
 	@Override

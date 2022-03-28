@@ -126,7 +126,6 @@ final class AstBuilder {
 				childNode.transfer(existingNode);
 				if (childNode instanceof IntegralNode) {
 					integralNodeMap.remove(childNode.getName());
-					unknownNodes.remove(childNode);
 				}
 			}
 		}
@@ -134,15 +133,6 @@ final class AstBuilder {
 
 	private void cleanUp() {
 		bindingNodeMap.clear();
-
-		// merge duplicates
-		{
-			final CppNode.Matcher matcher = new CppNode.Matcher();
-			mergeDuplicate(matcher, rootNode);
-			for (final CppNode node : rootNode) {
-				mergeDuplicate(matcher, node);
-			}
-		}
 
 		// remove all children of variable and function node
 		for (final CppNode node : rootNode) {
@@ -180,6 +170,15 @@ final class AstBuilder {
 			}
 		}
 		unknownNodes.clear();
+
+		// merge duplicates
+		{
+			final CppNode.Matcher matcher = new CppNode.Matcher();
+			mergeDuplicate(matcher, rootNode);
+			for (final CppNode node : rootNode) {
+				mergeDuplicate(matcher, node);
+			}
+		}
 	}
 
 	private void createOverride() {

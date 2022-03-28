@@ -52,7 +52,8 @@ public final class VariableNode extends CppNode implements IBodyContainer, IType
 	//region Node Comparator
 	@Override
 	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
+		return super.isSimilar(node, matcher)
+				&& matcher.isNodeMatch(type, ((VariableNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
