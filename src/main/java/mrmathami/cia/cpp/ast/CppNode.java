@@ -15,9 +15,12 @@ import java.io.ObjectOutput;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -629,35 +632,94 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 	}
 
 	public static final class Matcher {
-		@Nonnull private final Map<Pair<CppNode, CppNode>, Pair<MatchLevel, MatchLevel>> map = new HashMap<>();
 		@Nonnull private final Map<CppNode, int[]> hashcodeMap = new IdentityHashMap<>();
 
+		@Nonnull private final Deque<Map<MatchLevel, Set<Pair<CppNode, CppNode>>>> positiveCacheStack;
+		@Nonnull private final Map<MatchLevel, Set<Pair<CppNode, CppNode>>> negativeCache;
+
 		public Matcher() {
+			this.positiveCacheStack = new ArrayDeque<>(List.of(new EnumMap<>(MatchLevel.class)));
+			this.negativeCache = new EnumMap<>(MatchLevel.class);
 		}
 
 		public boolean isNodeMatch(@Nullable CppNode nodeA, @Nullable CppNode nodeB, @Nonnull MatchLevel level) {
 			if (nodeA == nodeB) return true;
 			if (nodeA == null || nodeB == null) return false;
-			final Pair<CppNode, CppNode> nodePair = Pair.immutableOf(nodeA, nodeB);
-			final Pair<MatchLevel, MatchLevel> levelPair = map.get(nodePair);
-			if (levelPair != null) {
-				final MatchLevel bottomLevel = levelPair.getA();
-				if (bottomLevel != null && bottomLevel.compareTo(level) >= 0) return true;
-				final MatchLevel topLevel = levelPair.getB();
-				if (topLevel != null && topLevel.compareTo(level) <= 0) return false;
+			// This key will guarantee to work on when in same graph differ mode
+			final Pair<CppNode, CppNode> key = nodeA.hashCode() <= nodeB.hashCode()
+					? Pair.immutableOf(nodeA, nodeB)
+					: Pair.immutableOf(nodeB, nodeA);
+
+			// === Negative cache ===
+			// negative cache hit on same or lower level -> not match
+			for (final Map.Entry<MatchLevel, Set<Pair<CppNode, CppNode>>> entry : negativeCache.entrySet()) {
+				final MatchLevel matchLevel = entry.getKey();
+				final Set<Pair<CppNode, CppNode>> levelCache = entry.getValue();
+				if (matchLevel.compareTo(level) <= 0 && levelCache.contains(key)) return false;
 			}
-			final Pair<MatchLevel, MatchLevel> newLevelPair = levelPair != null ? levelPair
-					: Pair.mutableOf(null, null);
-			if (levelPair == null) map.put(nodePair, newLevelPair);
-			// i am optimistic! But with a backup
-			final MatchLevel backupLevelA = newLevelPair.setA(level);
-			if (level.matcher.isNodeMatch(nodeA, nodeB, this)) {
-				return true;
-			} else {
-				newLevelPair.setA(backupLevelA);
-				newLevelPair.setB(level);
+
+			// === Layered positive cache ===
+			// positive cache hit on same or higher level -> match
+			for (final Map<MatchLevel, Set<Pair<CppNode, CppNode>>> positiveCache : positiveCacheStack) {
+				for (Map.Entry<MatchLevel, Set<Pair<CppNode, CppNode>>> entry : positiveCache.entrySet()) {
+					final MatchLevel matchLevel = entry.getKey();
+					final Set<Pair<CppNode, CppNode>> levelCache = entry.getValue();
+					if (matchLevel.compareTo(level) >= 0 && levelCache.contains(key)) return true;
+				}
+			}
+
+			// ===  Calculate and compare ===
+			// create new layer of positive cache
+			final Map<MatchLevel, Set<Pair<CppNode, CppNode>>> newPositiveCache = new EnumMap<>(MatchLevel.class);
+			positiveCacheStack.push(newPositiveCache);
+
+			// create theory: current key is true
+			newPositiveCache.put(level, new HashSet<>(List.of(key)));
+
+			// prove the theory
+			final boolean result = level.matcher.isNodeMatch(nodeA, nodeB, this);
+
+			// remove new layer
+			positiveCacheStack.pop();
+
+			// check if the theory is incorrect
+			if (!result) {
+				// put the wrong theory to the negative cache
+				negativeCache.computeIfAbsent(level, any -> new HashSet<>());
+				for (final Map.Entry<MatchLevel, Set<Pair<CppNode, CppNode>>> entry : negativeCache.entrySet()) {
+					final MatchLevel matchLevel = entry.getKey();
+					final Set<Pair<CppNode, CppNode>> levelCache = entry.getValue();
+					final int compare = matchLevel.compareTo(level);
+					if (compare == 0) levelCache.add(key);
+					if (compare > 0) levelCache.remove(key); // purely for memory and anti-rehash
+				}
 				return false;
 			}
+
+			// theory is correct! -> combine the positive cache
+			final Map<MatchLevel, Set<Pair<CppNode, CppNode>>> positiveCache = positiveCacheStack.peek();
+			assert positiveCache != null;
+			// for each level of the new positive cache...
+			for (final Map.Entry<MatchLevel, Set<Pair<CppNode, CppNode>>> newEntry : newPositiveCache.entrySet()) {
+				final MatchLevel newMatchLevel = newEntry.getKey();
+				final Set<Pair<CppNode, CppNode>> newLevelCache = newEntry.getValue();
+				// ... with each level of the current positive cache...
+				for (final Map.Entry<MatchLevel, Set<Pair<CppNode, CppNode>>> entry : positiveCache.entrySet()) {
+					final MatchLevel matchLevel = entry.getKey();
+					final Set<Pair<CppNode, CppNode>> levelCache = entry.getValue();
+					final int compare = matchLevel.compareTo(newMatchLevel);
+					if (compare < 0) {
+						// if the level of the current positive cache is lower than the level of the new positive cache
+						// remove all positive cached key that exist but has lower lever than current positive cache
+						levelCache.removeAll(newLevelCache);
+					} else if (compare == 0) {
+						// if the current positive cache and the new positive cache is at the same level
+						// add all positive cached key from the new positive cache to the current positive cache
+						levelCache.addAll(newLevelCache);
+					}
+				}
+			}
+			return true;
 		}
 
 		public int nodeHashcode(@Nullable CppNode node, @Nonnull MatchLevel level) {
@@ -676,6 +738,36 @@ public abstract class CppNode implements Iterable<CppNode>, Externalizable {
 			} else {
 				return hashcodes[level.ordinal()];
 			}
+		}
+
+		public boolean isNodesMatchUnordered(@Nonnull Collection<CppNode> nodesA, @Nonnull Collection<CppNode> nodesB,
+				@Nonnull MatchLevel level) {
+			final int size = nodesA.size();
+			if (size != nodesB.size()) return false;
+			final Map<Wrapper, int[]> map = new HashMap<>(size);
+			for (final CppNode nodeA : nodesA) {
+				final Wrapper wrapper = new Wrapper(nodeA, level, this);
+				final int[] countWrapper = map.computeIfAbsent(wrapper, any -> new int[]{0});
+				countWrapper[0] += 1;
+			}
+			for (final CppNode nodeB : nodesB) {
+				final Wrapper wrapper = new Wrapper(nodeB, level, this);
+				final int[] countWrapper = map.get(wrapper);
+				if (countWrapper == null) return false;
+				if (--countWrapper[0] == 0) map.remove(wrapper);
+			}
+			return map.isEmpty();
+		}
+
+		public boolean isNodesMatchOrdered(@Nonnull Collection<CppNode> nodesA, @Nonnull Collection<CppNode> nodesB,
+				@Nonnull MatchLevel level) {
+			final Iterator<CppNode> iteratorA = nodesA.iterator();
+			final Iterator<CppNode> iteratorB = nodesB.iterator();
+			while (iteratorA.hasNext() == iteratorB.hasNext()) {
+				if (!iteratorA.hasNext()) return true;
+				if (!isNodeMatch(iteratorA.next(), iteratorB.next(), level)) break;
+			}
+			return false;
 		}
 	}
 

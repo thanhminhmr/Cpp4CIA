@@ -43,7 +43,8 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 	//<editor-fold desc="Node Comparator">
 	@Override
 	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
+		return super.isSimilar(node, matcher)
+				&& matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override
@@ -55,7 +56,8 @@ public final class TypedefNode extends CppNode implements ITypeContainer, ITyped
 
 	@Override
 	protected boolean isIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isIdentical(node, matcher) && matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
+		return super.isIdentical(node, matcher)
+				&& matcher.isNodeMatch(type, ((TypedefNode) node).type, MatchLevel.PROTOTYPE_IDENTICAL);
 	}
 
 	@Override

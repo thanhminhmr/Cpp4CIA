@@ -54,7 +54,8 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Override
 	protected boolean isPrototypeSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isPrototypeSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isPrototypeSimilar(node, matcher)
+				&& matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
@@ -66,7 +67,8 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Override
 	protected boolean isPrototypeIdentical(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isPrototypeIdentical(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isPrototypeIdentical(node, matcher)
+				&& matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override
@@ -78,7 +80,8 @@ public final class EnumNode extends CppNode implements ITypeContainer, IVariable
 
 	@Override
 	protected boolean isSimilar(@Nonnull CppNode node, @Nonnull Matcher matcher) {
-		return super.isSimilar(node, matcher) && matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
+		return super.isSimilar(node, matcher)
+				&& matcher.isNodeMatch(type, ((EnumNode) node).type, MatchLevel.SIMILAR);
 	}
 
 	@Override

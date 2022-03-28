@@ -42,12 +42,20 @@ public final class VersionDiffer {
 		nodeMapB.put(new CppNode.Wrapper(rootB, CppNode.MatchLevel.SIMILAR, matcher), rootB);
 		for (final CppNode nodeA : rootA) {
 			if (!(nodeA instanceof IntegralNode)) {
-				nodeMapA.put(new CppNode.Wrapper(nodeA, CppNode.MatchLevel.SIMILAR, matcher), nodeA);
+				final CppNode.Wrapper wrapper = new CppNode.Wrapper(nodeA, CppNode.MatchLevel.SIMILAR, matcher);
+				final CppNode node = nodeMapA.put(wrapper, nodeA);
+				if (node != null) {
+					throw new AssertionError();
+				}
 			}
 		}
 		for (final CppNode nodeB : rootB) {
 			if (!(nodeB instanceof IntegralNode)) {
-				nodeMapB.put(new CppNode.Wrapper(nodeB, CppNode.MatchLevel.SIMILAR, matcher), nodeB);
+				final CppNode.Wrapper wrapper = new CppNode.Wrapper(nodeB, CppNode.MatchLevel.SIMILAR, matcher);
+				final CppNode node = nodeMapB.put(wrapper, nodeB);
+				if (node != null) {
+					throw new AssertionError();
+				}
 			}
 		}
 
