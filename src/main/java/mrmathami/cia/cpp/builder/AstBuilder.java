@@ -172,12 +172,10 @@ final class AstBuilder {
 		unknownNodes.clear();
 
 		// merge duplicates
-		{
-			final CppNode.Matcher matcher = new CppNode.Matcher();
-			mergeDuplicate(matcher, rootNode);
-			for (final CppNode node : rootNode) {
-				mergeDuplicate(matcher, node);
-			}
+		final CppNode.Matcher matcher = new CppNode.Matcher();
+		mergeDuplicate(matcher, rootNode);
+		for (final CppNode node : rootNode) {
+			mergeDuplicate(matcher, node);
 		}
 	}
 
@@ -296,9 +294,9 @@ final class AstBuilder {
 		final CppNode existNode = bindingNodeMap.get(topBinding);
 		if (existNode != null && !(existNode instanceof IntegralNode)) return existNode;
 
-		final String name = firstNonBlank(astName != null ? astName.toString() : null, topBinding.getName());
+		final String name = firstNonBlank(astName != null ? astName.getLastName().toString() : null, topBinding.getName());
 		final String uniqueName = firstNonBlank(topBinding instanceof ICPPBinding
-				? PATTERN.matcher(ASTTypeUtil.getQualifiedName((ICPPBinding) binding)).replaceAll("{ROOT}")
+				? PATTERN.matcher(ASTTypeUtil.getQualifiedName((ICPPBinding) binding)).replaceAll("{unnamed}")
 				: astName != null ? ASTStringUtil.getQualifiedName(astName) : null, name);
 
 		newNode.setName(name);
