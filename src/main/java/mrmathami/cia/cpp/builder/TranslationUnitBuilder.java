@@ -3,7 +3,6 @@ package mrmathami.cia.cpp.builder;
 import mrmathami.annotations.Nonnull;
 import mrmathami.cia.cpp.CppException;
 import mrmathami.utils.EncodingDetector;
-import mrmathami.utils.Pair;
 import org.eclipse.cdt.core.dom.ast.IASTPreprocessorIncludeStatement;
 import org.eclipse.cdt.core.dom.ast.IASTTranslationUnit;
 import org.eclipse.cdt.core.dom.ast.gnu.cpp.GPPLanguage;
@@ -21,12 +20,14 @@ import java.io.IOException;
 import java.io.Reader;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 final class TranslationUnitBuilder {
 	@Nonnull static final String VIRTUAL_FILENAME = "##ROOT##";
@@ -40,10 +41,19 @@ final class TranslationUnitBuilder {
 	}
 
 	@Nonnull
-	static List<Pair<Path, Set<Path>>> createFileIncludesList(@Nonnull List<Path> projectFiles,
-			@Nonnull List<Path> includePaths) throws CppException {
-		final List<Pair<Path, Set<Path>>> includeList = new ArrayList<>(projectFiles.size());
-		final Map<Path, Path> projectFileMap = new HashMap<>(projectFiles.size());
+	private static String getExtension(@Nonnull Path path) {
+		final String file = path.getFileName().toString();
+		final int dot = file.lastIndexOf('.');
+		return dot >= 0 ? file.substring(dot).toLowerCase(Locale.ROOT) : "";
+	}
+
+	@Nonnull
+	static Map<Path, Set<Path>> createFileIncludes(@Nonnull List<Path> projectFiles, @Nonnull List<Path> includePaths)
+			throws CppException {
+		final Map<Path, Set<Path>> includeList = new TreeMap<>(
+				Comparator.comparing(TranslationUnitBuilder::getExtension).reversed()
+						.thenComparing(Path::compareTo));
+		final Map<Path, Path> projectFileMap = new HashMap<>(2 * projectFiles.size());
 		for (final Path projectFile : projectFiles) projectFileMap.put(projectFile, projectFile);
 		for (final Path projectFile : projectFiles) {
 			try (final CharArrayWriter writer = new CharArrayWriter()) {
@@ -59,7 +69,7 @@ final class TranslationUnitBuilder {
 						LOG_SERVICE);
 
 				final Path currentFolder = projectFile.getParent();
-				final Set<Path> includeSet = new HashSet<>();
+				final Set<Path> includeSet = new LinkedHashSet<>();
 				for (final IASTPreprocessorIncludeStatement includeDirective : translationUnit.getIncludeDirectives()) {
 					final String includeFileName = includeDirective.getName().toString();
 					if (!includeDirective.isSystemInclude()) {
@@ -79,7 +89,7 @@ final class TranslationUnitBuilder {
 						}
 					}
 				}
-				includeList.add(Pair.immutableOf(projectFile, includeSet));
+				includeList.put(projectFile, includeSet);
 			} catch (CoreException e) {
 				throw new CppException("Cannot create TranslationUnit!", e);
 			} catch (IOException e) {
